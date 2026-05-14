@@ -147,7 +147,7 @@ class Settings(BaseSettings):
     )
     studio_kb_embedding_model: str = Field(
         default="deterministic",
-        description="STUDIO_KB_EMBEDDING_MODEL — метка модели для записи в БД (фаза 10c: только deterministic)",
+        description="STUDIO_KB_EMBEDDING_MODEL — id модели для API (openai_compatible) или метка для deterministic",
     )
     studio_kb_embedding_dim: int = Field(
         default=384,
@@ -160,6 +160,30 @@ class Settings(BaseSettings):
         ge=1,
         le=100,
         description="STUDIO_KB_SEARCH_TOP_K — лимит результатов поиска по умолчанию",
+    )
+    studio_kb_embedding_provider: str = Field(
+        default="deterministic",
+        description="STUDIO_KB_EMBEDDING_PROVIDER — deterministic | openai_compatible",
+    )
+    studio_kb_embedding_api_base_url: str | None = Field(
+        default=None,
+        description="STUDIO_KB_EMBEDDING_API_BASE_URL — база OpenAI-compatible (…/v1), без /embeddings в конце",
+    )
+    studio_kb_embedding_api_key: str | None = Field(
+        default=None,
+        description="STUDIO_KB_EMBEDDING_API_KEY — Bearer для /embeddings (не логировать)",
+    )
+    studio_kb_embedding_timeout_ms: int = Field(
+        default=10_000,
+        ge=500,
+        le=120_000,
+        description="STUDIO_KB_EMBEDDING_TIMEOUT_MS — HTTP timeout для embeddings",
+    )
+    studio_kb_embedding_batch_size: int = Field(
+        default=32,
+        ge=1,
+        le=128,
+        description="STUDIO_KB_EMBEDDING_BATCH_SIZE — размер батча для openai_compatible",
     )
 
     @property

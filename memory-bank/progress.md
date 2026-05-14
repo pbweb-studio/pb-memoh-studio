@@ -26,6 +26,7 @@
 | 10a Knowledge base documents/versions/chunks (no embeddings) | Done |
 | 10b KB parse pipeline (pending, plain/md, unsupported MIME) | Done |
 | 10c KB embeddings + pgvector search (no LLM/RAG answers) | Done |
+| 10d KB external OpenAI-compatible embedding provider | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10c — pgvector + deterministic provider + search API + `/kb_search`; pytest **212** passed; compose config ok.
+**Последнее:** фаза 10d — embedding provider selection + httpx `/embeddings` + batch + redaction; pytest **220** passed; compose config ok.

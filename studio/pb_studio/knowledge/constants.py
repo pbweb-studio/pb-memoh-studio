@@ -37,3 +37,8 @@ class KnowledgeChunkEmbeddingStatus:
     PENDING = "pending"
     EMBEDDED = "embedded"
     FAILED = "failed"
+
+
+class KnowledgeEmbeddingProviderKind:
+    DETERMINISTIC = "deterministic"
+    OPENAI_COMPATIBLE = "openai_compatible"

@@ -19,7 +19,7 @@ from pb_studio.knowledge.constants import (
     KnowledgeVersionStatus,
     KNOWLEDGE_EMBEDDING_VECTOR_DIM,
 )
-from pb_studio.knowledge.embeddings import get_embedding_provider
+from pb_studio.knowledge.embeddings import get_embedding_provider, redact_embedding_error
 from pb_studio.knowledge.models import (
     StudioKnowledgeChunk,
     StudioKnowledgeDocument,
@@ -536,25 +536,59 @@ async def embed_pending_knowledge_chunks_batch(
         ).all()
     )
     provider = get_embedding_provider(settings)
+    bsize = max(1, min(settings.studio_kb_embedding_batch_size, 128))
     embedded = failed = 0
-    for ch in rows:
-        if ch.embedding_status != KnowledgeChunkEmbeddingStatus.PENDING:
-            continue
-        try:
-            vec = await provider.embed_one(ch.content_text)
-            if len(vec) != KNOWLEDGE_EMBEDDING_VECTOR_DIM:
-                raise ValueError(f"embedding dim mismatch: got {len(vec)}, expected {KNOWLEDGE_EMBEDDING_VECTOR_DIM}")
-            ch.embedding = vec
-            ch.embedding_model = provider.model_label
-            ch.embedded_at = utcnow()
-            ch.embedding_status = KnowledgeChunkEmbeddingStatus.EMBEDDED
-            ch.embedding_last_error = None
-            embedded += 1
-        except Exception as exc:  # noqa: BLE001
-            ch.embedding_status = KnowledgeChunkEmbeddingStatus.FAILED
-            ch.embedding_last_error = str(exc)[:4000]
-            failed += 1
-        await session.flush()
+    secret = (settings.studio_kb_embedding_api_key or "").strip() or None
+
+    def _apply_vec(ch: StudioKnowledgeChunk, vec: list[float]) -> None:
+        if len(vec) != KNOWLEDGE_EMBEDDING_VECTOR_DIM:
+            raise ValueError(f"embedding dim mismatch: got {len(vec)}, expected {KNOWLEDGE_EMBEDDING_VECTOR_DIM}")
+        ch.embedding = vec
+        ch.embedding_model = provider.model_label
+        ch.embedded_at = utcnow()
+        ch.embedding_status = KnowledgeChunkEmbeddingStatus.EMBEDDED
+        ch.embedding_last_error = None
+
+    for i in range(0, len(rows), bsize):
+        batch = rows[i : i + bsize]
+        if provider.batch_atomic:
+            texts = [ch.content_text for ch in batch]
+            try:
+                vecs = await provider.embed_texts(texts)
+            except Exception as exc:  # noqa: BLE001
+                msg = redact_embedding_error(str(exc), secret)[:4000]
+                for ch in batch:
+                    if ch.embedding_status != KnowledgeChunkEmbeddingStatus.PENDING:
+                        continue
+                    ch.embedding_status = KnowledgeChunkEmbeddingStatus.FAILED
+                    ch.embedding_last_error = msg
+                    failed += 1
+                await session.flush()
+                continue
+            for ch, vec in zip(batch, vecs, strict=True):
+                if ch.embedding_status != KnowledgeChunkEmbeddingStatus.PENDING:
+                    continue
+                try:
+                    _apply_vec(ch, vec)
+                    embedded += 1
+                except Exception as exc:  # noqa: BLE001
+                    ch.embedding_status = KnowledgeChunkEmbeddingStatus.FAILED
+                    ch.embedding_last_error = redact_embedding_error(str(exc), secret)[:4000]
+                    failed += 1
+                await session.flush()
+        else:
+            for ch in batch:
+                if ch.embedding_status != KnowledgeChunkEmbeddingStatus.PENDING:
+                    continue
+                try:
+                    vec = await provider.embed_one(ch.content_text)
+                    _apply_vec(ch, vec)
+                    embedded += 1
+                except Exception as exc:  # noqa: BLE001
+                    ch.embedding_status = KnowledgeChunkEmbeddingStatus.FAILED
+                    ch.embedding_last_error = redact_embedding_error(str(exc), secret)[:4000]
+                    failed += 1
+                await session.flush()
     return {"embedded": embedded, "failed": failed}
 
 

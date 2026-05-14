@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 10c (KB embeddings + vector search)
+## После фазы 10d (внешний embedding provider)
 
-**Статус:** pgvector + deterministic embeddings; `POST /knowledge/embed-pending`, `POST /knowledge/search`; Celery `embed_pending_knowledge_chunks`; `/kb_search`. Memoh не менялся.
+**Статус:** `openai_compatible` + deterministic; httpx `/embeddings`, батчи, redaction API key в ошибках; те же `POST /knowledge/embed-pending` и Celery.
 
-**Следующий шаг:** по постановке — **6+** (LLM), **10+** (Docling, внешние embeddings, полный RAG), или иной эпик.
+**Следующий шаг:** по постановке — **6+** (LLM), **10+** (Docling, полный RAG), или иной эпик.

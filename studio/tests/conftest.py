@@ -41,6 +41,11 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_EMBEDDING_MODEL",
         "STUDIO_KB_EMBEDDING_DIM",
         "STUDIO_KB_SEARCH_TOP_K",
+        "STUDIO_KB_EMBEDDING_PROVIDER",
+        "STUDIO_KB_EMBEDDING_API_BASE_URL",
+        "STUDIO_KB_EMBEDDING_API_KEY",
+        "STUDIO_KB_EMBEDDING_TIMEOUT_MS",
+        "STUDIO_KB_EMBEDDING_BATCH_SIZE",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

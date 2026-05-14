@@ -6,27 +6,28 @@
 
 ## Текущая фаза
 
-**Фаза 10c (Studio: KB embeddings + vector search без LLM/RAG)** — колонки эмбеддингов на `studio_knowledge_chunks` (Alembic `014_studio_knowledge_chunk_embeddings`, pgvector в Postgres, JSON-вектор в SQLite-тестах); провайдер `deterministic` (`knowledge/embeddings.py`); `POST /knowledge/embed-pending`, `POST /knowledge/search` при `STUDIO_KB_EMBEDDINGS_ENABLED`; Celery `embed_pending_knowledge_chunks`; команда `/kb_search` (+ опционально `--project <slug>`) и обновлённый `/kb_help`. **Без** Memoh, LLM chat/completion, генерации RAG-ответов, Studio Admin UI.
+**Фаза 10d (Studio: KB внешний embedding provider)** — `STUDIO_KB_EMBEDDING_PROVIDER=deterministic|openai_compatible`; OpenAI-compatible `POST …/embeddings` через httpx (батчи `STUDIO_KB_EMBEDDING_BATCH_SIZE`, timeout); ключ и ошибки редактятся в `embedding_last_error`; deterministic без HTTP для тестов. **Без** Memoh, LLM chat, RAG-ответов.
 
-Фазы **10b**, **10a**, **9b**, **9a**, **8a–8c**, **7b**–**4b** — см. журнал.
+Фазы **10c**, **10b**, **10a**, **9b** — см. журнал.
 
 ## Текущая цель
 
-**6+** (LLM/продуктовая доставка сводок) или **10+** (Docling, внешние embeddings, полноценный RAG) — только по отдельной постановке.
+**6+** (LLM/продуктовая доставка сводок) или **10+** (Docling, полный RAG) — только по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–10c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **10c:** deterministic embeddings, vector search (pgvector / fallback), embed API + Celery + `/kb_search`.
+- Фазы 0–10d по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **10d:** OpenAI-compatible embeddings API + deterministic fallback.
+- **10c:** pgvector / SQLite search, embed/search API, Celery.
 - **10b:** staged import + parse pending, батч API и Celery, команды `/kb_parse` / `/kb_status`.
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**212** кейсов после фазы 10c, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**220** кейсов после фазы 10d, локально/Docker).
 
 ## Что ещё не готово
 
-- Внешний LLM, внешний embedding API, RAG question answering, Studio Admin; прочие сценарии 6+.
+- Внешний LLM, RAG question answering (полный пайплайн), Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -53,7 +54,8 @@
 - **Фаза 9b:** project digest из summaries, только Studio DB + шаблон; доставка и команды — только control group; см. `docs/06_DECISIONS.md`.
 - **Фаза 10a:** KB — только Studio DB + детерминированные чанки; API при флаге `STUDIO_KB_ENABLED`; команды `/kb_*` — только control group; см. `docs/06_DECISIONS.md`.
 - **Фаза 10b:** parse pipeline для pending-версий; PDF/DOCX без Docling → `failed_unsupported`; см. `docs/06_DECISIONS.md`.
-- **Фаза 10c:** эмбеддинги чанков (deterministic) + pgvector search в Postgres, fallback в SQLite; без LLM/chat; см. `docs/06_DECISIONS.md`.
+- **Фаза 10c:** эмбеддинги чанков + pgvector search в Postgres, fallback в SQLite; без LLM/chat; см. `docs/06_DECISIONS.md`.
+- **Фаза 10d:** OpenAI-compatible `/embeddings` (httpx), батчи, redaction ключа в ошибках; deterministic для тестов; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 

@@ -40,6 +40,9 @@ docker compose -f docker-compose.local.yml up -d --build
 Для **фазы 10b (KB parse)** те же env; дополнительно: `POST /knowledge/documents/{id}/parse`, `POST /knowledge/parse-pending` (ручной/периодический запуск батча); Celery-задача `parse_pending_knowledge_documents`; в теле `POST .../versions/text` можно передать `defer_parse: true` и при необходимости `metadata_json.mime_type` для staged import.
 
 Для **фазы 10c (KB embeddings + search)** добавьте в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_EMBEDDINGS_ENABLED`, `STUDIO_KB_EMBEDDING_MODEL`, `STUDIO_KB_EMBEDDING_DIM` (должна совпадать с `vector(384)` в миграции `014`), `STUDIO_KB_SEARCH_TOP_K`. Эндпоинты `POST /knowledge/embed-pending`, `POST /knowledge/search` — при `STUDIO_KB_EMBEDDINGS_ENABLED=true` и остальных условиях KB; Celery `embed_pending_knowledge_chunks`. Образ Postgres: `pgvector/pgvector` (уже в `docker-compose.local.yml`).
+
+Для **фазы 10d (KB внешние embeddings)** добавьте: `STUDIO_KB_EMBEDDING_PROVIDER` (`deterministic` или `openai_compatible`), при `openai_compatible` — `STUDIO_KB_EMBEDDING_API_BASE_URL` (например `https://api.openai.com/v1`), `STUDIO_KB_EMBEDDING_API_KEY`, опционально `STUDIO_KB_EMBEDDING_TIMEOUT_MS`, `STUDIO_KB_EMBEDDING_BATCH_SIZE`; `STUDIO_KB_EMBEDDING_MODEL` — id модели для API. Ключ не кладите в логи приложения.
+
 Проверка API:
 
 ```powershell

@@ -215,6 +215,13 @@
 
 ## Фаза 10c — KB embeddings + vector search (выполнено)
 
-- Эмбеддинги чанков только **deterministic** (без внешнего embedding API в этой фазе); запись метки модели в `embedding_model`; поиск — cosine distance через pgvector в Postgres, в SQLite — загрузка embedded-чанков и сортировка в Python.
+- Эмбеддинги чанков и поиск по вектору: см. **10d** для внешнего провайдера; базово поддержан **deterministic** и pgvector/SQLite fallback.
 - Включение: **`STUDIO_KB_EMBEDDINGS_ENABLED=true`** (и **`STUDIO_KB_ENABLED=true`**); размерность колонки фиксирована миграцией (**384**); env `STUDIO_KB_EMBEDDING_MODEL`, `STUDIO_KB_EMBEDDING_DIM` (должна совпадать с миграцией), `STUDIO_KB_SEARCH_TOP_K`.
 - API embed/search и `/kb_search` не вызывают LLM и не генерируют «ответы RAG»; команды — только control group + ACL.
+
+## Фаза 10d — KB внешний embedding provider (выполнено)
+
+- **`STUDIO_KB_EMBEDDING_PROVIDER`:** `deterministic` (локально/тесты) или **`openai_compatible`** (`POST {base}/embeddings`, Bearer `STUDIO_KB_EMBEDDING_API_KEY`); батчи по `STUDIO_KB_EMBEDDING_BATCH_SIZE`, timeout `STUDIO_KB_EMBEDDING_TIMEOUT_MS`.
+- Ошибки HTTP/сети и исключения пишутся в `embedding_last_error` после **redaction** ключа (`redact_secrets`); ключ не логируется из кода провайдера.
+- OpenAI-батч **атомарный** (один HTTP на батч): сбой батча помечает все чанки батча `failed`, следующие батчи продолжаются; deterministic остаётся **почанковым** (`batch_atomic=false`).
+- **Без** LLM chat/completion и без генерации RAG-ответов; Memoh не затрагивается.

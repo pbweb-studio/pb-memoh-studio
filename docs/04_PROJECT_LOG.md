@@ -173,3 +173,9 @@
 - Alembic `014_studio_knowledge_chunk_embeddings` (pgvector `vector(384)` в Postgres; JSON-список в SQLite для тестов); поля `embedding`, `embedding_model`, `embedded_at`, `embedding_status` (pending/embedded/failed), `embedding_last_error`; провайдер `deterministic` без внешнего API; `POST /knowledge/embed-pending`, `POST /knowledge/search`; Celery `embed_pending_knowledge_chunks`; `/kb_search` (+ `--project <slug>`) и `/kb_help`.
 - **Без** Memoh, LLM chat/completion, генерации RAG-ответов, Studio Admin UI.
 - Тесты: `studio/tests/test_knowledge_phase10c.py`; полный `pytest tests/` (**212** passed).
+
+## 2026-05-14 — Фаза 10d (Studio: KB внешний embedding provider)
+
+- `STUDIO_KB_EMBEDDING_PROVIDER` (`deterministic` | `openai_compatible`), `STUDIO_KB_EMBEDDING_API_BASE_URL`, `STUDIO_KB_EMBEDDING_API_KEY`, `STUDIO_KB_EMBEDDING_TIMEOUT_MS`, `STUDIO_KB_EMBEDDING_BATCH_SIZE`; httpx `POST …/embeddings`; redaction ключа в `embedding_last_error`; батч для openai-compatible не валит следующие батчи при ошибке.
+- **Без** LLM chat, RAG-ответов, Memoh.
+- Тесты: `studio/tests/test_knowledge_phase10d.py`; полный `pytest tests/` (**220** passed).

@@ -313,6 +313,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 10d — KB: внешний OpenAI-compatible embeddings (без LLM/RAG-ответов)
+
+**Статус:** расширение [`studio/pb_studio/knowledge/embeddings.py`](studio/pb_studio/knowledge/embeddings.py): `STUDIO_KB_EMBEDDING_PROVIDER`, httpx на `/embeddings`, батчи, redaction ключа в `embedding_last_error`; сервис `embed_pending_knowledge_chunks_batch` учитывает `batch_atomic` и `STUDIO_KB_EMBEDDING_BATCH_SIZE`. **Без** LLM chat, без Memoh, без RAG-ответов.
+
+**Тесты:** [`studio/tests/test_knowledge_phase10d.py`](studio/tests/test_knowledge_phase10d.py); регрессия 10c.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -337,7 +345,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
-| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline, pending+parse API, Celery `parse_pending_knowledge_documents`, `/kb_parse|status`; **10c** — deterministic embeddings, pgvector search, Celery `embed_pending_knowledge_chunks`, `/kb_search`; **10+** — Docling, внешние embeddings, полный RAG |
+| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10+** — Docling, полный RAG |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |
