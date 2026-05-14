@@ -3,7 +3,7 @@
 Синхронизирует пароль администратора Memoh в Postgres с секцией [admin] в config.toml.
 
 Memoh создаёт пользователя только при пустой БД; смена password в toml не обновляет users.password_hash.
-Требует: pip install bcrypt; Docker с контейнером Postgres Memoh.
+Требует: модуль Python bcrypt (например apt install python3-bcrypt); Docker с контейнером Postgres Memoh.
 
 Секреты не печатаются (только факт успеха / число затронутых строк).
 """
@@ -48,7 +48,7 @@ def main() -> None:
     try:
         import bcrypt
     except ImportError:
-        raise SystemExit("install bcrypt: pip install bcrypt (or pip3 install --user bcrypt)")
+        raise SystemExit("install bcrypt: apt-get install -y python3-bcrypt (or pip install bcrypt)")
 
     password = read_admin_password(args.memoh_config)
     if not password.strip():

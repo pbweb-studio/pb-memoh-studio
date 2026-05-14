@@ -93,7 +93,9 @@ echo "=== post-Memoh API settle ==="
 sleep 12
 
 echo "=== sync Memoh admin DB password from config.toml ==="
-python3 -m pip install -q bcrypt
+if ! python3 -c "import bcrypt" 2>/dev/null; then
+  apt-get update -qq && apt-get install -y -qq python3-bcrypt >/dev/null
+fi
 python3 deploy/scripts/memoh_sync_admin_db_password.py
 
 echo "=== delete Telegram webhook ==="
