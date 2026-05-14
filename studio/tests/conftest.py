@@ -46,6 +46,14 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_EMBEDDING_API_KEY",
         "STUDIO_KB_EMBEDDING_TIMEOUT_MS",
         "STUDIO_KB_EMBEDDING_BATCH_SIZE",
+        "STUDIO_KB_RAG_ENABLED",
+        "STUDIO_KB_CHAT_PROVIDER",
+        "STUDIO_KB_CHAT_API_BASE_URL",
+        "STUDIO_KB_CHAT_API_KEY",
+        "STUDIO_KB_CHAT_MODEL",
+        "STUDIO_KB_CHAT_TIMEOUT_MS",
+        "STUDIO_KB_RAG_TOP_K",
+        "STUDIO_KB_RAG_MAX_CONTEXT_CHARS",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

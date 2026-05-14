@@ -75,6 +75,24 @@ async def verify_kb_embeddings_enabled(settings: Settings = Depends(get_settings
         )
 
 
+async def verify_kb_rag_enabled(settings: Settings = Depends(get_settings)) -> None:
+    if not settings.studio_kb_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STUDIO_KB_ENABLED is false",
+        )
+    if not settings.studio_kb_embeddings_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STUDIO_KB_EMBEDDINGS_ENABLED is false",
+        )
+    if not settings.studio_kb_rag_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STUDIO_KB_RAG_ENABLED is false",
+        )
+
+
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 QueueServiceDep = Annotated[QueueService, Depends(get_queue_service)]

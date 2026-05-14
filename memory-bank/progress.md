@@ -27,6 +27,7 @@
 | 10b KB parse pipeline (pending, plain/md, unsupported MIME) | Done |
 | 10c KB embeddings + pgvector search (no LLM/RAG answers) | Done |
 | 10d KB external OpenAI-compatible embedding provider | Done |
+| 10e KB RAG question answering MVP (ask API + /kb_ask) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10d — embedding provider selection + httpx `/embeddings` + batch + redaction; pytest **220** passed; compose config ok.
+**Последнее:** фаза 10e — RAG по KB (retrieval + chat completion), `/knowledge/ask`, `/kb_ask`, redaction chat key; pytest **229** passed; compose config ok; Docker `python:3.12-slim` + `pytest tests/`.

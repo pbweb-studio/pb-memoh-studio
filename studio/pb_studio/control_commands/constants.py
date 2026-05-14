@@ -35,6 +35,7 @@ class ControlCommandName:
     KB_PARSE = "kb_parse"
     KB_STATUS = "kb_status"
     KB_SEARCH = "kb_search"
+    KB_ASK = "kb_ask"
     KB_ADD = "kb_add"
 
 
@@ -76,13 +77,14 @@ PROJECT_HELP_TEXT = """Команды проектов (Studio, только и�
 База знаний: /kb_help
 """
 
-KB_HELP_TEXT = """Команды базы знаний (Studio, только из управляющей группы; без RAG-ответов/LLM):
+KB_HELP_TEXT = """Команды базы знаний (Studio, только из управляющей группы):
 /kb_help — этот текст
 /kb_list — список документов KB
 /kb_get <document_uuid> — карточка документа и активная версия
 /kb_parse <document_uuid> — распарсить все pending-версии документа
 /kb_status <document_uuid> — статусы версий и число чанков
 /kb_search [--project <slug>] <запрос> — поиск чанков по эмбеддингам (нужен STUDIO_KB_EMBEDDINGS_ENABLED=true)
+/kb_ask [--project <slug>] <вопрос> — ответ по KB через retrieval + chat completion (нужны STUDIO_KB_RAG_ENABLED=true и настройки STUDIO_KB_CHAT_*)
 /kb_add <title> | <text> — новый документ (manual) и первая версия из текста (разбиение на чанки в Studio)
 
 Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.

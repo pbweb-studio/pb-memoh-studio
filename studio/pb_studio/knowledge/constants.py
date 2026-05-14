@@ -42,3 +42,11 @@ class KnowledgeChunkEmbeddingStatus:
 class KnowledgeEmbeddingProviderKind:
     DETERMINISTIC = "deterministic"
     OPENAI_COMPATIBLE = "openai_compatible"
+
+
+class KnowledgeChatProviderKind:
+    OPENAI_COMPATIBLE = "openai_compatible"
+
+
+# Ответ при отсутствии релевантных чанков в RAG (фаза 10e).
+KNOWLEDGE_RAG_NOT_FOUND_ANSWER = "не найдено в базе знаний"

@@ -179,3 +179,9 @@
 - `STUDIO_KB_EMBEDDING_PROVIDER` (`deterministic` | `openai_compatible`), `STUDIO_KB_EMBEDDING_API_BASE_URL`, `STUDIO_KB_EMBEDDING_API_KEY`, `STUDIO_KB_EMBEDDING_TIMEOUT_MS`, `STUDIO_KB_EMBEDDING_BATCH_SIZE`; httpx `POST …/embeddings`; redaction ключа в `embedding_last_error`; батч для openai-compatible не валит следующие батчи при ошибке.
 - **Без** LLM chat, RAG-ответов, Memoh.
 - Тесты: `studio/tests/test_knowledge_phase10d.py`; полный `pytest tests/` (**220** passed).
+
+## 2026-05-14 — Фаза 10e (Studio: KB RAG question answering MVP)
+
+- `STUDIO_KB_RAG_ENABLED`, `STUDIO_KB_CHAT_*`, `STUDIO_KB_RAG_TOP_K`, `STUDIO_KB_RAG_MAX_CONTEXT_CHARS`; модуль `pb_studio/knowledge/rag.py` (vector search → контекст → `POST …/chat/completions`); `POST /knowledge/ask` под `STUDIO_ADMIN_TOKEN`; `/kb_ask`, `/kb_help`; при пустом retrieval — фиксированный ответ «не найдено в базе знаний» без вызова LLM; redaction chat API key в ошибках control/API.
+- **Без** Memoh, второго бота, polling/webhook Studio, Studio Admin UI; ответы `/kb_ask` только в active control group.
+- Тесты: `studio/tests/test_knowledge_phase10e.py`; полный `pytest tests/` (**229** passed); `docker compose -f docker-compose.local.yml config`; `docker run` + `pytest tests/` (см. журнал проверок).

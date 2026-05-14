@@ -185,6 +185,44 @@ class Settings(BaseSettings):
         le=128,
         description="STUDIO_KB_EMBEDDING_BATCH_SIZE — размер батча для openai_compatible",
     )
+    studio_kb_rag_enabled: bool = Field(
+        default=False,
+        description="STUDIO_KB_RAG_ENABLED — RAG-ответы по KB (chat completion + vector search)",
+    )
+    studio_kb_chat_provider: str = Field(
+        default="openai_compatible",
+        description="STUDIO_KB_CHAT_PROVIDER — openai_compatible (MVP)",
+    )
+    studio_kb_chat_api_base_url: str | None = Field(
+        default=None,
+        description="STUDIO_KB_CHAT_API_BASE_URL — база OpenAI-compatible (…/v1)",
+    )
+    studio_kb_chat_api_key: str | None = Field(
+        default=None,
+        description="STUDIO_KB_CHAT_API_KEY — Bearer для /chat/completions (не логировать)",
+    )
+    studio_kb_chat_model: str | None = Field(
+        default=None,
+        description="STUDIO_KB_CHAT_MODEL — id модели для chat completion",
+    )
+    studio_kb_chat_timeout_ms: int = Field(
+        default=20_000,
+        ge=3_000,
+        le=180_000,
+        description="STUDIO_KB_CHAT_TIMEOUT_MS — HTTP timeout для chat completion",
+    )
+    studio_kb_rag_top_k: int = Field(
+        default=5,
+        ge=1,
+        le=50,
+        description="STUDIO_KB_RAG_TOP_K — сколько чанков в контекст RAG",
+    )
+    studio_kb_rag_max_context_chars: int = Field(
+        default=8000,
+        ge=500,
+        le=100_000,
+        description="STUDIO_KB_RAG_MAX_CONTEXT_CHARS — лимит символов контекста из чанков",
+    )
 
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:

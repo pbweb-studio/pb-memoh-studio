@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 10d (внешний embedding provider)
+## После фазы 10e (KB RAG MVP)
 
-**Статус:** `openai_compatible` + deterministic; httpx `/embeddings`, батчи, redaction API key в ошибках; те же `POST /knowledge/embed-pending` и Celery.
+**Статус:** `POST /knowledge/ask` + `/kb_ask` при `STUDIO_KB_RAG_ENABLED`; retrieval только по KB chunks; chat completion OpenAI-compatible; ответы только в control group для `/kb_ask`.
 
-**Следующий шаг:** по постановке — **6+** (LLM), **10+** (Docling, полный RAG), или иной эпик.
+**Следующий шаг:** по постановке — **6+** (LLM для сводок), **10+** (Docling, расширенный RAG), или иной эпик.

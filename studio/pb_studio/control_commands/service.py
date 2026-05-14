@@ -28,6 +28,8 @@ from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
 from pb_studio.knowledge import service as studio_kb_service
+from pb_studio.knowledge.embeddings import redact_embedding_error
+from pb_studio.knowledge.rag import ask_knowledge_base
 from pb_studio.knowledge.constants import KnowledgeVersionStatus
 from pb_studio.knowledge.models import StudioKnowledgeDocumentVersion
 from pb_studio.project_digests import service as project_digests_svc
@@ -506,6 +508,12 @@ async def _kb_resolve_active_version(
     return max(parsed, key=lambda x: x.version_number)
 
 
+def _redact_kb_error_message(message: str, settings: Settings, telegram_token: str | None) -> str:
+    chat_key = (settings.studio_kb_chat_api_key or "").strip() or None
+    out = redact_embedding_error(message, chat_key)
+    return redact_secrets(out, telegram_token or None)
+
+
 async def _dispatch_kb_control_commands(
     session: AsyncSession,
     cmd: StudioControlCommand,
@@ -673,6 +681,60 @@ async def _dispatch_kb_control_commands(
             )
             return
 
+        if cmd.command_name == ControlCommandName.KB_ASK:
+            if not settings.studio_kb_rag_enabled:
+                mid = await reply("RAG по KB выключен (STUDIO_KB_RAG_ENABLED=false).")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            if not settings.studio_kb_embeddings_enabled:
+                mid = await reply("Поиск по эмбеддингам выключен (STUDIO_KB_EMBEDDINGS_ENABLED=false).")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            question = str(cmd.args_json.get("query") or "").strip()
+            project_slug = str(cmd.args_json.get("project_slug") or "").strip()
+            project_id = None
+            if project_slug:
+                proj = await studio_projects_service.get_project_by_slug(session, project_slug)
+                if proj is None:
+                    mid = await reply("Проект не найден.")
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+                project_id = proj.id
+            try:
+                result = await ask_knowledge_base(session, settings, question=question, project_id=project_id)
+            except ValueError as exc:
+                mid = await reply(f"Ошибка: {_redact_kb_error_message(str(exc), settings, token)}")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            lines = [result.answer]
+            if result.sources:
+                lines.append("")
+                lines.append(f"Источники ({len(result.sources)}):")
+                for h in result.sources[:10]:
+                    lines.append(
+                        f"dist={h.distance:.4f} doc={h.document_id} chunk={h.chunk_id}\n{(h.content_text or '')[:350]}"
+                    )
+            mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_ask",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"question_len": len(question), "has_project": bool(project_slug), "sources": len(result.sources)},
+            )
+            return
+
         if cmd.command_name == ControlCommandName.KB_ADD:
             title = str(cmd.args_json.get("title") or "")
             text_body = str(cmd.args_json.get("text") or "")
@@ -700,18 +762,18 @@ async def _dispatch_kb_control_commands(
         cmd.processed_at = now
         cmd.last_error = "unsupported kb command"
     except ValueError as exc:
-        mid = await reply(f"Ошибка: {exc}")
+        mid = await reply(f"Ошибка: {_redact_kb_error_message(str(exc), settings, token)}")
         cmd.status = ControlCommandStatus.PROCESSED
         cmd.processed_at = now
         cmd.response_telegram_message_id = mid
     except Exception as exc:  # noqa: BLE001
         logger.exception("kb control command failed id=%s", cmd.id)
-        safe_err = redact_secrets(str(exc), token)[:4000]
+        safe_err = _redact_kb_error_message(str(exc), settings, token)[:4000]
         cmd.status = ControlCommandStatus.FAILED
         cmd.last_error = safe_err
         cmd.processed_at = now
         try:
-            await reply(f"KB: не выполнено: {redact_secrets(str(exc)[:500], token)}")
+            await reply(f"KB: не выполнено: {_redact_kb_error_message(str(exc)[:500], settings, token)}")
         except Exception:  # noqa: BLE001
             pass
 

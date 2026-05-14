@@ -9,10 +9,14 @@ from pb_studio.api.deps import (
     verify_admin_optional,
     verify_kb_embeddings_enabled,
     verify_kb_enabled,
+    verify_kb_rag_enabled,
 )
 from pb_studio.core.config import get_settings
 from pb_studio.knowledge.models import StudioKnowledgeDocumentVersion
+from pb_studio.knowledge.rag import ask_knowledge_base
 from pb_studio.knowledge.schemas import (
+    KnowledgeAskBody,
+    KnowledgeAskOut,
     KnowledgeChunkOut,
     KnowledgeDocumentCreate,
     KnowledgeDocumentOut,
@@ -187,6 +191,38 @@ async def post_knowledge_search(session: DbSession, body: KnowledgeSearchBody) -
         )
         for h in hits
     ]
+
+
+@router.post(
+    "/ask",
+    response_model=KnowledgeAskOut,
+    dependencies=[Depends(verify_kb_rag_enabled)],
+)
+async def post_knowledge_ask(session: DbSession, body: KnowledgeAskBody) -> KnowledgeAskOut:
+    settings = get_settings()
+    try:
+        result = await ask_knowledge_base(
+            session,
+            settings,
+            question=body.question,
+            project_id=body.project_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return KnowledgeAskOut(
+        answer=result.answer,
+        sources=[
+            KnowledgeSearchHitOut(
+                chunk_id=h.chunk_id,
+                document_id=h.document_id,
+                project_id=h.project_id,
+                chunk_index=h.chunk_index,
+                content_text=h.content_text,
+                distance=h.distance,
+            )
+            for h in result.sources
+        ],
+    )
 
 
 @router.get("/documents/{document_id}/versions", response_model=list[KnowledgeVersionOut])

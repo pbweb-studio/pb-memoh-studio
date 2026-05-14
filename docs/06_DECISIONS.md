@@ -225,3 +225,11 @@
 - Ошибки HTTP/сети и исключения пишутся в `embedding_last_error` после **redaction** ключа (`redact_secrets`); ключ не логируется из кода провайдера.
 - OpenAI-батч **атомарный** (один HTTP на батч): сбой батча помечает все чанки батча `failed`, следующие батчи продолжаются; deterministic остаётся **почанковым** (`batch_atomic=false`).
 - **Без** LLM chat/completion и без генерации RAG-ответов; Memoh не затрагивается.
+
+## Фаза 10e — KB RAG question answering MVP (выполнено)
+
+- Включение: **`STUDIO_KB_RAG_ENABLED=true`** при уже включённых **`STUDIO_KB_ENABLED`** и **`STUDIO_KB_EMBEDDINGS_ENABLED`**; chat: **`STUDIO_KB_CHAT_PROVIDER=openai_compatible`**, `STUDIO_KB_CHAT_API_BASE_URL`, `STUDIO_KB_CHAT_API_KEY`, `STUDIO_KB_CHAT_MODEL`, лимиты `STUDIO_KB_CHAT_TIMEOUT_MS`, `STUDIO_KB_RAG_TOP_K`, `STUDIO_KB_RAG_MAX_CONTEXT_CHARS`.
+- Retrieval только по чанкам KB (`search_knowledge_chunks`); при пустом результате — фиксированная фраза «не найдено в базе знаний» **без** вызова LLM.
+- Админ **`POST /knowledge/ask`** под `STUDIO_ADMIN_TOKEN`; **`/kb_ask`** — тот же Event Mirror + ACL, ответы только в active control group (не в client/project/internal/service чаты).
+- Ошибки и ответы пользователю проходят redaction chat API key (аналогично embeddings).
+- **Без** изменений Memoh, второго бота, polling/webhook Studio, Studio Admin UI.

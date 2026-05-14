@@ -43,6 +43,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 10d (KB внешние embeddings)** добавьте: `STUDIO_KB_EMBEDDING_PROVIDER` (`deterministic` или `openai_compatible`), при `openai_compatible` — `STUDIO_KB_EMBEDDING_API_BASE_URL` (например `https://api.openai.com/v1`), `STUDIO_KB_EMBEDDING_API_KEY`, опционально `STUDIO_KB_EMBEDDING_TIMEOUT_MS`, `STUDIO_KB_EMBEDDING_BATCH_SIZE`; `STUDIO_KB_EMBEDDING_MODEL` — id модели для API. Ключ не кладите в логи приложения.
 
+Для **фазы 10e (KB RAG MVP)** добавьте: `STUDIO_KB_RAG_ENABLED`, `STUDIO_KB_CHAT_PROVIDER` (MVP: `openai_compatible`), `STUDIO_KB_CHAT_API_BASE_URL`, `STUDIO_KB_CHAT_API_KEY`, `STUDIO_KB_CHAT_MODEL`, опционально `STUDIO_KB_CHAT_TIMEOUT_MS`, `STUDIO_KB_RAG_TOP_K`, `STUDIO_KB_RAG_MAX_CONTEXT_CHARS`. Эндпоинт `POST /knowledge/ask` при `STUDIO_KB_RAG_ENABLED=true` и включённых KB+embeddings; команды `/kb_ask` (и `--project <slug>`) — только в active control group; без Memoh и без Studio Admin UI.
+
 Проверка API:
 
 ```powershell

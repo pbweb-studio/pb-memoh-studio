@@ -6,28 +6,29 @@
 
 ## Текущая фаза
 
-**Фаза 10d (Studio: KB внешний embedding provider)** — `STUDIO_KB_EMBEDDING_PROVIDER=deterministic|openai_compatible`; OpenAI-compatible `POST …/embeddings` через httpx (батчи `STUDIO_KB_EMBEDDING_BATCH_SIZE`, timeout); ключ и ошибки редактятся в `embedding_last_error`; deterministic без HTTP для тестов. **Без** Memoh, LLM chat, RAG-ответов.
+**Фаза 10e (Studio: KB RAG question answering MVP)** — при `STUDIO_KB_RAG_ENABLED=true` и включённых KB+embeddings: vector search по чанкам → контекст → один вызов OpenAI-compatible **`POST …/chat/completions`** (`STUDIO_KB_CHAT_*`); админ **`POST /knowledge/ask`**; команда **`/kb_ask`** (`--project <slug>`) из control group. При пустом retrieval — ответ «не найдено в базе знаний» **без** LLM. Ключ chat API не логируется; ошибки redacted. **Без** Memoh, второго бота, polling/webhook Studio, Studio Admin UI.
 
-Фазы **10c**, **10b**, **10a**, **9b** — см. журнал.
+Фазы **10d**, **10c**, **10b**, **10a**, **9b** — см. журнал.
 
 ## Текущая цель
 
-**6+** (LLM/продуктовая доставка сводок) или **10+** (Docling, полный RAG) — только по отдельной постановке.
+**6+** (LLM/продуктовая доставка сводок) или **10+** (Docling, расширенный RAG) — только по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–10d по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- Фазы 0–10e по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **10e:** RAG MVP по KB (`rag.py`, `/knowledge/ask`, `/kb_ask`).
 - **10d:** OpenAI-compatible embeddings API + deterministic fallback.
 - **10c:** pgvector / SQLite search, embed/search API, Celery.
 - **10b:** staged import + parse pending, батч API и Celery, команды `/kb_parse` / `/kb_status`.
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**220** кейсов после фазы 10d, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**229** кейсов после фазы 10e, локально/Docker).
 
 ## Что ещё не готово
 
-- Внешний LLM, RAG question answering (полный пайплайн), Studio Admin; прочие сценарии 6+.
+- Полный RAG/Docling, Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -56,10 +57,11 @@
 - **Фаза 10b:** parse pipeline для pending-версий; PDF/DOCX без Docling → `failed_unsupported`; см. `docs/06_DECISIONS.md`.
 - **Фаза 10c:** эмбеддинги чанков + pgvector search в Postgres, fallback в SQLite; без LLM/chat; см. `docs/06_DECISIONS.md`.
 - **Фаза 10d:** OpenAI-compatible `/embeddings` (httpx), батчи, redaction ключа в ошибках; deterministic для тестов; см. `docs/06_DECISIONS.md`.
+- **Фаза 10e:** RAG MVP — `POST /knowledge/ask`, `/kb_ask`, retrieval только по KB chunks + один chat completion; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 
-- По постановке: **6+** или **10+** (Docling/embeddings/RAG) из плана.
+- По постановке: **6+** или **10+** (Docling / расширенный RAG) из плана.
 
 ## Вопросы к GPT
 
