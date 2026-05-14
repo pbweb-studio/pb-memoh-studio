@@ -49,11 +49,11 @@ for i in $(seq 1 70); do
 done
 test "$ok" = 1
 
-echo "=== wait Memoh /health (up to ~140s) ==="
+echo "=== wait Memoh stack (web GET /health on 8082, up to ~140s) ==="
 ok=0
 for i in $(seq 1 70); do
-  # Memoh: HEAD /health — без лимита времени curl иногда зависает на keep-alive.
-  if curl -sf --max-time 5 -o /dev/null -X HEAD "http://127.0.0.1:8080/health" 2>/dev/null; then
+  # Стабильнее, чем HEAD к API :8080 (curl с хоста иногда таймаутил).
+  if curl -sf --max-time 5 -o /dev/null "http://127.0.0.1:8082/health" 2>/dev/null; then
     ok=1
     echo "MEMOH_HEALTH_OK iteration=$i"
     break
