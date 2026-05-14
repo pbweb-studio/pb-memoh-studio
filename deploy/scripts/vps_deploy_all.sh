@@ -65,6 +65,10 @@ test "$ok" = 1
 echo "=== post-Memoh API settle ==="
 sleep 12
 
+echo "=== sync Memoh admin password (DB) from config.toml ==="
+python3 -m pip install -q bcrypt
+python3 deploy/scripts/memoh_sync_admin_db_password.py
+
 echo "=== Telegram webhook (Memoh) ==="
 python3 deploy/scripts/memoh_delete_telegram_webhook.py --memoh-env "$MEMOH_ROOT/.env.memoh"
 python3 deploy/scripts/memoh_bootstrap_telegram_channel.py --memoh-root "$MEMOH_ROOT"
