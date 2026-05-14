@@ -6,25 +6,23 @@
 
 ## Текущая фаза
 
-**Фаза 5b (outbound system notifications)** — доставка `pending_for_control_group_delivery` / `failed_retryable` в Telegram **только** в активную control group: Bot API `sendMessage`, тот же `TELEGRAM_BOT_TOKEN`, без polling/webhook из Studio. Memoh **не** менялся.
+**Фаза 6a (сводки — инфраструктура)** — таблица `studio_chat_summaries`, планировщик pending jobs из Event Mirror (`studio_messages` + `studio_chat_lifecycle_events` в периоде), админ-роуты `GET /summaries`, `POST /summaries/plan`, `GET /summaries/{id}`, Celery `plan_daily_chat_summaries`. **Без** LLM, **без** генерации текста, **без** отправки сводок в Telegram. Memoh **не** менялся.
 
-Фазы **4b** (Memoh→Studio mirror, вариант C), **4a** (ingest), **5a** (модели/API/уведомления без send) — как ранее.
+Фазы **4b**, **4a**, **5a**, **5b** — как ранее.
 
 ## Текущая цель
 
-Фаза **6 (сводки)** — не начинать до отдельной постановки.
+Полноценная фаза **6+** (генерация/UX сводок) — **не** начинать до отдельной постановки.
 
 ## Что уже работает
 
-- Фазы 0–5b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **4b:** Memoh mirror (см. журнал и `internal/channel/adapters/telegram/*`).
-- **5a:** `pb_studio/control_group/` — роли чатов, `studio_control_groups`, `studio_system_notifications`, интеграция после `my_chat_member`, админ-роуты, `STUDIO_ADMIN_TOKEN`.
-- **5b:** `telegram_outbound`, `system_notification_delivery`, Alembic `004`, Celery `deliver_pending_system_notifications`, `GET/POST /notifications/system*`; локальный compose пробрасывает токен и флаги 5b в `studio-api` / `studio-worker` (см. `docker-compose.local.yml`, `docs/07_RUNBOOK_WINDOWS.md`).
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**48** кейсов после фазы 5b).
+- Фазы 0–6a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **6a:** `pb_studio/summaries/`, Alembic `005`, Celery `plan_daily_chat_summaries`, админ-API сводок.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**56** кейсов после фазы 6a).
 
 ## Что ещё не готово
 
-- Сводки (6), SLA (8), RAG, проекты, Studio Admin.
+- Генерация текста сводок (LLM), отправка сводок в Telegram, продукт «сводка сегодня»; фаза 7+; SLA (8), RAG, проекты, Studio Admin.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -44,10 +42,11 @@
 
 - Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД / ожидание доставки.
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
+- Сводки 6a: только Studio DB + планировщик; границы — см. `docs/06_DECISIONS.md` (фаза 6a).
 
 ## Следующая задача
 
-- По постановке продукта: фаза **6** (сводки).
+- По постановке: фаза **6+** или другая фаза из плана.
 
 ## Вопросы к GPT
 

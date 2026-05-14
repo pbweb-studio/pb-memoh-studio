@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pb_studio.control_group.models  # noqa: F401 — регистрация таблиц на Base.metadata
 import pb_studio.event_mirror.models  # noqa: F401 — регистрация таблиц на Base.metadata
+import pb_studio.summaries.models  # noqa: F401 — phase 6a summaries
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

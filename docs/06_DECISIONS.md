@@ -37,7 +37,7 @@
 - **Без** Memoh-изменений; **без** исходящего Telegram API в 5a; второй бот и смена polling/webhook **не** используются.
 - Системные уведомления по `my_chat_member` после Event Mirror: запись в БД; при активной управляющей группе статус `pending_for_control_group_delivery`, иначе `logged_only`; доставка **не** планируется в исходный чат события (`payload.delivery_policy = control_group_only`).
 - Админ-API: `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{studio_chat_uuid}/role`; при `STUDIO_ADMIN_TOKEN` — Bearer обязателен.
-- Сводки (6), SLA (8), RAG, Studio Admin — вне scope.
+- Сводки (6+), SLA (8), RAG, Studio Admin — вне scope 5a/5b.
 
 ## Фаза 5b — outbound: system notifications → Telegram control group (Studio)
 
@@ -47,6 +47,13 @@
 - **Надёжность:** при ошибках API — статусы `failed_retryable` / `failed_permanent`, `retry_count`, `last_error`; идемпотентный батч; повторный запуск не дублирует уже `delivered_to_control_group`.
 - **Аудит:** попытки доставки фиксируются в `studio_audit_log` (`control_group.system_notification_delivered`, `control_group.system_notification_delivery_failed`, `control_group.system_notification_delivery_blocked`, `control_group.system_notification_delivery_refused` и т.д.); в payload логов **не** попадает сырой токен (редакция).
 - **Операции:** Celery-задача `deliver_pending_system_notifications`; опционально `GET /notifications/system`, `POST /notifications/system/deliver-pending` под `STUDIO_ADMIN_TOKEN`.
+
+## Фаза 6a — сводки: инфраструктура без LLM (Studio)
+
+- Таблица `studio_chat_summaries`: задания `pending` / `generated` / `failed` по чату и периоду; снимок `chat_role` на момент планирования; `source_event_count` считается **только** по строкам Event Mirror (`studio_messages`, `studio_chat_lifecycle_events`) в полуинтервале периода.
+- **Без** вызовов Memoh, **без** LLM, **без** генерации текста сводки в 6a, **без** `sendMessage` сводок в Telegram; второй бот и polling/webhook **не** добавляются.
+- Идемпотентность: уникальность `(chat_id, summary_type, period_start, period_end)`.
+- API под `STUDIO_ADMIN_TOKEN`: `GET /summaries`, `POST /summaries/plan`, `GET /summaries/{id}`; Celery `plan_daily_chat_summaries` — только создание pending daily jobs за «вчера» (UTC).
 
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 

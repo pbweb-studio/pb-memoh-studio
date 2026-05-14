@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from pb_studio.api.routes import control as control_routes
 from pb_studio.api.routes import events as events_routes
 from pb_studio.api.routes import notifications as notifications_routes
+from pb_studio.api.routes import summaries as summaries_routes
 from pb_studio.core.config import get_settings
 from pb_studio.core.database import dispose_engine
 from pb_studio.core.redis_client import close_redis
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     application.include_router(events_routes.router)
     application.include_router(control_routes.router)
     application.include_router(notifications_routes.router)
+    application.include_router(summaries_routes.router)
 
     return application
 

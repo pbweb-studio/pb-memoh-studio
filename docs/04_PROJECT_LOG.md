@@ -78,3 +78,10 @@
 - В `docker-compose.local.yml` для `studio-api` и `studio-worker` проброшены: `TELEGRAM_BOT_TOKEN`, `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`, `STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES` (значения с хоста / `.env`; мигратор и beat без изменений).
 - Проверки: `docker compose -f docker-compose.local.yml config`; `pytest tests/` в Docker.
 - SHA: `git rev-parse HEAD` на `pb-studio/main`.
+
+## 2026-05-14 — Фаза 6a (Studio: инфраструктура сводок без LLM)
+
+- Таблица `studio_chat_summaries` (Alembic `005_chat_summaries`), пакет `pb_studio/summaries/`, планировщик + админ-API `GET/POST /summaries*`, Celery `plan_daily_chat_summaries` (только pending jobs).
+- **Без** Memoh, **без** LLM, **без** Telegram outbound для сводок; Memoh и Go-код не менялись.
+- Тесты: `pytest tests/` (включая `test_summaries_phase6a.py`); `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` на `pb-studio/main`.

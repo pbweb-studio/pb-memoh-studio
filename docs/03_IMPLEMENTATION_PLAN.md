@@ -143,6 +143,20 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 6a — сводки: хранение и планировщик (без LLM, без Telegram)
+
+**Статус:** `studio/pb_studio/summaries/`, Alembic `005_chat_summaries`, планировщик `plan_summary_job` / `plan_daily_chat_summaries`, админ-роуты `GET /summaries`, `POST /summaries/plan`, `GET /summaries/{id}`, Celery `plan_daily_chat_summaries`. **Без** Memoh, **без** LLM, **без** генерации текста и **без** отправки сводок в Telegram.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `studio_chat_summaries` | Задания сводок: тип `daily`/`weekly`/`manual`, период, статус `pending`/`generated`/`failed`, `source_event_count`, опционально `summary_text` / `metadata_json`. |
+| `summaries/planner.py` | Подсчёт событий из Event Mirror; создание pending job без дубликата по периоду. |
+| Celery `plan_daily_chat_summaries` | Pending daily jobs за вчера (UTC) по всем `studio_chats`. |
+
+**Тесты:** `studio/tests/test_summaries_phase6a.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -154,7 +168,8 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 4 | Event Mirror: 4a ingest HTTP + таблицы + нормализация; дальше — транспорт из Memoh/Telegram по ADR |
 | 5a | Управляющая группа: таблицы + API + system notifications из Event Mirror (**без** исходящего Telegram) |
 | 5b | Доставка `pending_for_control_group_delivery` / retry в Telegram control group: `sendMessage`, Celery, админ-эндпоинты (**без** Memoh, **без** polling/webhook Studio) |
-| 6 | Сводка «сегодня» из Studio DB |
+| 6a | Сводки: таблица `studio_chat_summaries`, планировщик pending jobs из Event Mirror, админ-API, Celery `plan_daily_chat_summaries` (**без** LLM, **без** отправки сводок в Telegram) |
+| 6+ | Сводка «сегодня» / генерация текста / продуктовые сценарии из Studio DB |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |
 | 9 | Проекты: bind/list/digest |
