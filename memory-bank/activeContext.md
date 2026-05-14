@@ -1,9 +1,9 @@
 # Active context
 
-**Сейчас:** фаза **4b** реализована и **проверена** (вариант C): Go-тесты `internal/channel/adapters/telegram` и Studio `pytest tests/` прошли в Docker; `docker compose -f docker-compose.local.yml config` валиден. Код зеркала не менялся при проверке.
+**Сейчас:** фаза **5a** в Studio — управляющая группа (`studio_control_groups`), роли чатов (`studio_chats.chat_role` + `studio_chat_roles`), системные уведомления (`studio_system_notifications`) после Event Mirror `my_chat_member`. Админ-API под опциональным `STUDIO_ADMIN_TOKEN`. Исходящего Telegram нет.
 
 **Ветка:** `pb-studio/main`.
 
-**Блокеры:** нет.
+**Memoh:** не менялся в 5a.
 
-**Фаза 5:** не открыта; следующий шаг — только по явной задаче (e2e или фаза 5).
+**Следующий шаг:** по постановке — фаза 6 или доставка уведомлений в control group (с ADR при hook в Memoh).

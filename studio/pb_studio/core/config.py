@@ -42,6 +42,10 @@ class Settings(BaseSettings):
         default=False,
         description="STUDIO_MIRROR_ENQUEUE_USER_MESSAGES — enqueue в Response Queue только для user text/caption",
     )
+    studio_admin_token: str | None = Field(
+        default=None,
+        description="STUDIO_ADMIN_TOKEN — если задан, админ-роуты (/control-group, /chats) требуют Authorization: Bearer …",
+    )
 
     @property
     def celery_backend_effective(self) -> str:

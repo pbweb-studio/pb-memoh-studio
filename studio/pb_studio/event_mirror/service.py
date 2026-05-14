@@ -6,6 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pb_studio.control_group.service import record_my_chat_member_system_notification
 from pb_studio.event_mirror.models import AuditLog, ChatLifecycleEvent, StudioChat, StudioMessage, StudioTelegramUser, TelegramRawUpdate
 from pb_studio.response_queue.schemas import EnqueueResult, InboundEnqueue
 from pb_studio.response_queue.service import QueueService
@@ -299,7 +300,7 @@ async def _normalize_message_inner(
         )
 
 
-async def _normalize_my_chat_member(session: AsyncSession, raw: TelegramRawUpdate, block: dict[str, Any], *, now: datetime) -> None:
+async def _normalize_my_chat_member(session: AsyncSession, raw: TelegramRawUpdate, block: dict[str, Any], *, now: datetime) -> StudioChat:
     chat_row = await _upsert_chat(session, block["chat"], now=now)
     actor = block.get("from")
     if actor:
@@ -318,6 +319,7 @@ async def _normalize_my_chat_member(session: AsyncSession, raw: TelegramRawUpdat
         raw_fragment={"old_chat_member": old_m, "new_chat_member": new_m},
         now=now,
     )
+    return chat_row
 
 
 async def _normalize_chat_member(session: AsyncSession, raw: TelegramRawUpdate, block: dict[str, Any], *, now: datetime) -> None:
@@ -453,7 +455,15 @@ async def ingest_telegram_update(
 
     elif "my_chat_member" in payload and isinstance(payload["my_chat_member"], dict):
         handled = True
-        await _normalize_my_chat_member(session, raw, payload["my_chat_member"], now=now)
+        block = payload["my_chat_member"]
+        chat_row = await _normalize_my_chat_member(session, raw, block, now=now)
+        await record_my_chat_member_system_notification(
+            session,
+            raw=raw,
+            chat_row=chat_row,
+            block=block,
+            now=now,
+        )
 
     elif "chat_member" in payload and isinstance(payload["chat_member"], dict):
         handled = True

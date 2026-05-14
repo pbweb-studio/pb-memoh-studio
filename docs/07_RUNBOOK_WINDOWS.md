@@ -63,6 +63,15 @@ docker run --rm -v "${PWD}/studio:/app" -w /app python:3.12-slim bash -c "pip in
 go test ./internal/channel/adapters/telegram/... -count=1
 ```
 
+## Studio: управляющая группа (фаза 5a)
+
+- Переменная **`STUDIO_ADMIN_TOKEN`**: если задана, эндпоинты `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{studio_chat_uuid}/role` требуют заголовок `Authorization: Bearer <token>`. Если пусто — локально роуты открыты (осторожно в публичной сети).
+- Пример назначения control group (после того как чат уже появился в БД через `POST /events/telegram`):
+
+```powershell
+curl -X POST http://127.0.0.1:8000/control-group/set -H "Content-Type: application/json" -d "{\"telegram_chat_id\": -1001234567890}"
+```
+
 ## Полезные пути
 
 - Документация: `docs/`.

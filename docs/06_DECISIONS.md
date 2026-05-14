@@ -10,7 +10,7 @@
 ## Продукт / платформа
 
 - Один Telegram-бот; второй бот не вводим.
-- Системные уведомления только в **управляющую группу**; если не настроена — только лог в Studio Layer.
+- Системные уведомления в Telegram — **только** в настроенную управляющую группу; если группа не задана — только запись в Studio DB (`studio_system_notifications`, статус `logged_only`). Исходящая отправка в Telegram не делается в **фазе 5a** (только контракт и политика); без нового ADR не добавляем Memoh/Telegram hook для send.
 - Бизнес-данные в **Studio Layer** (Postgres), не в memory Memoh как в БД.
 - SLA — отдельный монитор (Celery/Beat), **не** через heartbeat Memoh.
 - Event Mirror обязателен; Response Queue обязателен; интеграция Memoh ↔ Studio через **MCP/API**.
@@ -30,6 +30,14 @@
 - **Без** правок Memoh и **без** исходящих вызовов Telegram API; управляющая группа / сводки / RAG / SLA — вне scope 4a.
 - Опциональный enqueue в Response Queue: только при `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES=true` и только для пользовательских text/caption в private/group/supergroup; по умолчанию выключено (см. `docs/03_IMPLEMENTATION_PLAN.md`).
 - Поставка событий из реального Telegram/Memoh в этот endpoint — отдельная подфаза (4b+), после выбора A/B/C для точки интеграции.
+
+## Фаза 5 — управляющая группа (Studio 5a)
+
+- Реализация: `studio/pb_studio/control_group/`, расширение `studio_chats.chat_role`, таблицы `studio_control_groups`, `studio_chat_roles`, `studio_system_notifications`, Alembic `003_control_group`.
+- **Без** Memoh-изменений; **без** исходящего Telegram API в 5a; второй бот и смена polling/webhook **не** используются.
+- Системные уведомления по `my_chat_member` после Event Mirror: запись в БД; при активной управляющей группе статус `pending_for_control_group_delivery`, иначе `logged_only`; доставка **не** планируется в исходный чат события (`payload.delivery_policy = control_group_only`).
+- Админ-API: `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{studio_chat_uuid}/role`; при `STUDIO_ADMIN_TOKEN` — Bearer обязателен.
+- Сводки (6), SLA (8), RAG, Studio Admin — вне scope.
 
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 

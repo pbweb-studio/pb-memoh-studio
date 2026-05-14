@@ -43,6 +43,7 @@ class StudioChat(Base):
     title: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     username: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     extra: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONCompat, nullable=True)
+    chat_role: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow

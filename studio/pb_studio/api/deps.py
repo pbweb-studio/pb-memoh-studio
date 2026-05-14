@@ -40,6 +40,20 @@ async def verify_events_ingest_optional(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
 
+async def verify_admin_optional(
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+    settings: Settings = Depends(get_settings),
+) -> None:
+    token = settings.studio_admin_token
+    if not token:
+        return
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+    got = authorization.removeprefix("Bearer ").strip()
+    if got != token:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid token")
+
+
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 QueueServiceDep = Annotated[QueueService, Depends(get_queue_service)]

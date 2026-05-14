@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from pb_studio.api.routes import control as control_routes
 from pb_studio.api.routes import events as events_routes
 from pb_studio.core.config import get_settings
 from pb_studio.core.database import dispose_engine
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
         return {"status": "ok", "service": "studio-api", "env": s.studio_env}
 
     application.include_router(events_routes.router)
+    application.include_router(control_routes.router)
 
     return application
 

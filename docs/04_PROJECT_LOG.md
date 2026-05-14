@@ -56,3 +56,10 @@
 - **Studio:** `docker run --rm -v "<repo>/studio:/app" -w /app python:3.12-slim bash -c "pip install -q -e '.[dev]' && pytest tests/ -v"` — **32 passed**.
 - **Compose:** `docker compose -f docker-compose.local.yml config` — без ошибок.
 - Запись о проверке вошла в коммит доков `1c8f9f6c0ef1ec71e78c3dcc92879c8c3b8c2b42` (см. `docs/AI_CONTEXT.md`); актуальный корень ветки: `git rev-parse HEAD`.
+
+## 2026-05-14 — Фаза 5a (Studio: управляющая группа)
+
+- Статус: реализовано в `studio/pb_studio/control_group/`, Alembic `003_control_group`, интеграция Event Mirror → `studio_system_notifications` для `my_chat_member`; исходящий Telegram и Memoh-send **не** делались.
+- API: `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{uuid}/role`; опционально `STUDIO_ADMIN_TOKEN` (Bearer).
+- Тесты: `pytest tests/` (включая `test_control_group.py`); `docker compose -f docker-compose.local.yml config` — ok.
+- Полный SHA коммита: `git rev-parse HEAD`.

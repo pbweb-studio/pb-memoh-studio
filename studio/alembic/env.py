@@ -8,6 +8,7 @@ from sqlalchemy import create_engine, pool
 from pb_studio.core.config import get_settings
 from pb_studio.response_queue.models import Base
 
+import pb_studio.control_group.models  # noqa: F401 — регистрация моделей для autogenerate
 import pb_studio.event_mirror.models  # noqa: F401 — регистрация моделей для autogenerate
 
 config = context.config

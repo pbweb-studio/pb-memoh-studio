@@ -124,6 +124,24 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 5 — управляющая группа (Studio, без Memoh, без исходящего Telegram в 5a)
+
+**Статус:** модели, Alembic `003_control_group`, API, интеграция с Event Mirror для `my_chat_member`, тесты `studio/tests/test_control_group.py`. **Исходящих** сообщений в Telegram в этой подфазе **нет** — только БД + политика доставки (`delivery_policy`); реальная отправка в управляющую группу — отдельный шаг (без второго бота, без смены polling/webhook; при необходимости нового Memoh-hook — ADR).
+
+| Компонент | Назначение |
+|-----------|------------|
+| `studio_chats.chat_role` | Текущая роль: `unknown`, `control_group`, `client_chat`, `project_chat`, `internal_chat`, `service_chat`. |
+| `studio_control_groups` | Назначение управляющей группы; не более одной активной записи (partial unique + логика сервиса). |
+| `studio_chat_roles` | История назначений ролей (append-only). |
+| `studio_system_notifications` | Системные уведомления по событиям (напр. `my_chat_member`); статусы `logged_only` / `pending_for_control_group_delivery`; **не** адресуются исходному клиентскому чату. |
+| `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{uuid}/role` | Админ-API; при `STUDIO_ADMIN_TOKEN` — обязательный Bearer. |
+| Audit | `control_group.set`, `control_group.chat_role_changed`, `control_group.system_notification_created`. |
+| Event Mirror | После нормализации `my_chat_member` создаётся запись `studio_system_notifications` с `payload.delivery_policy = control_group_only`. |
+
+**Тесты:** `pytest tests/test_control_group.py`; полный набор Studio — `pytest tests/`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -133,7 +151,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 2 | Response Queue Studio: модели + `QueueService` + тесты (2a); интеграция Memoh / Celery / HTTP — дальше |
 | 3 | Studio skeleton: FastAPI, Postgres, Redis, Celery, Alembic, `/health`, compose |
 | 4 | Event Mirror: 4a ingest HTTP + таблицы + нормализация; дальше — транспорт из Memoh/Telegram по ADR |
-| 5 | Управляющая группа, роли, уведомления только туда |
+| 5 | Управляющая группа: таблицы + API + system notifications из Event Mirror (**без** исходящего Telegram в 5a) |
 | 6 | Сводка «сегодня» из Studio DB |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |

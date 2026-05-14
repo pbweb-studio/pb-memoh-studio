@@ -6,57 +6,48 @@
 
 ## Текущая фаза
 
-**Фаза 4b (транспорт Memoh → Studio Event Mirror) — вариант C реализован.** Memoh по-прежнему получает Telegram `Update` как раньше; после дедупа `update_id` необязательно зеркалирует **сырой** JSON в `POST` на URL из `STUDIO_EVENTS_URL` (асинхронно, с коротким timeout). **Фаза 4a** (ingest в Studio) без изменений по смыслу.
+**Фаза 5a (управляющая группа в Studio)** — модели, API, записи системных уведомлений из Event Mirror (`my_chat_member`), политика доставки только в control group. **Исходящий Telegram** (реальная отправка в группу) **не** реализован; Memoh **не** менялся.
+
+Фазы **4b** (Memoh→Studio mirror, вариант C) и **4a** (ingest) остаются как ранее.
 
 ## Текущая цель
 
-Фаза **5 не открыта** до явного решения. Опционально: e2e Memoh + Studio с включённым зеркалом; иначе — планирование фазы 5 по отдельной задаче.
+Фаза **6 (сводки)** — не начинать до отдельной постановки. Опционально: исходящая доставка system notifications в Telegram control group (worker/Memoh) — только после ADR при необходимости hook в Memoh.
 
 ## Что уже работает
 
-- Фазы 0–4a: см. `docs/04_PROJECT_LOG.md`.
-- **4b:** зеркало в [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go), вызов в [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go).
-- **Проверка 4b закрыта (CI в агенте):** Go-тесты пакета Telegram adapter прошли (`docker run … golang:1.25` → `go test ./internal/channel/adapters/telegram/... -count=1`, образ соответствует директиве `go` в `go.mod`); Studio — `pytest tests/ -v` в Docker `python:3.12-slim`, **32 passed**; `docker compose -f docker-compose.local.yml config` — без ошибок.
-- Инжест и нормализация в Studio: `studio/pb_studio/event_mirror/`.
-- Решение по интеграции: `docs/06_DECISIONS.md` (ADR A/B/C; для raw Update утверждён и закодирован **C**).
+- Фазы 0–5a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **4b:** Memoh mirror (см. предыдущие записи журнала и `internal/channel/adapters/telegram/*`).
+- **5a:** `pb_studio/control_group/` — роли чатов, `studio_control_groups`, `studio_system_notifications`, интеграция после `my_chat_member`, админ-роуты, `STUDIO_ADMIN_TOKEN`.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**41** тест-кейс после фазы 5).
 
 ## Что ещё не готово
 
-- Полный e2e «Telegram → Memoh → Studio БД» в прод-окружении (ручная проверка/наблюдаемость по желанию).
-- Управляющая группа (Фаза 5), сводки, RAG, SLA, Studio Admin.
+- Исходящая отправка системных уведомлений в Telegram (только в control group) — не в 5a.
+- Сводки (6), SLA (8), RAG, проекты, Studio Admin.
 
-## Идентификаторы коммитов (фаза 4b)
+## Идентификаторы коммитов (история 4b)
 
-- **Реализация Go-hook (feat telegram mirror, вариант C):** `67bc573d1b5891f6cf9d3613580f59ca92200ec9`
-- **Коммит с записью результатов автоматической проверки 4b (доки + memory-bank):** `1c8f9f6c0ef1ec71e78c3dcc92879c8c3b8c2b42` (сообщение `docs: close phase 4b verification (tests documented)`).
-- **Актуальный корень ветки** (если есть только doc-follow-up поверх): `git rev-parse HEAD`.
+- **Реализация Go-hook 4b:** `67bc573d1b5891f6cf9d3613580f59ca92200ec9`
+- **Коммит записи проверки 4b в доках:** `1c8f9f6c0ef1ec71e78c3dcc92879c8c3b8c2b42`
+- **Актуальный корень ветки:** `git rev-parse HEAD`
 
-**Код Event Mirror Studio (фаза 4a, исторический якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
+**Код Event Mirror Studio (фаза 4a, якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 
-**Документация ADR (только текст, перед кодом 4b):** `60a319773fc545be147a29625e3121613002bd7f` — если отличается от HEAD с реализацией 4b, это **отдельный** коммит (тело ADR без Go-изменений).
+**ADR (только текст):** `60a319773fc545be147a29625e3121613002bd7f`
 
-## Файлы Memoh, изменённые в фазе 4b (вариант C)
+## Файлы Memoh (фаза 4b)
 
-1. [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) — после успешного прохождения дедупа: `mirrorTelegramUpdateToStudioAsync(cfg.ID, u)`.
-2. [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go) — новый модуль: POST, env, timeout, Bearer, `recover` в горутине.
-3. [`internal/channel/adapters/telegram/studio_event_mirror_test.go`](internal/channel/adapters/telegram/studio_event_mirror_test.go) — тесты зеркала.
-
-`inbound.go`, `dispatcher`, цикл polling/webhook **не** переписывались сверх минимальной вставки в адаптере.
+См. предыдущую версию контекста: `telegram.go`, `studio_event_mirror.go`, `studio_event_mirror_test.go`.
 
 ## Принятые решения
 
-- Один бот; второй Telegram-бот не вводится; Memoh не переводится на внешний gateway; схема владения getUpdates/webhook **не** менялась.
-- Бизнес-логика и нормализация — в Studio; в Memoh только транспорт JSON.
-- Response Queue в Studio **не** включается из Memoh; только существующий флаг `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES` на стороне Studio.
-- Зеркало выключается `MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED=false` (по умолчанию).
-
-## Что нельзя трогать без нового ADR
-
-- Не включать второй потребитель того же бота в обход согласованной схемы; не дублировать системные Telegram-уведомления из этого hook.
+- Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД.
+- Фаза 5a без Memoh-send; новый Memoh hook только после записи в `docs/06_DECISIONS.md` (при необходимости).
 
 ## Следующая задача
 
-- По необходимости: e2e Memoh + `studio-api` и ingest в `studio_telegram_raw_updates`. Открытие **фазы 5** — только по явной постановке (не начинать самовольно).
+- По решению продукта: доставка `pending_for_control_group_delivery` в Telegram **или** фаза 6.
 
 ## Вопросы к GPT
 

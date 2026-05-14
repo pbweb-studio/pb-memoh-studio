@@ -10,6 +10,7 @@
 | ADR интеграции TG→Studio (перед 4b) | Done |
 | 4b Транспорт Memoh → ingest (вариант C) | Done |
 | 4b Проверка (go test / pytest / compose config) | Done |
-| 5+ | Pending |
+| 5a Управляющая группа (Studio) | Done |
+| 6+ Сводки и прочее | Pending |
 
-**Последнее:** закрыта автоматическая проверка 4b; готовность к фазе 5 — только после явного решения, не автоматически.
+**Последнее:** фаза 5a — control group API, роли, system notifications + Event Mirror; тесты Studio 41 passed.
