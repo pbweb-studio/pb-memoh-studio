@@ -54,6 +54,7 @@ def main() -> None:
     if not password.strip():
         raise SystemExit("empty admin password in config")
 
+    hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("ascii")
     escaped = hashed.replace("'", "''")
     sql = f"UPDATE users SET password_hash = '{escaped}' WHERE username = 'admin';\n"
 
