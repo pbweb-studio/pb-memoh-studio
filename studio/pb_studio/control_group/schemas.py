@@ -43,3 +43,29 @@ class SystemNotificationOut(BaseModel):
     payload: dict[str, Any] | None
 
     model_config = {"from_attributes": True}
+
+
+class SystemNotificationAdminOut(BaseModel):
+    id: UUID
+    kind: str
+    source_telegram_chat_id: int
+    source_studio_chat_id: UUID | None
+    status: str
+    title: str | None
+    body: str | None
+    payload: dict[str, Any] | None
+    retry_count: int
+    last_error: str | None
+    delivered_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class DeliverPendingResult(BaseModel):
+    examined: int
+    delivered: int
+    failed_retryable: int
+    failed_permanent: int
+    skipped: int

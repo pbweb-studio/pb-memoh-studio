@@ -1,9 +1,9 @@
 # Текущая задача
 
-## После фазы 5a (управляющая группа в Studio)
+## После фазы 5b (outbound system notifications)
 
-**Статус:** таблицы, API, system notifications из `my_chat_member`, политика «только control group»; **без** реальной отправки в Telegram и **без** правок Memoh.
+**Статус:** доставка записей `studio_system_notifications` в активную control group через Bot API `sendMessage` (при `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED=true` и валидном `TELEGRAM_BOT_TOKEN`); Celery-задача и админ-эндпоинты; Memoh не менялся.
 
-**Следующий шаг (не начинать без задачи):** фаза **6** (сводки) **или** подфаза доставки `pending_for_control_group_delivery` в Telegram (возможен ADR на Memoh hook).
+**Следующий шаг (не начинать без задачи):** фаза **6** (сводки).
 
-**Ограничение:** не слать системные уведомления в client/project чаты; не включать второй бот.
+**Ограничение:** не слать системные уведомления в client/project/internal/service чаты; не включать второй бот; не запускать polling/webhook из Studio.

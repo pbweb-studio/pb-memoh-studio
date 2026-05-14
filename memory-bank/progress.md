@@ -11,6 +11,7 @@
 | 4b Транспорт Memoh → ingest (вариант C) | Done |
 | 4b Проверка (go test / pytest / compose config) | Done |
 | 5a Управляющая группа (Studio) | Done |
+| 5b Outbound system notifications → control group | Done |
 | 6+ Сводки и прочее | Pending |
 
-**Последнее:** фаза 5a — control group API, роли, system notifications + Event Mirror; тесты Studio 41 passed.
+**Последнее:** фаза 5b — sendMessage delivery, Celery, admin notifications API, pytest 48 passed (Docker).

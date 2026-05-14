@@ -44,7 +44,23 @@ class Settings(BaseSettings):
     )
     studio_admin_token: str | None = Field(
         default=None,
-        description="STUDIO_ADMIN_TOKEN — если задан, админ-роуты (/control-group, /chats) требуют Authorization: Bearer …",
+        description="STUDIO_ADMIN_TOKEN — если задан, админ-роуты требуют Authorization: Bearer …",
+    )
+    telegram_bot_token: str | None = Field(
+        default=None,
+        description="TELEGRAM_BOT_TOKEN — Bot API sendMessage (Studio worker/API); без polling/webhook из Studio",
+    )
+    studio_system_notifications_enabled: bool = Field(
+        default=False,
+        description="STUDIO_SYSTEM_NOTIFICATIONS_ENABLED — outbound доставка system notifications в control group",
+    )
+    studio_telegram_send_timeout_ms: int = Field(
+        default=3000,
+        description="STUDIO_TELEGRAM_SEND_TIMEOUT_MS",
+    )
+    studio_system_notification_max_retries: int = Field(
+        default=3,
+        description="STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES — после исчерпания помечается failed_permanent",
     )
 
     @property

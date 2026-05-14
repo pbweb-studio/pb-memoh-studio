@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, String, Text, text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from pb_studio.response_queue.models import Base, JSONCompat
@@ -59,6 +59,7 @@ class StudioSystemNotification(Base):
     __table_args__ = (
         Index("ix_studio_sys_notif_status", "status"),
         Index("ix_studio_sys_notif_source_tg", "source_telegram_chat_id"),
+        Index("ix_studio_sys_notif_status_created", "status", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -77,4 +78,10 @@ class StudioSystemNotification(Base):
     body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     payload: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONCompat, nullable=True)
     status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
+    )

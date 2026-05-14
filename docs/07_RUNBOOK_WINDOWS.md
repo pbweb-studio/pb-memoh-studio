@@ -72,6 +72,19 @@ go test ./internal/channel/adapters/telegram/... -count=1
 curl -X POST http://127.0.0.1:8000/control-group/set -H "Content-Type: application/json" -d "{\"telegram_chat_id\": -1001234567890}"
 ```
 
+## Studio: доставка system notifications (фаза 5b)
+
+- **`TELEGRAM_BOT_TOKEN`** — тот же бот, что у Memoh; Studio использует его **только** для исходящего `sendMessage` (нет второго бота, нет `getUpdates`/webhook со стороны Studio).
+- **`STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`**: по умолчанию `false`; пока `false` или токен пустой — батч доставки не отправляет сообщения.
+- **`STUDIO_TELEGRAM_SEND_TIMEOUT_MS`**, **`STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES`** — таймаут HTTP и лимит попыток для `failed_retryable` → `failed_permanent`.
+- Периодический запуск: Celery-задача `deliver_pending_system_notifications` (настроить beat/cron по политике деплоя) **или** ручной вызов:
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/notifications/system/deliver-pending" -H "Authorization: Bearer %STUDIO_ADMIN_TOKEN%"
+```
+
+- Список уведомлений (диагностика): `GET /notifications/system?limit=50` с тем же Bearer (если задан `STUDIO_ADMIN_TOKEN`).
+
 ## Полезные пути
 
 - Документация: `docs/`.

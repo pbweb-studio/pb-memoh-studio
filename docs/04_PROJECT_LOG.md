@@ -63,3 +63,12 @@
 - API: `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{uuid}/role`; опционально `STUDIO_ADMIN_TOKEN` (Bearer).
 - Тесты: `pytest tests/` (включая `test_control_group.py`); `docker compose -f docker-compose.local.yml config` — ok.
 - Полный SHA коммита: `git rev-parse HEAD`.
+
+## 2026-05-14 — Фаза 5b (Studio: outbound system notifications → control group)
+
+- Статус: исходящая доставка через Telegram Bot API `sendMessage` (`pb_studio/control_group/telegram_outbound.py`, `system_notification_delivery.py`); **тот же** `TELEGRAM_BOT_TOKEN`; **без** `getUpdates`/webhook из Studio; Memoh **не** менялся.
+- Alembic `004_system_notification_delivery` (retry/last_error/delivered_at/updated_at, индекс по статусу).
+- Celery: `deliver_pending_system_notifications`; API под `STUDIO_ADMIN_TOKEN`: `GET /notifications/system`, `POST /notifications/system/deliver-pending`.
+- Env: `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`, `STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES` (см. `.env.example`).
+- Тесты: `pytest tests/` (включая `test_system_notification_delivery.py`); `docker compose -f docker-compose.local.yml config`.
+- Полный SHA фиксирующего коммита: `git rev-parse HEAD` на `pb-studio/main`.

@@ -16,4 +16,5 @@ class SystemNotificationStatus(StrEnum):
     LOGGED_ONLY = "logged_only"
     PENDING_FOR_CONTROL_GROUP_DELIVERY = "pending_for_control_group_delivery"
     DELIVERED_TO_CONTROL_GROUP = "delivered_to_control_group"
-    DELIVERY_FAILED = "delivery_failed"
+    FAILED_RETRYABLE = "failed_retryable"
+    FAILED_PERMANENT = "failed_permanent"

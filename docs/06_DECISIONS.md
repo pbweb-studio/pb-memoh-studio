@@ -10,7 +10,7 @@
 ## Продукт / платформа
 
 - Один Telegram-бот; второй бот не вводим.
-- Системные уведомления в Telegram — **только** в настроенную управляющую группу; если группа не задана — только запись в Studio DB (`studio_system_notifications`, статус `logged_only`). Исходящая отправка в Telegram не делается в **фазе 5a** (только контракт и политика); без нового ADR не добавляем Memoh/Telegram hook для send.
+- Системные уведомления в Telegram — **только** в настроенную управляющую группу; если группа не задана — только запись в Studio DB (`studio_system_notifications`, статус `logged_only`). **Фаза 5a:** контракт и политика без исходящего API. **Фаза 5b:** исходящая доставка только в control group через Bot API `sendMessage` (см. раздел «Фаза 5b»); без нового ADR не добавляем Memoh hook для send.
 - Бизнес-данные в **Studio Layer** (Postgres), не в memory Memoh как в БД.
 - SLA — отдельный монитор (Celery/Beat), **не** через heartbeat Memoh.
 - Event Mirror обязателен; Response Queue обязателен; интеграция Memoh ↔ Studio через **MCP/API**.
@@ -31,13 +31,22 @@
 - Опциональный enqueue в Response Queue: только при `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES=true` и только для пользовательских text/caption в private/group/supergroup; по умолчанию выключено (см. `docs/03_IMPLEMENTATION_PLAN.md`).
 - Поставка событий из реального Telegram/Memoh в этот endpoint — отдельная подфаза (4b+), после выбора A/B/C для точки интеграции.
 
-## Фаза 5 — управляющая группа (Studio 5a)
+## Фаза 5a — управляющая группа (Studio)
 
 - Реализация: `studio/pb_studio/control_group/`, расширение `studio_chats.chat_role`, таблицы `studio_control_groups`, `studio_chat_roles`, `studio_system_notifications`, Alembic `003_control_group`.
 - **Без** Memoh-изменений; **без** исходящего Telegram API в 5a; второй бот и смена polling/webhook **не** используются.
 - Системные уведомления по `my_chat_member` после Event Mirror: запись в БД; при активной управляющей группе статус `pending_for_control_group_delivery`, иначе `logged_only`; доставка **не** планируется в исходный чат события (`payload.delivery_policy = control_group_only`).
 - Админ-API: `GET /control-group`, `POST /control-group/set`, `GET /chats`, `GET /chats/unassigned`, `POST /chats/{studio_chat_uuid}/role`; при `STUDIO_ADMIN_TOKEN` — Bearer обязателен.
 - Сводки (6), SLA (8), RAG, Studio Admin — вне scope.
+
+## Фаза 5b — outbound: system notifications → Telegram control group (Studio)
+
+- **Транспорт:** Telegram Bot API **только** `sendMessage` (HTTP, например `httpx`); **без** `getUpdates`, **без** webhook из Studio; **без** второго бота — тот же `TELEGRAM_BOT_TOKEN`, что и у остального контура (Memoh остаётся владельцем входящего потока).
+- **Куда:** исключительно `chat_id` **активной** записи `studio_control_groups` → связанный `studio_chats` с `chat_role = control_group`. Не в исходный чат события; не в `client_chat` / `project_chat` / `internal_chat` / `service_chat` (роль destination проверяется перед отправкой).
+- **Флаги:** `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED` (по умолчанию `false`); без включения и без токена — доставка не выполняется, строки в БД не теряются.
+- **Надёжность:** при ошибках API — статусы `failed_retryable` / `failed_permanent`, `retry_count`, `last_error`; идемпотентный батч; повторный запуск не дублирует уже `delivered_to_control_group`.
+- **Аудит:** попытки доставки фиксируются в `studio_audit_log` (`control_group.system_notification_delivered`, `control_group.system_notification_delivery_failed`, `control_group.system_notification_delivery_blocked`, `control_group.system_notification_delivery_refused` и т.д.); в payload логов **не** попадает сырой токен (редакция).
+- **Операции:** Celery-задача `deliver_pending_system_notifications`; опционально `GET /notifications/system`, `POST /notifications/system/deliver-pending` под `STUDIO_ADMIN_TOKEN`.
 
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
