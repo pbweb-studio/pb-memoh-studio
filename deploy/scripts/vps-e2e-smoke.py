@@ -12,6 +12,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 
 REPO = Path(sys.argv[1] if len(sys.argv) > 1 else "/opt/pb-studio/pb-memoh-studio")
@@ -71,6 +72,21 @@ def curl_json(method: str, url: str, token: str | None, body: dict | None = None
 def curl_code(method: str, url: str, token: str | None, body: dict | None = None, accept: str | None = None) -> int:
     c, _ = curl_json(method, url, token, body, accept)
     return c
+
+
+def curl_http_code_no_redirect(url: str, accept: str | None = None) -> int | None:
+    """Первый HTTP-код без следования редиректам (curl на хосте VPS)."""
+    args = ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}"]
+    if accept:
+        args += ["-H", f"Accept: {accept}"]
+    args.append(url)
+    rc, out = sh(*args, timeout=60)
+    if rc != 0:
+        return None
+    try:
+        return int((out or "").strip())
+    except ValueError:
+        return None
 
 
 def main() -> int:
@@ -156,8 +172,12 @@ def main() -> int:
     al = curl_code("GET", f"{BASE}/admin/login", None, accept="text/html")
     out("PASS" if al == 200 else "FAIL", "2_admin_login", str(al))
 
-    ac = curl_code("GET", f"{BASE}/admin/chats", None, accept="text/html")
-    out("PASS" if ac in (301, 302, 307) else "FAIL", "2_admin_chats_unauth_redirect", str(ac))
+    ac = curl_http_code_no_redirect(f"{BASE}/admin/chats", accept="text/html")
+    out(
+        "PASS" if ac in (301, 302, 303, 307, 308) else "FAIL",
+        "2_admin_chats_unauth_redirect",
+        str(ac) if ac is not None else "curl_failed",
+    )
 
     ab = curl_code("GET", f"{BASE}/admin/chats", token, accept="text/html")
     out("PASS" if ab == 200 else "FAIL", "2_admin_chats_bearer", str(ab))
@@ -254,9 +274,8 @@ def main() -> int:
         c = curl_code("GET", f"{BASE}{p}", token, accept="text/html")
         out("PASS" if c == 200 else "FAIL", f"4_filter_{p}", str(c))
 
-    import datetime
-
-    ts = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    # slug: только [a-z0-9_-] — см. ProjectCreate.pattern (литеральный «z»; не использовать «%s» в шаблоне strftime).
+    ts = datetime.now(UTC).strftime("%Y%m%dt%H%M%S") + "z"
     slug = f"smoke-project-{ts}"
     c, body = curl_json(
         "POST",
@@ -487,6 +506,8 @@ def main() -> int:
         "--rm",
         "--no-deps",
         "studio-api",
+        "python",
+        "-m",
         "pytest",
         "tests/",
         "-q",
@@ -494,7 +515,12 @@ def main() -> int:
         cwd=REPO,
         timeout=900,
     )
-    out("PASS" if rc_pt == 0 else "FAIL", "14_pytest", f"exit={rc_pt}")
+    if rc_pt == 0:
+        out("PASS", "14_pytest", "exit=0")
+    elif "No module named pytest" in pt_out:
+        out("SKIP", "14_pytest", "prod image: pytest not installed (run tests in CI/dev)")
+    else:
+        out("FAIL", "14_pytest", f"exit={rc_pt}")
 
     if pid:
         out("ENTITY", "project", f"id={pid};slug={slug}")
