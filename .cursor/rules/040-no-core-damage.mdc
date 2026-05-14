@@ -1,0 +1,13 @@
+---
+description: Не ломать ядро Memoh
+globs: "**/*"
+alwaysApply: true
+---
+
+# Ядро Memoh
+
+- Не переписывать Memoh без **доказанной** необходимости и записи в `docs/06_DECISIONS.md`.
+- Не кастомить heartbeat под бизнес-логику.
+- Интеграции студии предпочтительно **рядом** (Studio API, webhooks, MCP), а не форк ядра «на будущее».
+
+Исключения только с явным ADR в `docs/06_DECISIONS.md`.

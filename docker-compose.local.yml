@@ -1,0 +1,43 @@
+# Локальная инфраструктура Studio Layer (не трогает docker-compose.yml Memoh).
+# Запуск: docker compose -f docker-compose.local.yml up -d
+# Согласуйте POSTGRES_* и REDIS_URL с .env.local
+
+name: pb-studio-local
+
+services:
+  studio-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pb-studio-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pb_studio}
+      POSTGRES_USER: ${POSTGRES_USER:-pb_studio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pb_studio_dev}
+    ports:
+      - "${STUDIO_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pb_studio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pb_studio} -d ${POSTGRES_DB:-pb_studio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  studio-redis:
+    image: redis:7-alpine
+    container_name: pb-studio-redis
+    ports:
+      - "${STUDIO_REDIS_PORT:-6380}:6379"
+    volumes:
+      - pb_studio_redisdata:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pb_studio_pgdata:
+  pb_studio_redisdata:

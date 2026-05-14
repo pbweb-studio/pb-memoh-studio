@@ -1,0 +1,15 @@
+---
+description: Memory Bank как контекст проекта
+globs: "**/*"
+alwaysApply: true
+---
+
+# Memory Bank
+
+Перед существенными изменениями читай:
+
+- `memory-bank/activeContext.md`
+- `memory-bank/systemPatterns.md`
+- `memory-bank/techContext.md`
+
+После устойчивого этапа обновляй `activeContext.md` и `progress.md` согласованно с `docs/AI_CONTEXT.md` и `docs/04_PROJECT_LOG.md`.

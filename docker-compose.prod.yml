@@ -1,0 +1,39 @@
+# Продакшен-скелет (Фаза 14). Реальные образы/секреты/Caddyfile — позже.
+# Деплой только с явным подтверждением владельца.
+# Домен: memo.pb-web.ru
+
+name: pb-memoh-studio-prod
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: pb-memoh-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - memoh-placeholder
+      - studio-api-placeholder
+    restart: unless-stopped
+
+  memoh-placeholder:
+    image: alpine:3.20
+    container_name: pb-memoh-core-placeholder
+    command: ["sleep", "infinity"]
+    restart: "no"
+
+  studio-api-placeholder:
+    image: alpine:3.20
+    container_name: pb-studio-api-placeholder
+    command: ["sleep", "infinity"]
+    restart: "no"
+
+  # studio-worker, studio-beat, postgres, redis — добавить при готовности образов и сетей
+
+volumes:
+  caddy_data:
+  caddy_config:

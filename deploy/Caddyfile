@@ -1,0 +1,6 @@
+# Заглушка для Фазы 14. Заменить на реальные reverse_proxy к memoh и studio-api.
+# Домен: memo.pb-web.ru
+
+:80 {
+	respond "pb-memoh-studio prod skeleton — настроить Caddy после деплоя"
+}
