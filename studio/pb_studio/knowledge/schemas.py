@@ -57,6 +57,11 @@ class KnowledgeVersionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class KnowledgeUploadOut(BaseModel):
+    document: KnowledgeDocumentOut
+    version: KnowledgeVersionOut
+
+
 class KnowledgeVersionTextBody(BaseModel):
     text: str = ""
     defer_parse: bool = False

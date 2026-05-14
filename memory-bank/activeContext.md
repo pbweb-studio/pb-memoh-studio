@@ -1,7 +1,7 @@
 # Active context
 
-**Сейчас:** фаза **10e** в Studio — KB RAG MVP: `STUDIO_KB_RAG_ENABLED`, OpenAI-compatible **chat completion** по результатам vector search; `POST /knowledge/ask`; `/kb_ask` только из control group. Memoh не менялся.
+**Сейчас:** фаза **10f** в Studio — KB HTTP upload (`/knowledge/documents/upload`, `.../versions/upload`), опциональный **Docling** для PDF/DOCX, `/kb_import_help`; volume в compose для `STUDIO_KB_STORAGE_DIR`. Memoh не менялся.
 
 **Ветка:** `pb-studio/main`.
 
-**Следующий шаг:** **6+** (LLM для сводок и пр.) или **10+** (Docling, расширенный RAG) — по отдельной постановке.
+**Следующий шаг:** **6+** (LLM для сводок и пр.) или расширение **10+** (импорт из Telegram, полный Docling pipeline) — по отдельной постановке.

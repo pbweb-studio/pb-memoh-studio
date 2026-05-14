@@ -209,7 +209,7 @@
 
 ## Фаза 10b — KB parse pipeline (выполнено)
 
-- Pending-версии (`status=pending`) обрабатываются детерминированным парсером в Studio: `text/plain`, `text/markdown` → чанки; PDF/DOCX и прочие «бинарные» MIME без текстового тела → `failed_unsupported` без падения батча.
+- Pending-версии (`status=pending`) обрабатываются детерминированным парсером в Studio: `text/plain`, `text/markdown` → чанки; PDF/DOCX в БД **без** загруженного файла на диск (legacy defer) → `failed_unsupported` без падения батча. **Фаза 10f:** HTTP-upload с `kb_storage_relpath` + опциональный Docling — см. отдельную секцию 10f.
 - Повторный `parse` для версии в `parsed` идемпотентен (чанки не дублируются).
 - Celery `parse_pending_knowledge_documents` и админ-`POST /knowledge/parse-pending` не расширяют SLA и не трогают Memoh.
 
@@ -233,3 +233,10 @@
 - Админ **`POST /knowledge/ask`** под `STUDIO_ADMIN_TOKEN`; **`/kb_ask`** — тот же Event Mirror + ACL, ответы только в active control group (не в client/project/internal/service чаты).
 - Ошибки и ответы пользователю проходят redaction chat API key (аналогично embeddings).
 - **Без** изменений Memoh, второго бота, polling/webhook Studio, Studio Admin UI.
+
+## Фаза 10f — KB HTTP upload + Docling (выполнено)
+
+- **`POST /knowledge/documents/upload`** и **`POST /knowledge/documents/{id}/versions/upload`** под `STUDIO_ADMIN_TOKEN` + `STUDIO_KB_ENABLED`; лимиты `STUDIO_KB_UPLOAD_MAX_BYTES`, whitelist `STUDIO_KB_ALLOWED_EXTENSIONS`; бинарники в `STUDIO_KB_STORAGE_DIR` (по умолчанию `storage/kb` или `/app/storage/kb` в compose с volume).
+- **Docling:** при `STUDIO_KB_DOCLING_ENABLED=true` и установленном пакете `docling` (extras `[docling]`) — конвертация PDF/DOCX в markdown; при выключенном флаге или отсутствии пакета — `failed_unsupported`; ошибки конвертации — `failed` с redacted `last_error` (`redact_kb_import_error`).
+- **Control group:** `/kb_import_help` (без загрузки файла через Telegram в этой фазе).
+- **`python-multipart`** в основных зависимостях пакета для multipart API.

@@ -54,6 +54,10 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_CHAT_TIMEOUT_MS",
         "STUDIO_KB_RAG_TOP_K",
         "STUDIO_KB_RAG_MAX_CONTEXT_CHARS",
+        "STUDIO_KB_DOCLING_ENABLED",
+        "STUDIO_KB_UPLOAD_MAX_BYTES",
+        "STUDIO_KB_ALLOWED_EXTENSIONS",
+        "STUDIO_KB_STORAGE_DIR",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

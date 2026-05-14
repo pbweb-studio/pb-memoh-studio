@@ -185,3 +185,9 @@
 - `STUDIO_KB_RAG_ENABLED`, `STUDIO_KB_CHAT_*`, `STUDIO_KB_RAG_TOP_K`, `STUDIO_KB_RAG_MAX_CONTEXT_CHARS`; модуль `pb_studio/knowledge/rag.py` (vector search → контекст → `POST …/chat/completions`); `POST /knowledge/ask` под `STUDIO_ADMIN_TOKEN`; `/kb_ask`, `/kb_help`; при пустом retrieval — фиксированный ответ «не найдено в базе знаний» без вызова LLM; redaction chat API key в ошибках control/API.
 - **Без** Memoh, второго бота, polling/webhook Studio, Studio Admin UI; ответы `/kb_ask` только в active control group.
 - Тесты: `studio/tests/test_knowledge_phase10e.py`; полный `pytest tests/` (**229** passed); `docker compose -f docker-compose.local.yml config`; `docker run` + `pytest tests/` (см. журнал проверок).
+
+## 2026-05-14 — Фаза 10f (Studio: KB HTTP upload + Docling import)
+
+- `POST /knowledge/documents/upload`, `POST /knowledge/documents/{id}/versions/upload` (multipart); `STUDIO_KB_DOCLING_ENABLED`, `STUDIO_KB_UPLOAD_MAX_BYTES`, `STUDIO_KB_ALLOWED_EXTENSIONS`, `STUDIO_KB_STORAGE_DIR`; модули `upload_io.py`, `docling_convert.py`; расширение `parsers.py` + сервис `ingest_*`; PDF/DOCX на диск и через Docling при доступности; иначе `failed_unsupported`; redacted `last_error`; `/kb_import_help`; compose volume `pb_studio_kb_uploads`; зависимость `python-multipart`.
+- **Без** Memoh, Studio Admin UI, импорта файлов через Telegram-бота в этой фазе; логика RAG 10e не менялась.
+- Тесты: `studio/tests/test_knowledge_phase10f.py`; полный `pytest tests/` (**238** passed); `docker compose -f docker-compose.local.yml config`; Docker `python:3.12-slim` + `pytest tests/`.

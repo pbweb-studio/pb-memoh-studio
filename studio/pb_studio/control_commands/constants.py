@@ -37,6 +37,7 @@ class ControlCommandName:
     KB_SEARCH = "kb_search"
     KB_ASK = "kb_ask"
     KB_ADD = "kb_add"
+    KB_IMPORT_HELP = "kb_import_help"
 
 
 # Лимиты UX для Telegram sendMessage (оставляем запас под «обрезано»)
@@ -77,6 +78,21 @@ PROJECT_HELP_TEXT = """Команды проектов (Studio, только и�
 База знаний: /kb_help
 """
 
+KB_IMPORT_HELP_TEXT = """Импорт файлов в Knowledge Base (Studio, только HTTP; без загрузки через Telegram-бота в этой фазе):
+
+Под STUDIO_ADMIN_TOKEN:
+• POST /knowledge/documents/upload — multipart: поле file, опционально title, project_id (form)
+• POST /knowledge/documents/{document_uuid}/versions/upload — новая версия из файла
+
+Расширения задаёт STUDIO_KB_ALLOWED_EXTENSIONS (по умолчанию txt,md,pdf,docx). Макс. размер: STUDIO_KB_UPLOAD_MAX_BYTES.
+Файлы PDF/DOCX: при STUDIO_KB_DOCLING_ENABLED=true и установленном пакете docling — конвертация в текст; иначе версия получит статус failed_unsupported.
+Текстовые .txt / .md — текущий plain/markdown parser.
+Хранилище бинарников: STUDIO_KB_STORAGE_DIR (по умолчанию каталог storage/kb от рабочей директории).
+
+Другие команды KB: /kb_help
+"""
+
+
 KB_HELP_TEXT = """Команды базы знаний (Studio, только из управляющей группы):
 /kb_help — этот текст
 /kb_list — список документов KB
@@ -86,6 +102,7 @@ KB_HELP_TEXT = """Команды базы знаний (Studio, только и�
 /kb_search [--project <slug>] <запрос> — поиск чанков по эмбеддингам (нужен STUDIO_KB_EMBEDDINGS_ENABLED=true)
 /kb_ask [--project <slug>] <вопрос> — ответ по KB через retrieval + chat completion (нужны STUDIO_KB_RAG_ENABLED=true и настройки STUDIO_KB_CHAT_*)
 /kb_add <title> | <text> — новый документ (manual) и первая версия из текста (разбиение на чанки в Studio)
+/kb_import_help — импорт файлов в KB по HTTP (upload), расширения и Docling
 
 Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.
 """

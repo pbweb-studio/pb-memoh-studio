@@ -26,6 +26,13 @@ from pb_studio.knowledge.models import (
     StudioKnowledgeDocumentVersion,
 )
 from pb_studio.knowledge.parsers import parse_document_version_content
+from pb_studio.knowledge.upload_io import (
+    extension_from_filename,
+    mime_for_extension,
+    redact_kb_import_error,
+    safe_upload_basename,
+    save_kb_binary_upload,
+)
 from pb_studio.projects.models import StudioProject
 
 
@@ -181,6 +188,10 @@ async def list_versions(session: AsyncSession, document_id: UUID) -> list[Studio
 
 def pending_import_content_hash(document_id: UUID, version_number: int, text: str, mime: str | None) -> str:
     return content_sha256_hex(f"{document_id}\n{version_number}\n{mime or ''}\n{text}")
+
+
+def upload_binary_content_hash(document_id: UUID, version_number: int, file_sha256_hex: str, mime: str | None) -> str:
+    return content_sha256_hex(f"{document_id}\n{version_number}\n{mime or ''}\n{file_sha256_hex}")
 
 
 async def _delete_chunks_for_version(session: AsyncSession, version_id: UUID) -> None:
@@ -380,6 +391,156 @@ async def create_document_version_pending_import(
     return ver, True
 
 
+async def _create_pending_binary_version(
+    session: AsyncSession,
+    document_id: UUID,
+    *,
+    data: bytes,
+    mime: str,
+    original_filename: str,
+    extension: str,
+    settings: Settings,
+) -> tuple[StudioKnowledgeDocumentVersion, bool]:
+    doc = await session.get(StudioKnowledgeDocument, document_id)
+    if doc is None:
+        raise ValueError("document not found")
+    if doc.status == KnowledgeDocumentStatus.ARCHIVED:
+        raise ValueError("document is archived")
+
+    max_ver = await session.scalar(
+        select(func.max(StudioKnowledgeDocumentVersion.version_number)).where(
+            StudioKnowledgeDocumentVersion.document_id == document_id
+        )
+    )
+    next_num = int(max_ver or 0) + 1
+    file_sha = hashlib.sha256(data).hexdigest()
+    h = upload_binary_content_hash(document_id, next_num, file_sha, mime)
+    existing = await session.scalar(
+        select(StudioKnowledgeDocumentVersion).where(
+            StudioKnowledgeDocumentVersion.document_id == document_id,
+            StudioKnowledgeDocumentVersion.content_hash == h,
+        )
+    )
+    if existing is not None:
+        return existing, False
+
+    rel = save_kb_binary_upload(
+        settings,
+        document_id=document_id,
+        version_number=next_num,
+        original_filename=original_filename,
+        data=data,
+        extension=extension,
+    )
+    meta: dict[str, Any] = {
+        "mime_type": mime,
+        "kb_storage_relpath": rel,
+        "original_filename": safe_upload_basename(original_filename),
+        "byte_sha256": file_sha,
+    }
+    ver = StudioKnowledgeDocumentVersion(
+        document_id=document_id,
+        version_number=next_num,
+        content_text="",
+        content_hash=h,
+        status=KnowledgeVersionStatus.PENDING,
+        metadata_json=meta,
+    )
+    session.add(ver)
+    await session.flush()
+    return ver, True
+
+
+async def ingest_file_upload_to_document(
+    session: AsyncSession,
+    document_id: UUID,
+    *,
+    filename: str,
+    data: bytes,
+    settings: Settings,
+) -> tuple[StudioKnowledgeDocumentVersion, bool]:
+    ext = extension_from_filename(filename)
+    if not ext:
+        raise ValueError("missing file extension")
+    if ext not in settings.studio_kb_allowed_extensions_set:
+        raise ValueError(f"extension not allowed: {ext}")
+    if len(data) > settings.studio_kb_upload_max_bytes:
+        raise ValueError("file too large")
+
+    mime = mime_for_extension(ext)
+
+    if ext in ("txt", "md"):
+        try:
+            body = data.decode("utf-8")
+        except UnicodeDecodeError:
+            body = data.decode("utf-8", errors="replace")
+        if not body.strip():
+            raise ValueError("empty file")
+        ver, created = await create_document_version_pending_import(
+            session,
+            document_id,
+            body,
+            settings,
+            mime_type=mime,
+            metadata_json={"original_filename": safe_upload_basename(filename)},
+        )
+    else:
+        ver, created = await _create_pending_binary_version(
+            session,
+            document_id,
+            data=data,
+            mime=mime,
+            original_filename=filename,
+            extension=ext,
+            settings=settings,
+        )
+
+    if not created:
+        return ver, False
+
+    await parse_document_version(session, ver.id, settings)
+    await session.refresh(ver)
+    return ver, True
+
+
+async def ingest_new_document_from_upload(
+    session: AsyncSession,
+    *,
+    title: str,
+    project_id: UUID | None,
+    filename: str,
+    data: bytes,
+    settings: Settings,
+) -> tuple[StudioKnowledgeDocument, StudioKnowledgeDocumentVersion, bool]:
+    ext = extension_from_filename(filename)
+    if not ext or ext not in settings.studio_kb_allowed_extensions_set:
+        raise ValueError(f"extension not allowed: {ext or '?'}")
+    if len(data) > settings.studio_kb_upload_max_bytes:
+        raise ValueError("file too large")
+    meta_upload = {"upload_original_filename": safe_upload_basename(filename)}
+    doc_title = (title or "").strip() or safe_upload_basename(filename)
+    doc = await create_document(
+        session,
+        title=doc_title,
+        source_type="file",
+        project_id=project_id,
+        metadata_json=meta_upload,
+    )
+    try:
+        ver, created = await ingest_file_upload_to_document(
+            session,
+            doc.id,
+            filename=filename,
+            data=data,
+            settings=settings,
+        )
+    except Exception:
+        await session.delete(doc)
+        await session.flush()
+        raise
+    return doc, ver, created
+
+
 async def parse_document_version(
     session: AsyncSession,
     version_id: UUID,
@@ -398,7 +559,7 @@ async def parse_document_version(
         raise ValueError("document is archived")
 
     await _delete_chunks_for_version(session, ver.id)
-    outcome = parse_document_version_content(document=doc, version=ver)
+    outcome = parse_document_version_content(document=doc, version=ver, settings=settings)
 
     if outcome.unsupported or not outcome.ok:
         ver.status = (
@@ -406,7 +567,7 @@ async def parse_document_version(
             if outcome.unsupported
             else KnowledgeVersionStatus.FAILED
         )
-        ver.last_error = (outcome.error_message or "parse failed")[:4000]
+        ver.last_error = redact_kb_import_error(outcome.error_message or "parse failed")[:4000]
         ver.parsed_at = None
         ver.parser_name = outcome.parser_name
         ver.parser_version = outcome.parser_version
@@ -425,7 +586,7 @@ async def parse_document_version(
         )
     except Exception as exc:  # noqa: BLE001
         ver.status = KnowledgeVersionStatus.FAILED
-        ver.last_error = str(exc)[:4000]
+        ver.last_error = redact_kb_import_error(str(exc))[:4000]
         ver.parsed_at = None
         await session.flush()
         raise

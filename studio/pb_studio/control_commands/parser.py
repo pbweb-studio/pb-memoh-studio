@@ -182,6 +182,14 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_help takes no arguments"})
         return ParsedControlCommand(ControlCommandName.KB_HELP, {})
 
+    if cmd == "/kb_import_help":
+        if rest:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_import_help takes no arguments"},
+            )
+        return ParsedControlCommand(ControlCommandName.KB_IMPORT_HELP, {})
+
     if cmd == "/kb_list":
         if rest:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_list takes no arguments"})

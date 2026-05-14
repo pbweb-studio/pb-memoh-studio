@@ -28,6 +28,7 @@
 | 10c KB embeddings + pgvector search (no LLM/RAG answers) | Done |
 | 10d KB external OpenAI-compatible embedding provider | Done |
 | 10e KB RAG question answering MVP (ask API + /kb_ask) | Done |
+| 10f KB HTTP upload + optional Docling (pdf/docx) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10e — RAG по KB (retrieval + chat completion), `/knowledge/ask`, `/kb_ask`, redaction chat key; pytest **229** passed; compose config ok; Docker `python:3.12-slim` + `pytest tests/`.
+**Последнее:** фаза 10f — multipart upload в KB, Docling опционально, storage volume в compose, `python-multipart`; pytest **238** passed; compose config ok; Docker + `pytest tests/`.

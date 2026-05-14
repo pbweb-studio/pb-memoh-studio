@@ -27,6 +27,7 @@ class KnowledgeParserName:
     PLAIN = "plain_text"
     MARKDOWN = "markdown"
     PLACEHOLDER = "placeholder"
+    DOCLING = "docling"
 
 
 # Размерность колонки vector в миграции 014 (должна совпадать с STUDIO_KB_EMBEDDING_DIM по умолчанию).

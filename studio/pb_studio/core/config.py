@@ -223,6 +223,24 @@ class Settings(BaseSettings):
         le=100_000,
         description="STUDIO_KB_RAG_MAX_CONTEXT_CHARS — лимит символов контекста из чанков",
     )
+    studio_kb_docling_enabled: bool = Field(
+        default=False,
+        description="STUDIO_KB_DOCLING_ENABLED — парсинг PDF/DOCX через Docling (если пакет установлен)",
+    )
+    studio_kb_upload_max_bytes: int = Field(
+        default=10_485_760,
+        ge=64,
+        le=200_000_000,
+        description="STUDIO_KB_UPLOAD_MAX_BYTES — макс. размер multipart upload",
+    )
+    studio_kb_allowed_extensions: str = Field(
+        default="txt,md,pdf,docx",
+        description="STUDIO_KB_ALLOWED_EXTENSIONS — CSV расширений без точки (нижний регистр)",
+    )
+    studio_kb_storage_dir: str | None = Field(
+        default=None,
+        description="STUDIO_KB_STORAGE_DIR — корень для сохранения загруженных бинарников (pdf/docx); пусто = storage/kb от cwd",
+    )
 
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:
@@ -239,6 +257,25 @@ class Settings(BaseSettings):
             except ValueError:
                 continue
         return frozenset(ids)
+
+    @property
+    def studio_kb_allowed_extensions_set(self) -> frozenset[str]:
+        raw = (self.studio_kb_allowed_extensions or "").strip().lower()
+        out: set[str] = set()
+        for part in re.split(r"[\s,;]+", raw):
+            p = part.strip().lstrip(".")
+            if p:
+                out.add(p)
+        return frozenset(out)
+
+    @property
+    def studio_kb_storage_path(self):
+        from pathlib import Path
+
+        raw = (self.studio_kb_storage_dir or "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+        return (Path.cwd() / "storage" / "kb").resolve()
 
     @property
     def celery_backend_effective(self) -> str:

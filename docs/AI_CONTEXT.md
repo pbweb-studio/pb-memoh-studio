@@ -6,17 +6,18 @@
 
 ## Текущая фаза
 
-**Фаза 10e (Studio: KB RAG question answering MVP)** — при `STUDIO_KB_RAG_ENABLED=true` и включённых KB+embeddings: vector search по чанкам → контекст → один вызов OpenAI-compatible **`POST …/chat/completions`** (`STUDIO_KB_CHAT_*`); админ **`POST /knowledge/ask`**; команда **`/kb_ask`** (`--project <slug>`) из control group. При пустом retrieval — ответ «не найдено в базе знаний» **без** LLM. Ключ chat API не логируется; ошибки redacted. **Без** Memoh, второго бота, polling/webhook Studio, Studio Admin UI.
+**Фаза 10f (Studio: KB HTTP upload + Docling import)** — `POST /knowledge/documents/upload` и `POST /knowledge/documents/{id}/versions/upload` (multipart `file`); txt/md — существующий parser; PDF/DOCX — при `STUDIO_KB_DOCLING_ENABLED=true` и пакете **docling** (`pip install -e ".[docling]"`); иначе `failed_unsupported`; лимиты `STUDIO_KB_UPLOAD_MAX_BYTES`, whitelist `STUDIO_KB_ALLOWED_EXTENSIONS`, диск `STUDIO_KB_STORAGE_DIR`; `/kb_import_help` в control group; **`python-multipart`** в зависимостях. Логика **10e** RAG не менялась. **Без** Memoh, Studio Admin UI, импорта файлов через Telegram-бота в этой фазе.
 
-Фазы **10d**, **10c**, **10b**, **10a**, **9b** — см. журнал.
+Фазы **10e**, **10d**, **10c**, **10b**, **10a**, **9b** — см. журнал.
 
 ## Текущая цель
 
-**6+** (LLM/продуктовая доставка сводок) или **10+** (Docling, расширенный RAG) — только по отдельной постановке.
+**6+** (LLM/продуктовая доставка сводок) или расширение **10+** (Telegram file → KB, полный Docling pipeline) — по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–10e по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- Фазы 0–10f по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **10f:** HTTP upload в KB, опциональный Docling, `/kb_import_help`.
 - **10e:** RAG MVP по KB (`rag.py`, `/knowledge/ask`, `/kb_ask`).
 - **10d:** OpenAI-compatible embeddings API + deterministic fallback.
 - **10c:** pgvector / SQLite search, embed/search API, Celery.
@@ -24,11 +25,11 @@
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**229** кейсов после фазы 10e, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**238** кейсов после фазы 10f, локально/Docker).
 
 ## Что ещё не готово
 
-- Полный RAG/Docling, Studio Admin; прочие сценарии 6+.
+- Импорт файлов из Telegram в KB, Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -58,10 +59,11 @@
 - **Фаза 10c:** эмбеддинги чанков + pgvector search в Postgres, fallback в SQLite; без LLM/chat; см. `docs/06_DECISIONS.md`.
 - **Фаза 10d:** OpenAI-compatible `/embeddings` (httpx), батчи, redaction ключа в ошибках; deterministic для тестов; см. `docs/06_DECISIONS.md`.
 - **Фаза 10e:** RAG MVP — `POST /knowledge/ask`, `/kb_ask`, retrieval только по KB chunks + один chat completion; см. `docs/06_DECISIONS.md`.
+- **Фаза 10f:** HTTP multipart upload в KB, опциональный Docling для PDF/DOCX, `/kb_import_help`; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 
-- По постановке: **6+** или **10+** (Docling / расширенный RAG) из плана.
+- По постановке: **6+** или расширение **10+** (Telegram file import / полный Docling pipeline) из плана.
 
 ## Вопросы к GPT
 

@@ -329,6 +329,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 10f — KB: HTTP upload + Docling для PDF/DOCX
+
+**Статус:** `POST /knowledge/documents/upload`, `POST /knowledge/documents/{id}/versions/upload` (multipart `file`, опционально `title`/`project_id`); `upload_io.py`, `docling_convert.py` (опциональный пакет `docling` через extras `[docling]`); настройки `STUDIO_KB_DOCLING_ENABLED`, `STUDIO_KB_UPLOAD_MAX_BYTES`, `STUDIO_KB_ALLOWED_EXTENSIONS`, `STUDIO_KB_STORAGE_DIR`; бинарники на диске, `kb_storage_relpath` в `metadata_json`; парсер расширен: PDF/DOCX при включённом Docling → markdown; иначе `failed_unsupported`; ошибки Docling → `failed` с redacted `last_error`. Команда `/kb_import_help` в control group. Зависимость **`python-multipart`** для Form/File. **Без** Memoh, Studio Admin UI, загрузки файлов через Telegram-бота в этой фазе; RAG-логика 10e не менялась.
+
+**Тесты:** [`studio/tests/test_knowledge_phase10f.py`](studio/tests/test_knowledge_phase10f.py); регрессия 10b/10e.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -353,7 +361,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
-| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10+** — Docling, расширенный RAG |
+| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10f** — HTTP upload + Docling (pdf/docx); **10+** — расширенный RAG/Docling pipeline |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |

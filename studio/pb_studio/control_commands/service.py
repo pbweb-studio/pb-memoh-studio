@@ -14,6 +14,7 @@ from pb_studio.control_group.service import get_control_group_chat
 from pb_studio.control_group.telegram_outbound import redact_secrets, telegram_send_message
 from pb_studio.control_commands.constants import (
     KB_HELP_TEXT,
+    KB_IMPORT_HELP_TEXT,
     PROJECT_HELP_TEXT,
     SUMMARY_AGG_SNIPPET_CHARS,
     SUMMARY_CHATS_MAX_LINES,
@@ -549,6 +550,20 @@ async def _dispatch_kb_control_commands(
             await _audit_control_command(
                 session,
                 action="control_commands.kb_help",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.KB_IMPORT_HELP:
+            mid = await reply(KB_IMPORT_HELP_TEXT)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_import_help",
                 command_id=cmd.id,
                 command_name=cmd.command_name,
                 payload={},

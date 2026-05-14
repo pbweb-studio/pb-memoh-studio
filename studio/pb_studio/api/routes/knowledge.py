@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 
 from pb_studio.api.deps import (
     DbSession,
@@ -25,6 +25,7 @@ from pb_studio.knowledge.schemas import (
     KnowledgeParseBatchOut,
     KnowledgeSearchBody,
     KnowledgeSearchHitOut,
+    KnowledgeUploadOut,
     KnowledgeVersionOut,
     KnowledgeVersionTextBody,
 )
@@ -63,6 +64,70 @@ async def post_knowledge_document(session: DbSession, body: KnowledgeDocumentCre
         return KnowledgeDocumentOut.model_validate(row)
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/documents/upload", response_model=KnowledgeUploadOut, status_code=status.HTTP_201_CREATED)
+async def post_knowledge_documents_upload(
+    session: DbSession,
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    project_id: UUID | None = Form(default=None),
+) -> KnowledgeUploadOut:
+    settings = get_settings()
+    raw_name = file.filename or "upload"
+    data = await file.read()
+    if len(data) > settings.studio_kb_upload_max_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail="file too large")
+    try:
+        doc, ver, _created = await kb_service.ingest_new_document_from_upload(
+            session,
+            title=(title or "").strip(),
+            project_id=project_id,
+            filename=raw_name,
+            data=data,
+            settings=settings,
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    await session.refresh(doc)
+    await session.refresh(ver)
+    return KnowledgeUploadOut(
+        document=KnowledgeDocumentOut.model_validate(doc),
+        version=KnowledgeVersionOut.model_validate(ver),
+    )
+
+
+@router.post("/documents/{document_id}/versions/upload", response_model=KnowledgeUploadOut, status_code=status.HTTP_201_CREATED)
+async def post_knowledge_document_version_upload(
+    session: DbSession,
+    document_id: UUID,
+    file: UploadFile = File(...),
+) -> KnowledgeUploadOut:
+    settings = get_settings()
+    raw_name = file.filename or "upload"
+    data = await file.read()
+    if len(data) > settings.studio_kb_upload_max_bytes:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, detail="file too large")
+    try:
+        ver, _created = await kb_service.ingest_file_upload_to_document(
+            session,
+            document_id,
+            filename=raw_name,
+            data=data,
+            settings=settings,
+        )
+    except ValueError as exc:
+        msg = str(exc)
+        code = status.HTTP_404_NOT_FOUND if msg == "document not found" else status.HTTP_400_BAD_REQUEST
+        raise HTTPException(code, detail=msg) from exc
+    doc = await kb_service.get_document(session, document_id)
+    if doc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="document not found")
+    await session.refresh(ver)
+    return KnowledgeUploadOut(
+        document=KnowledgeDocumentOut.model_validate(doc),
+        version=KnowledgeVersionOut.model_validate(ver),
+    )
 
 
 @router.get("/documents/{document_id}", response_model=KnowledgeDocumentOut)

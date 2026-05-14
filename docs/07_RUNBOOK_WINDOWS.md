@@ -45,6 +45,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 10e (KB RAG MVP)** добавьте: `STUDIO_KB_RAG_ENABLED`, `STUDIO_KB_CHAT_PROVIDER` (MVP: `openai_compatible`), `STUDIO_KB_CHAT_API_BASE_URL`, `STUDIO_KB_CHAT_API_KEY`, `STUDIO_KB_CHAT_MODEL`, опционально `STUDIO_KB_CHAT_TIMEOUT_MS`, `STUDIO_KB_RAG_TOP_K`, `STUDIO_KB_RAG_MAX_CONTEXT_CHARS`. Эндпоинт `POST /knowledge/ask` при `STUDIO_KB_RAG_ENABLED=true` и включённых KB+embeddings; команды `/kb_ask` (и `--project <slug>`) — только в active control group; без Memoh и без Studio Admin UI.
 
+Для **фазы 10f (KB HTTP upload / Docling)** добавьте в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_DOCLING_ENABLED`, `STUDIO_KB_UPLOAD_MAX_BYTES`, `STUDIO_KB_ALLOWED_EXTENSIONS`, `STUDIO_KB_STORAGE_DIR` (в `docker-compose.local.yml` по умолчанию `/app/storage/kb` и volume `pb_studio_kb_uploads`). Эндпоинты `POST /knowledge/documents/upload`, `POST /knowledge/documents/{id}/versions/upload` (multipart `file`); опционально `pip install -e ".[docling]"` для PDF/DOCX. Команда `/kb_import_help` в control group.
+
 Проверка API:
 
 ```powershell
