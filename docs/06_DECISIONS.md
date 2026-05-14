@@ -209,7 +209,7 @@
 
 ## Фаза 10b — KB parse pipeline (выполнено)
 
-- Pending-версии (`status=pending`) обрабатываются детерминированным парсером в Studio: `text/plain`, `text/markdown` → чанки; PDF/DOCX в БД **без** загруженного файла на диск (legacy defer) → `failed_unsupported` без падения батча. **Фаза 10f:** HTTP-upload с `kb_storage_relpath` + опциональный Docling — см. отдельную секцию 10f.
+- Pending-версии (`status=pending`) обрабатываются детерминированным парсером в Studio: `text/plain`, `text/markdown` → чанки; PDF/DOCX в БД **без** загруженного файла на диск (legacy defer) → `failed_unsupported` без падения батча. **Фаза 10f:** HTTP-upload с `kb_storage_relpath` + опциональный Docling. **Фаза 10g:** импорт из Telegram document в control group → тот же ingest pipeline.
 - Повторный `parse` для версии в `parsed` идемпотентен (чанки не дублируются).
 - Celery `parse_pending_knowledge_documents` и админ-`POST /knowledge/parse-pending` не расширяют SLA и не трогают Memoh.
 
@@ -238,5 +238,11 @@
 
 - **`POST /knowledge/documents/upload`** и **`POST /knowledge/documents/{id}/versions/upload`** под `STUDIO_ADMIN_TOKEN` + `STUDIO_KB_ENABLED`; лимиты `STUDIO_KB_UPLOAD_MAX_BYTES`, whitelist `STUDIO_KB_ALLOWED_EXTENSIONS`; бинарники в `STUDIO_KB_STORAGE_DIR` (по умолчанию `storage/kb` или `/app/storage/kb` в compose с volume).
 - **Docling:** при `STUDIO_KB_DOCLING_ENABLED=true` и установленном пакете `docling` (extras `[docling]`) — конвертация PDF/DOCX в markdown; при выключенном флаге или отсутствии пакета — `failed_unsupported`; ошибки конвертации — `failed` с redacted `last_error` (`redact_kb_import_error`).
-- **Control group:** `/kb_import_help` (без загрузки файла через Telegram в этой фазе).
+- **Control group:** `/kb_import_help` (описание HTTP + Telegram); **фаза 10g:** `/kb_import_last`, `/kb_import_file` при `STUDIO_KB_TELEGRAM_IMPORT_ENABLED` (без polling Studio).
 - **`python-multipart`** в основных зависимостях пакета для multipart API.
+
+## Фаза 10g — KB импорт из Telegram document (выполнено)
+
+- Включение: **`STUDIO_KB_TELEGRAM_IMPORT_ENABLED=true`** при **`STUDIO_KB_ENABLED`**, **`TELEGRAM_BOT_TOKEN`**, **`STUDIO_CONTROL_COMMANDS_ENABLED`**; источник файла — только зеркало `studio_messages` **активной** control group (`document` + `from.id`); скачивание через Bot API `getFile` + `file/bot<token>/…` с лимитом байт (`STUDIO_KB_TELEGRAM_MAX_FILE_BYTES` или `STUDIO_KB_UPLOAD_MAX_BYTES`) и timeout `STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS`.
+- Команды: **`/kb_import_last <title>`**, **`/kb_import_last --project <slug> <title>`** (последний document от отправителя **перед** message_id команды), **`/kb_import_file <telegram_file_id> <title>`**; ACL — **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`**; ответы только `sendMessage` в control group; ошибки сети/API не валят батч обработки команд (`process_pending` изолирует сбои).
+- Импорт в KB — тот же **`ingest_new_document_from_upload`** что HTTP **10f** (расширения `STUDIO_KB_ALLOWED_EXTENSIONS`, Docling как в 10f); токен бота и API-ключи не попадают в `last_error` пользовательских команд (redaction).

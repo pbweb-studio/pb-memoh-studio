@@ -29,7 +29,9 @@ from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
 from pb_studio.knowledge import service as studio_kb_service
+from pb_studio.knowledge import telegram_kb_import as tg_kb_import
 from pb_studio.knowledge.embeddings import redact_embedding_error
+from pb_studio.knowledge.upload_io import redact_kb_import_error
 from pb_studio.knowledge.rag import ask_knowledge_base
 from pb_studio.knowledge.constants import KnowledgeVersionStatus
 from pb_studio.knowledge.models import StudioKnowledgeDocumentVersion
@@ -512,6 +514,7 @@ async def _kb_resolve_active_version(
 def _redact_kb_error_message(message: str, settings: Settings, telegram_token: str | None) -> str:
     chat_key = (settings.studio_kb_chat_api_key or "").strip() or None
     out = redact_embedding_error(message, chat_key)
+    out = redact_kb_import_error(out)
     return redact_secrets(out, telegram_token or None)
 
 
@@ -567,6 +570,165 @@ async def _dispatch_kb_control_commands(
                 command_id=cmd.id,
                 command_name=cmd.command_name,
                 payload={},
+            )
+            return
+
+        if cmd.command_name in (ControlCommandName.KB_IMPORT_LAST, ControlCommandName.KB_IMPORT_FILE):
+            if not settings.studio_kb_telegram_import_enabled:
+                mid = await reply("Импорт из Telegram выключен (STUDIO_KB_TELEGRAM_IMPORT_ENABLED=false).")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            title = str(cmd.args_json.get("title") or "").strip()
+            if not title:
+                mid = await reply("Пустой title.")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            project_slug = str(cmd.args_json.get("project_slug") or "").strip()
+            sender_id = _parse_sender_id(cmd.args_json)
+            if sender_id is None:
+                mid = await reply("Не удалось определить отправителя команды.")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            if not (settings.telegram_bot_token or "").strip():
+                mid = await reply("Не задан TELEGRAM_BOT_TOKEN.")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+
+            project_id = None
+            if project_slug:
+                proj = await studio_projects_service.get_project_by_slug(session, project_slug)
+                if proj is None:
+                    mid = await reply("Проект не найден.")
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+                project_id = proj.id
+
+            doc_obj: dict[str, Any] | None = None
+            file_id: str | None = None
+            preferred_fn = ""
+            if cmd.command_name == ControlCommandName.KB_IMPORT_LAST:
+                found = await tg_kb_import.find_last_user_document_message_before(
+                    session,
+                    control_group_studio_chat_id=cmd.control_group_chat_id,
+                    before_telegram_message_id=int(cmd.source_message_id or 0),
+                    sender_telegram_user_id=sender_id,
+                )
+                if found is None:
+                    mid = await reply(
+                        "Нет document-сообщения от вас перед этой командой (ищем до 50 сообщений назад по message_id)."
+                    )
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+                _src_msg, doc_obj = found
+                file_id = tg_kb_import.telegram_document_file_id(doc_obj)
+                if not file_id:
+                    mid = await reply("В document нет file_id.")
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+                preferred_fn = tg_kb_import.synthetic_filename_from_document(doc_obj)
+                ds = tg_kb_import.telegram_declared_file_size(doc_obj)
+                max_b = settings.studio_kb_telegram_effective_max_bytes
+                if ds is not None and ds > max_b:
+                    mid = await reply(f"Файл слишком большой для лимита ({max_b} байт).")
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+            else:
+                file_id = str(cmd.args_json.get("telegram_file_id") or "").strip()
+                if not file_id:
+                    mid = await reply("Пустой telegram_file_id.")
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+                preferred_fn = ""
+
+            ok_fetch, data, err_fetch, basename = await tg_kb_import.fetch_document_bytes_for_kb(settings, file_id=file_id)
+            if not ok_fetch or data is None:
+                detail = _redact_kb_error_message(err_fetch or "download_failed", settings, token)
+                mid = await reply(f"Не удалось скачать файл из Telegram: {detail[:400]}")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                await _audit_control_command(
+                    session,
+                    action="control_commands.kb_import_telegram_download_failed",
+                    command_id=cmd.id,
+                    command_name=cmd.command_name,
+                    payload={"detail_len": len(detail)},
+                )
+                return
+
+            if len(data) > settings.studio_kb_telegram_effective_max_bytes:
+                mid = await reply("Скачанный файл превышает лимит.")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+
+            ingest_fn = basename or "telegram.bin"
+            if cmd.command_name == ControlCommandName.KB_IMPORT_LAST and doc_obj is not None:
+                ingest_fn = preferred_fn or ingest_fn
+                ext_a, _e1 = tg_kb_import.extension_allowed_for_telegram_import(ingest_fn, settings)
+                if ext_a is None and basename:
+                    ext_b, _e2 = tg_kb_import.extension_allowed_for_telegram_import(basename, settings)
+                    if ext_b is not None:
+                        ingest_fn = basename
+            ext_final, err_final = tg_kb_import.extension_allowed_for_telegram_import(ingest_fn, settings)
+            if ext_final is None:
+                mid = await reply(f"Импорт отклонён: {err_final}")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+
+            try:
+                doc_row, ver, _created = await studio_kb_service.ingest_new_document_from_upload(
+                    session,
+                    title=title,
+                    project_id=project_id,
+                    filename=ingest_fn,
+                    data=data,
+                    settings=settings,
+                )
+            except ValueError as exc:
+                mid = await reply(f"Ошибка импорта: {_redact_kb_error_message(str(exc), settings, token)}")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+
+            mid = await reply(
+                _safe_truncate(
+                    f"Импорт из Telegram завершён.\n"
+                    f"document_id={doc_row.id} title={doc_row.title}\n"
+                    f"version_id={ver.id} status={ver.status} parser={ver.parser_name or '-'}"
+                )
+            )
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_import_telegram",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"document_id": str(doc_row.id), "version_id": str(ver.id), "version_status": ver.status},
             )
             return
 

@@ -190,6 +190,50 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
             )
         return ParsedControlCommand(ControlCommandName.KB_IMPORT_HELP, {})
 
+    if cmd == "/kb_import_last":
+        rest_all = line.strip()
+        low = rest_all.lower()
+        if not low.startswith("/kb_import_last"):
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "not_kb_import_last"})
+        tail = rest_all[len("/kb_import_last") :].strip()
+        if not tail:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "missing_title"})
+        m = re.match(r"(?i)--project\s+(\S+)\s+(.+)", tail)
+        if m:
+            slug_t = m.group(1).strip().lower()
+            title = m.group(2).strip()
+            if not title:
+                return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty_title"})
+            if not _SLUG_TOKEN_RE.match(slug_t):
+                return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+            return ParsedControlCommand(
+                ControlCommandName.KB_IMPORT_LAST,
+                {"title": title, "project_slug": slug_t.lower()},
+            )
+        return ParsedControlCommand(
+            ControlCommandName.KB_IMPORT_LAST,
+            {"title": tail, "project_slug": ""},
+        )
+
+    if cmd == "/kb_import_file":
+        parts_all = line.split()
+        if len(parts_all) < 3:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_import_file needs telegram_file_id and title"},
+            )
+        fid = parts_all[1].strip()
+        title = " ".join(parts_all[2:]).strip()
+        if not fid or not title:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_import_file empty file_id or title"},
+            )
+        return ParsedControlCommand(
+            ControlCommandName.KB_IMPORT_FILE,
+            {"telegram_file_id": fid, "title": title, "project_slug": ""},
+        )
+
     if cmd == "/kb_list":
         if rest:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_list takes no arguments"})

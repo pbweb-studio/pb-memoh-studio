@@ -1,7 +1,7 @@
 # Active context
 
-**Сейчас:** фаза **10f** в Studio — KB HTTP upload (`/knowledge/documents/upload`, `.../versions/upload`), опциональный **Docling** для PDF/DOCX, `/kb_import_help`; volume в compose для `STUDIO_KB_STORAGE_DIR`. Memoh не менялся.
+**Сейчас:** фаза **10g** в Studio — импорт KB из Telegram **document** в active control group: `/kb_import_last`, `/kb_import_file`; Bot API `getFile` + download с `TELEGRAM_BOT_TOKEN`; env `STUDIO_KB_TELEGRAM_*`; тот же ingest что **10f**. Memoh не менялся.
 
 **Ветка:** `pb-studio/main`.
 
-**Следующий шаг:** **6+** (LLM для сводок и пр.) или расширение **10+** (импорт из Telegram, полный Docling pipeline) — по отдельной постановке.
+**Следующий шаг:** **6+** (LLM для сводок и пр.) или расширение **10+** — по отдельной постановке.

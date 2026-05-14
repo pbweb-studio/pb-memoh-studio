@@ -241,6 +241,22 @@ class Settings(BaseSettings):
         default=None,
         description="STUDIO_KB_STORAGE_DIR — корень для сохранения загруженных бинарников (pdf/docx); пусто = storage/kb от cwd",
     )
+    studio_kb_telegram_import_enabled: bool = Field(
+        default=False,
+        description="STUDIO_KB_TELEGRAM_IMPORT_ENABLED — импорт файлов в KB из control group (/kb_import_last, /kb_import_file)",
+    )
+    studio_kb_telegram_download_timeout_ms: int = Field(
+        default=10_000,
+        ge=500,
+        le=120_000,
+        description="STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS — HTTP timeout getFile+download",
+    )
+    studio_kb_telegram_max_file_bytes: int = Field(
+        default=0,
+        ge=0,
+        le=200_000_000,
+        description="STUDIO_KB_TELEGRAM_MAX_FILE_BYTES — лимит скачивания из Telegram; 0 = как STUDIO_KB_UPLOAD_MAX_BYTES",
+    )
 
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:
@@ -276,6 +292,15 @@ class Settings(BaseSettings):
         if raw:
             return Path(raw).expanduser().resolve()
         return (Path.cwd() / "storage" / "kb").resolve()
+
+    @property
+    def studio_kb_telegram_effective_max_bytes(self) -> int:
+        """Лимит байт для скачивания из Telegram; не больше STUDIO_KB_UPLOAD_MAX_BYTES."""
+        up = int(self.studio_kb_upload_max_bytes)
+        t = int(self.studio_kb_telegram_max_file_bytes or 0)
+        if t > 0:
+            return min(t, up)
+        return up
 
     @property
     def celery_backend_effective(self) -> str:

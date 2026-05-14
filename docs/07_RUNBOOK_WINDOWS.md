@@ -47,6 +47,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 10f (KB HTTP upload / Docling)** добавьте в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_DOCLING_ENABLED`, `STUDIO_KB_UPLOAD_MAX_BYTES`, `STUDIO_KB_ALLOWED_EXTENSIONS`, `STUDIO_KB_STORAGE_DIR` (в `docker-compose.local.yml` по умолчанию `/app/storage/kb` и volume `pb_studio_kb_uploads`). Эндпоинты `POST /knowledge/documents/upload`, `POST /knowledge/documents/{id}/versions/upload` (multipart `file`); опционально `pip install -e ".[docling]"` для PDF/DOCX. Команда `/kb_import_help` в control group.
 
+Для **фазы 10g (KB импорт из Telegram control group)** добавьте в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_TELEGRAM_IMPORT_ENABLED` (по умолчанию `false`), `STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS`, `STUDIO_KB_TELEGRAM_MAX_FILE_BYTES` (0 = лимит как `STUDIO_KB_UPLOAD_MAX_BYTES`). Нужны также `STUDIO_KB_ENABLED`, `TELEGRAM_BOT_TOKEN`, `STUDIO_CONTROL_COMMANDS_ENABLED` и (при необходимости ACL) `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`. Команды `/kb_import_last` и `/kb_import_file` — см. `/kb_import_help`; скачивание через Bot API, без polling Studio.
+
 Проверка API:
 
 ```powershell

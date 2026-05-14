@@ -29,6 +29,7 @@
 | 10d KB external OpenAI-compatible embedding provider | Done |
 | 10e KB RAG question answering MVP (ask API + /kb_ask) | Done |
 | 10f KB HTTP upload + optional Docling (pdf/docx) | Done |
+| 10g KB Telegram document import (control group) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10f — multipart upload в KB, Docling опционально, storage volume в compose, `python-multipart`; pytest **238** passed; compose config ok; Docker + `pytest tests/`.
+**Последнее:** фаза 10g — `/kb_import_last` / `/kb_import_file`, `telegram_file_download` + `telegram_kb_import`, env в compose; `_redact_kb_error_message` + `redact_kb_import_error`; pytest **249** passed; compose config ok.

@@ -6,17 +6,18 @@
 
 ## Текущая фаза
 
-**Фаза 10f (Studio: KB HTTP upload + Docling import)** — `POST /knowledge/documents/upload` и `POST /knowledge/documents/{id}/versions/upload` (multipart `file`); txt/md — существующий parser; PDF/DOCX — при `STUDIO_KB_DOCLING_ENABLED=true` и пакете **docling** (`pip install -e ".[docling]"`); иначе `failed_unsupported`; лимиты `STUDIO_KB_UPLOAD_MAX_BYTES`, whitelist `STUDIO_KB_ALLOWED_EXTENSIONS`, диск `STUDIO_KB_STORAGE_DIR`; `/kb_import_help` в control group; **`python-multipart`** в зависимостях. Логика **10e** RAG не менялась. **Без** Memoh, Studio Admin UI, импорта файлов через Telegram-бота в этой фазе.
+**Фаза 10g (Studio: KB импорт из Telegram control group)** — при `STUDIO_KB_TELEGRAM_IMPORT_ENABLED=true` команды `/kb_import_last [--project <slug>] <title>` и `/kb_import_file <telegram_file_id> <title>`: источник метаданных — **Event Mirror** (`studio_messages` с `document`); скачивание через Bot API (**тот же** `TELEGRAM_BOT_TOKEN`), лимиты `STUDIO_KB_TELEGRAM_*` + whitelist расширений как у **10f**; далее `ingest_new_document_from_upload` (как HTTP upload **10f**). **Без** Memoh, второго бота, polling/webhook Studio, отдельного Celery для импорта; RAG **10e** не менялся.
 
-Фазы **10e**, **10d**, **10c**, **10b**, **10a**, **9b** — см. журнал.
+Фазы **10f** (HTTP multipart + Docling), **10e**, **10d** — см. журнал.
 
 ## Текущая цель
 
-**6+** (LLM/продуктовая доставка сводок) или расширение **10+** (Telegram file → KB, полный Docling pipeline) — по отдельной постановке.
+**6+** (LLM для сводок и пр.) или расширение **10+** (полный Docling pipeline, прочие KB UX) — по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–10f по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- Фазы 0–10g по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **10g:** импорт KB из Telegram document в control group (`/kb_import_last`, `/kb_import_file`), Bot API getFile+download, те же лимиты/Docling что 10f.
 - **10f:** HTTP upload в KB, опциональный Docling, `/kb_import_help`.
 - **10e:** RAG MVP по KB (`rag.py`, `/knowledge/ask`, `/kb_ask`).
 - **10d:** OpenAI-compatible embeddings API + deterministic fallback.
@@ -25,11 +26,11 @@
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**238** кейсов после фазы 10f, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**249** кейсов после фазы 10g, локально/Docker).
 
 ## Что ещё не готово
 
-- Импорт файлов из Telegram в KB, Studio Admin; прочие сценарии 6+.
+- Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -60,10 +61,11 @@
 - **Фаза 10d:** OpenAI-compatible `/embeddings` (httpx), батчи, redaction ключа в ошибках; deterministic для тестов; см. `docs/06_DECISIONS.md`.
 - **Фаза 10e:** RAG MVP — `POST /knowledge/ask`, `/kb_ask`, retrieval только по KB chunks + один chat completion; см. `docs/06_DECISIONS.md`.
 - **Фаза 10f:** HTTP multipart upload в KB, опциональный Docling для PDF/DOCX, `/kb_import_help`; см. `docs/06_DECISIONS.md`.
+- **Фаза 10g:** импорт KB из Telegram document в control group (`/kb_import_last`, `/kb_import_file`), Bot API getFile+download; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 
-- По постановке: **6+** или расширение **10+** (Telegram file import / полный Docling pipeline) из плана.
+- По постановке: **6+** или расширение **10+** из плана.
 
 ## Вопросы к GPT
 

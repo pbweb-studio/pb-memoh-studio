@@ -191,3 +191,9 @@
 - `POST /knowledge/documents/upload`, `POST /knowledge/documents/{id}/versions/upload` (multipart); `STUDIO_KB_DOCLING_ENABLED`, `STUDIO_KB_UPLOAD_MAX_BYTES`, `STUDIO_KB_ALLOWED_EXTENSIONS`, `STUDIO_KB_STORAGE_DIR`; модули `upload_io.py`, `docling_convert.py`; расширение `parsers.py` + сервис `ingest_*`; PDF/DOCX на диск и через Docling при доступности; иначе `failed_unsupported`; redacted `last_error`; `/kb_import_help`; compose volume `pb_studio_kb_uploads`; зависимость `python-multipart`.
 - **Без** Memoh, Studio Admin UI, импорта файлов через Telegram-бота в этой фазе; логика RAG 10e не менялась.
 - Тесты: `studio/tests/test_knowledge_phase10f.py`; полный `pytest tests/` (**238** passed); `docker compose -f docker-compose.local.yml config`; Docker `python:3.12-slim` + `pytest tests/`.
+
+## 2026-05-14 — Фаза 10g (Studio: KB импорт из Telegram control group)
+
+- `STUDIO_KB_TELEGRAM_IMPORT_ENABLED`, `STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS`, `STUDIO_KB_TELEGRAM_MAX_FILE_BYTES` (0 = как upload max); `telegram_file_download.py`, `telegram_kb_import.py`; команды `/kb_import_last`, `/kb_import_file`; поиск последнего `document` в зеркале CG от того же user; скачивание → `ingest_new_document_from_upload` (как 10f); `_redact_kb_error_message` дополнен `redact_kb_import_error` (sk-).
+- **Без** Memoh, второго бота, polling/webhook Studio, отдельного admin API для импорта; RAG 10e не менялся.
+- Тесты: `studio/tests/test_knowledge_phase10g.py`; полный `pytest tests/` (**249** passed); `docker compose -f docker-compose.local.yml config`.

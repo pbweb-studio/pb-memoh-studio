@@ -58,6 +58,9 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_UPLOAD_MAX_BYTES",
         "STUDIO_KB_ALLOWED_EXTENSIONS",
         "STUDIO_KB_STORAGE_DIR",
+        "STUDIO_KB_TELEGRAM_IMPORT_ENABLED",
+        "STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS",
+        "STUDIO_KB_TELEGRAM_MAX_FILE_BYTES",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

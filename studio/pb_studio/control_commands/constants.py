@@ -38,6 +38,8 @@ class ControlCommandName:
     KB_ASK = "kb_ask"
     KB_ADD = "kb_add"
     KB_IMPORT_HELP = "kb_import_help"
+    KB_IMPORT_LAST = "kb_import_last"
+    KB_IMPORT_FILE = "kb_import_file"
 
 
 # Лимиты UX для Telegram sendMessage (оставляем запас под «обрезано»)
@@ -78,16 +80,25 @@ PROJECT_HELP_TEXT = """Команды проектов (Studio, только и�
 База знаний: /kb_help
 """
 
-KB_IMPORT_HELP_TEXT = """Импорт файлов в Knowledge Base (Studio, только HTTP; без загрузки через Telegram-бота в этой фазе):
+KB_IMPORT_HELP_TEXT = """Импорт файлов в Knowledge Base (Studio):
 
-Под STUDIO_ADMIN_TOKEN:
+HTTP (под STUDIO_ADMIN_TOKEN):
 • POST /knowledge/documents/upload — multipart: поле file, опционально title, project_id (form)
 • POST /knowledge/documents/{document_uuid}/versions/upload — новая версия из файла
 
-Расширения задаёт STUDIO_KB_ALLOWED_EXTENSIONS (по умолчанию txt,md,pdf,docx). Макс. размер: STUDIO_KB_UPLOAD_MAX_BYTES.
-Файлы PDF/DOCX: при STUDIO_KB_DOCLING_ENABLED=true и установленном пакете docling — конвертация в текст; иначе версия получит статус failed_unsupported.
-Текстовые .txt / .md — текущий plain/markdown parser.
-Хранилище бинарников: STUDIO_KB_STORAGE_DIR (по умолчанию каталог storage/kb от рабочей директории).
+Из Telegram (только active control group, нужен STUDIO_KB_TELEGRAM_IMPORT_ENABLED=true и TELEGRAM_BOT_TOKEN):
+• Отправьте файл (document), затем команду:
+  /kb_import_last <название документа>
+  /kb_import_last --project <slug> <название>
+• Или по file_id из сообщения (поле document.file_id):
+  /kb_import_file <telegram_file_id> <название>
+
+Расширения: STUDIO_KB_ALLOWED_EXTENSIONS (по умолчанию txt,md,pdf,docx).
+Лимиты: STUDIO_KB_UPLOAD_MAX_BYTES; для Telegram отдельно STUDIO_KB_TELEGRAM_MAX_FILE_BYTES (0 = как upload max).
+Таймаут Bot API: STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS.
+PDF/DOCX: при STUDIO_KB_DOCLING_ENABLED=true и пакете docling — конвертация; иначе failed_unsupported.
+Текстовые .txt / .md — текущий parser.
+Хранилище: STUDIO_KB_STORAGE_DIR.
 
 Другие команды KB: /kb_help
 """
@@ -102,7 +113,9 @@ KB_HELP_TEXT = """Команды базы знаний (Studio, только и�
 /kb_search [--project <slug>] <запрос> — поиск чанков по эмбеддингам (нужен STUDIO_KB_EMBEDDINGS_ENABLED=true)
 /kb_ask [--project <slug>] <вопрос> — ответ по KB через retrieval + chat completion (нужны STUDIO_KB_RAG_ENABLED=true и настройки STUDIO_KB_CHAT_*)
 /kb_add <title> | <text> — новый документ (manual) и первая версия из текста (разбиение на чанки в Studio)
-/kb_import_help — импорт файлов в KB по HTTP (upload), расширения и Docling
+/kb_import_help — импорт в KB (HTTP + Telegram из control group, см. текст)
+/kb_import_last [--project <slug>] <title> — последний document-файл в этой группе от вас → KB
+/kb_import_file <telegram_file_id> <title> — скачать по file_id → KB
 
 Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.
 """
