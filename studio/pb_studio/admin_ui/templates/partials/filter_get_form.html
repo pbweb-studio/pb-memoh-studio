@@ -1,0 +1,30 @@
+{% if filter_action and filter_fields %}
+<form method="get" action="{{ filter_action }}" class="card shadow-sm border-0 mb-3">
+  <div class="card-body py-2 px-3">
+    {% for h in (filter_hidden|default([])) %}
+    <input type="hidden" name="{{ h.name }}" value="{{ h.value }}">
+    {% endfor %}
+    <div class="row g-2 align-items-end">
+      {% for field in filter_fields %}
+      <div class="col-6 col-md-3 col-lg-2">
+        <label class="form-label small text-muted mb-0">{{ field.label }}</label>
+        {% if field.type == "select" %}
+        <select name="{{ field.name }}" class="form-select form-select-sm">
+          <option value="">— все —</option>
+          {% for opt in field.options %}
+          <option value="{{ opt[0] }}" {% if field.value == opt[0] %}selected{% endif %}>{{ opt[1] }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input type="text" class="form-control form-control-sm" name="{{ field.name }}" value="{{ field.value }}" placeholder="{{ field.placeholder or '' }}">
+        {% endif %}
+      </div>
+      {% endfor %}
+      <div class="col-12 col-md-auto d-flex flex-wrap gap-1 pt-1">
+        <button type="submit" class="btn btn-primary btn-sm">Применить</button>
+        <a href="{{ filter_action }}" class="btn btn-outline-secondary btn-sm">Сброс</a>
+      </div>
+    </div>
+  </div>
+</form>
+{% endif %}

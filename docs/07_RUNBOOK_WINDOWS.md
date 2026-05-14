@@ -53,7 +53,7 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 12a (импорт Telegram Desktop JSON)** включите **`STUDIO_HISTORY_IMPORT_ENABLED=true`** в **`studio-api`** (и при необходимости **`studio-worker`** для единообразия env); **`STUDIO_HISTORY_IMPORT_MAX_BYTES`** — лимит размера JSON (по умолчанию 52428800). API: `POST /history-import/telegram-json` (multipart `file`), `GET /history-import/jobs`, `GET /history-import/jobs/{id}` — только с **`STUDIO_ADMIN_TOKEN`**. Без Memoh и без Telegram Bot API.
 
-Для **Studio Admin UI (13a + 13b)** в **`studio-api`** задайте **`STUDIO_ADMIN_TOKEN`** (в `docker-compose.local.yml` переменная проброшена из окружения хоста). В браузере: `http://127.0.0.1:8000/admin/login` → ввод токена → cookie-сессия; либо для скриптов — `Authorization: Bearer <токен>` на `GET /admin/` и разделы. **13a:** read-only списки. **13b:** детальные страницы и POST-формы (редирект + flash `fs`/`fe`); токен не в HTML и не в логах.
+Для **Studio Admin UI (13a–13c)** в **`studio-api`** задайте **`STUDIO_ADMIN_TOKEN`** (в `docker-compose.local.yml` переменная из окружения хоста). В браузере: `http://127.0.0.1:8000/admin/login` → токен → cookie; либо `Authorization: Bearer <токен>`. **13a:** read-only. **13b:** детали и POST-формы (flash `fs`/`fe`). **13c:** GET-фильтры и **`?page=` / `?limit=`** (по умолчанию 25, макс. 100), breadcrumbs, offcanvas-меню на узких экранах. Токен не в HTML и не в логах.
 
 Проверка API:
 

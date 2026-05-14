@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** фаза **13b** в Studio — Admin UI: детальные страницы + POST-формы под **`/admin/*`** (те же сервисы, что REST; flash `fs`/`fe`); auth **`STUDIO_ADMIN_TOKEN`**; **без** Memoh, Bot API, LLM, новых сущностей.
+**Сейчас:** фаза **13c** в Studio — Admin UI: фильтры и пагинация списков, breadcrumbs, мобильное меню, форматирование дат; поверх **13a/13b**; auth **`STUDIO_ADMIN_TOKEN`**; **без** Memoh, Bot API, LLM, новых сущностей.
 
 **Ветка:** `pb-studio/main`.
 

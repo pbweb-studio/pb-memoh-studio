@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Чат {{ chat.id }} — Studio Admin{% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
-  <li class="breadcrumb-item"><a href="/admin/chats">Чаты</a></li>
-  <li class="breadcrumb-item active">{{ chat.id }}</li>
-</ol></nav>
-<h1 class="h3 mb-3">Чат</h1>
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-3">Чат</h1>
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="card shadow-sm">
@@ -21,8 +18,8 @@
             <tr><th>type</th><td>{{ chat.chat_type }}</td></tr>
             <tr><th>title</th><td>{{ chat.title or '—' }}</td></tr>
             <tr><th>username</th><td>{{ chat.username or '—' }}</td></tr>
-            <tr><th>created_at</th><td class="small">{{ chat.created_at }}</td></tr>
-            <tr><th>updated_at</th><td class="small">{{ chat.updated_at }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ chat.created_at|admin_dt }}</td></tr>
+            <tr><th>updated_at</th><td class="small">{{ chat.updated_at|admin_dt }}</td></tr>
           </tbody>
         </table>
       </div>

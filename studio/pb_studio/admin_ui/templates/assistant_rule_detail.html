@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Правило {{ rule.id }} — Studio Admin{% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
-  <li class="breadcrumb-item"><a href="/admin/assistant-rules">Правила</a></li>
-  <li class="breadcrumb-item active">{{ rule.id }}</li>
-</ol></nav>
-<h1 class="h3 mb-3">Правило ассистента</h1>
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-3">Правило ассистента</h1>
 <div class="row g-3">
   <div class="col-lg-8">
     <div class="card shadow-sm mb-3">
@@ -21,8 +18,9 @@
             <tr><th>project</th><td>{% if rule.project_id %}<a href="/admin/projects/{{ rule.project_id }}"><code>{{ rule.project_id }}</code></a>{% else %}—{% endif %}</td></tr>
             <tr><th>chat</th><td>{% if rule.chat_id %}<a href="/admin/chats/{{ rule.chat_id }}"><code>{{ rule.chat_id }}</code></a>{% else %}—{% endif %}</td></tr>
             <tr><th>source</th><td>{{ rule.source }}</td></tr>
-            <tr><th>disabled_at</th><td class="small">{{ rule.disabled_at or '—' }}</td></tr>
-            <tr><th>created_at</th><td class="small">{{ rule.created_at }}</td></tr>
+            <tr><th>disabled_at</th><td class="small">{{ rule.disabled_at|admin_dt }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ rule.created_at|admin_dt }}</td></tr>
+            <tr><th>updated_at</th><td class="small">{{ rule.updated_at|admin_dt }}</td></tr>
           </tbody>
         </table>
       </div>

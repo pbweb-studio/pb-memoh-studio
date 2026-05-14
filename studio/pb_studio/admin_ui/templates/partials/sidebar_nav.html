@@ -1,0 +1,17 @@
+<div class="fw-semibold mb-3 text-secondary small">pb-studio</div>
+<nav class="nav flex-column small gap-1">
+  <a class="nav-link py-1 rounded{% if nav_active == 'dashboard' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/">Обзор</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'chats' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/chats">Чаты</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'cg' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/control-group">Control group</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'summaries' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/summaries">Сводки</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'projects' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/projects">Проекты</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'sla' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/sla/incidents">SLA инциденты</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'kb' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/knowledge/documents">KB документы</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'rules' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/assistant-rules">Правила</a>
+  <a class="nav-link py-1 rounded{% if nav_active == 'hist' %} active bg-primary-subtle fw-semibold{% endif %}" href="/admin/history-import/jobs">Импорт истории</a>
+</nav>
+<hr>
+<form method="post" action="/admin/logout" class="d-grid">
+  <button type="submit" class="btn btn-outline-secondary btn-sm">Выйти</button>
+</form>
+<div class="text-muted mt-3" style="font-size: 0.7rem;">Studio Admin · 13c</div>

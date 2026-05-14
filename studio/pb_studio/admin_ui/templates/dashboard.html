@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Обзор — Studio Admin{% endblock %}
 {% block content %}
-<h1 class="h3 mb-4">Обзор</h1>
-<p class="text-muted small mb-4">Только чтение. Пагинация и фильтры — позже.</p>
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-1">Обзор</h1>
+<p class="text-muted small mb-4">Счётчики по БД Studio. Разделы — в меню слева.</p>
 <div class="row g-3">
   <div class="col-md-3 col-6">
     <div class="card shadow-sm h-100"><div class="card-body">

@@ -1,39 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="h3 mb-2">{{ page_title }}</h1>
-<p class="text-muted small mb-3">{{ page_subtitle }}</p>
-<nav aria-label="pagination placeholder" class="mb-3">
-  <ul class="pagination pagination-sm mb-0">
-    <li class="page-item disabled"><span class="page-link">Назад</span></li>
-    <li class="page-item active"><span class="page-link">1</span></li>
-    <li class="page-item disabled"><span class="page-link">Вперёд</span></li>
-  </ul>
-  <span class="badge bg-secondary ms-2">фильтры — позже</span>
-</nav>
-{% if empty %}
-<div class="alert alert-light border">Нет данных.</div>
-{% else %}
-<div class="table-responsive card shadow-sm">
-<table class="table table-sm table-hover mb-0">
-  <thead class="table-light"><tr>
-    {% for col in columns %}<th>{{ col }}</th>{% endfor %}
-  </tr></thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>
-      {% for cell in row %}
-      <td>
-        {% if detail_prefix and loop.index0 == (detail_col|default(0)) %}
-        <a href="{{ detail_prefix }}/{{ cell }}"><code class="small">{{ cell }}</code></a>
-        {% else %}
-        <code class="small">{{ cell }}</code>
-        {% endif %}
-      </td>
-      {% endfor %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% include "partials/breadcrumbs.html" %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+  <div>
+    <h1 class="h4 mb-1">{{ page_title }}</h1>
+    <p class="text-muted small mb-0">{{ page_subtitle }}</p>
+  </div>
 </div>
+{% include "partials/filter_get_form.html" %}
+{% include "partials/pagination_bar.html" %}
+{% include "partials/data_table.html" %}
+{% if not empty %}
+{% include "partials/pagination_bar.html" %}
 {% endif %}
 {% endblock %}

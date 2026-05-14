@@ -1,11 +1,16 @@
 {% extends "base.html" %}
 {% block title %}Правила — Studio Admin{% endblock %}
 {% block content %}
-<h1 class="h3 mb-2">{{ page_title }}</h1>
-<p class="text-muted small mb-3">{{ page_subtitle }}</p>
-<div class="card shadow-sm mb-4">
-  <div class="card-header">Создать правило</div>
-  <div class="card-body">
+{% include "partials/breadcrumbs.html" %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+  <div>
+    <h1 class="h4 mb-1">{{ page_title }}</h1>
+    <p class="text-muted small mb-0">{{ page_subtitle }}</p>
+  </div>
+</div>
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header py-2 small fw-semibold">Создать правило</div>
+  <div class="card-body py-3">
     <form method="post" action="/admin/assistant-rules" class="row g-3">
       <div class="col-md-4">
         <label class="form-label small">scope</label>
@@ -21,7 +26,7 @@
         <select name="project_id" class="form-select form-select-sm">
           <option value="">—</option>
           {% for p in projects_select %}
-          <option value="{{ p.id }}">{{ p.slug }} — {{ p.name[:40] }}</option>
+          <option value="{{ p.id }}">{{ p.slug }} — {{ p.name|admin_snip(40) }}</option>
           {% endfor %}
         </select>
       </div>
@@ -30,7 +35,7 @@
         <select name="chat_id" class="form-select form-select-sm">
           <option value="">—</option>
           {% for c in chats_select %}
-          <option value="{{ c.id }}">{{ c.telegram_chat_id }} · {{ (c.title or '')[:32] }}</option>
+          <option value="{{ c.id }}">{{ c.telegram_chat_id }} · {{ (c.title or '')|admin_snip(32) }}</option>
           {% endfor %}
         </select>
       </div>
@@ -44,30 +49,10 @@
     </form>
   </div>
 </div>
-{% if empty %}
-<div class="alert alert-light border">Нет данных.</div>
-{% else %}
-<div class="table-responsive card shadow-sm">
-<table class="table table-sm table-hover mb-0">
-  <thead class="table-light"><tr>
-    {% for col in columns %}<th>{{ col }}</th>{% endfor %}
-  </tr></thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>
-      {% for cell in row %}
-      <td>
-        {% if detail_prefix and loop.index0 == 0 %}
-        <a href="{{ detail_prefix }}/{{ cell }}"><code class="small">{{ cell }}</code></a>
-        {% else %}
-        <code class="small">{{ cell }}</code>
-        {% endif %}
-      </td>
-      {% endfor %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+{% include "partials/filter_get_form.html" %}
+{% include "partials/pagination_bar.html" %}
+{% include "partials/data_table.html" %}
+{% if not empty %}
+{% include "partials/pagination_bar.html" %}
 {% endif %}
 {% endblock %}

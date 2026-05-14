@@ -385,6 +385,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 13c — Studio Admin UI: polish + usability
+
+**Статус:** единый helper пагинации ([`studio/pb_studio/admin_ui/pagination.py`](studio/pb_studio/admin_ui/pagination.py)), форматирование дат/обрезка текста ([`formatting.py`](studio/pb_studio/admin_ui/formatting.py)); GET-фильтры и `limit`/`page` на списках чатов / сводок / проектов / SLA / KB / правил; пагинация jobs импорта; breadcrumbs, offcanvas-меню на мобильных, общие partials (`partials/`), `app.css`. **Без** новых сущностей, Memoh, бота, LLM/RAG.
+
+**Тесты:** [`studio/tests/test_admin_ui_phase13c.py`](studio/tests/test_admin_ui_phase13c.py); полный `pytest tests/` (см. журнал).
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -412,5 +420,5 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10f** — HTTP upload + Docling (pdf/docx); **10g** — импорт document из Telegram (control group); **10+** — расширенный RAG/Docling pipeline |
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
-| 13 | Studio Admin: **13a** — каркас read-only; **13b** — детали + формы (те же сервисы, что REST) |
+| 13 | Studio Admin: **13a** — каркас read-only; **13b** — детали + формы; **13c** — фильтры, пагинация, UX-полировка |
 | 14 | Prod compose, Caddy, runbook, backup (деплой только с подтверждением) |

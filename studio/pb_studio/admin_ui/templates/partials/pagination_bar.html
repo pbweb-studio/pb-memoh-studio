@@ -1,0 +1,25 @@
+{% if pagination and pagination.total is not none %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 small">
+  <div class="text-muted">
+    Всего записей: <strong>{{ pagination.total }}</strong>
+    {% if pagination.total_pages > 1 %}
+      · стр. <strong>{{ pagination.page }}</strong> из {{ pagination.total_pages }}
+    {% endif %}
+    · по {{ pagination.limit }} на страницу
+  </div>
+  {% if pagination.total_pages > 1 %}
+  <div class="btn-group btn-group-sm" role="group" aria-label="Пагинация">
+    {% if pagination.prev_url %}
+    <a class="btn btn-outline-secondary" href="{{ pagination.prev_url }}">← Назад</a>
+    {% else %}
+    <button type="button" class="btn btn-outline-secondary" disabled>← Назад</button>
+    {% endif %}
+    {% if pagination.next_url %}
+    <a class="btn btn-outline-secondary" href="{{ pagination.next_url }}">Вперёд →</a>
+    {% else %}
+    <button type="button" class="btn btn-outline-secondary" disabled>Вперёд →</button>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}

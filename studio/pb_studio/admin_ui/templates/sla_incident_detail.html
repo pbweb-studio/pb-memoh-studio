@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% block title %}SLA инцидент {{ inc.id }} — Studio Admin{% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
-  <li class="breadcrumb-item"><a href="/admin/sla/incidents">Инциденты</a></li>
-  <li class="breadcrumb-item active">{{ inc.id }}</li>
-</ol></nav>
-<h1 class="h3 mb-3">SLA инцидент</h1>
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-3">SLA инцидент</h1>
 <div class="row g-3">
   <div class="col-lg-8">
     <div class="card shadow-sm">
@@ -19,11 +16,11 @@
           <tbody>
             <tr><th class="w-25">id</th><td><code class="small">{{ inc.id }}</code></td></tr>
             <tr><th>chat</th><td><a href="/admin/chats/{{ inc.chat_id }}"><code>{{ inc.chat_id }}</code></a></td></tr>
-            <tr><th>severity</th><td>{{ inc.severity }}</td></tr>
-            <tr><th>due_at</th><td class="small">{{ inc.due_at }}</td></tr>
-            <tr><th>acknowledged_at</th><td class="small">{{ inc.acknowledged_at or '—' }}</td></tr>
-            <tr><th>resolved_at</th><td class="small">{{ inc.resolved_at or '—' }}</td></tr>
-            <tr><th>created_at</th><td class="small">{{ inc.created_at }}</td></tr>
+            <tr><th>severity</th><td><span class="badge rounded-pill bg-light text-dark border badge-admin">{{ inc.severity }}</span></td></tr>
+            <tr><th>due_at</th><td class="small">{{ inc.due_at|admin_dt }}</td></tr>
+            <tr><th>acknowledged_at</th><td class="small">{{ inc.acknowledged_at|admin_dt }}</td></tr>
+            <tr><th>resolved_at</th><td class="small">{{ inc.resolved_at|admin_dt }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ inc.created_at|admin_dt }}</td></tr>
           </tbody>
         </table>
       </div>

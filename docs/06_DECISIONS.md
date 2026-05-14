@@ -280,3 +280,9 @@
 - Те же **`STUDIO_ADMIN_TOKEN`** / cookie-сессия для **всех** POST под `/admin/*`; сообщения об успехе/ошибке через query **`fs`** / **`fe`** (URL-encoded, без секретов); валидация через Pydantic/`ValueError` → читаемый flash.
 - Операции только через существующие сервисы: роль чата, проект create/archive, bind/unbind, правила create/disable, SLA ack/resolve, KB upload (при **`STUDIO_KB_ENABLED`**).
 
+## Фаза 13c — Studio Admin UI: polish + usability (выполнено)
+
+- Списки: GET-параметры фильтров и **`page` / `limit`** (пагинация без безлимитных выборок); общий helper URL для prev/next; пустые состояния и повтор панели пагинации под таблицей при нескольких страницах.
+- Layout: breadcrumbs, активный пункт sidebar, offcanvas-меню на `md` ниже, `h4` заголовки, `app.css` для компактных badges.
+- **Без** новых сущностей и без изменений Memoh / бота / LLM-RAG.
+

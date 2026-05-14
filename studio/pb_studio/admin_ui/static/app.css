@@ -1,1 +1,11 @@
-/* Studio Admin UI — phase 13a */
+/* Studio Admin UI — phase 13c */
+.badge-admin {
+  font-weight: 500;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 767.98px) {
+  main .table-responsive {
+    font-size: 0.8rem;
+  }
+}

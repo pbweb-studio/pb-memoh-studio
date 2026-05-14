@@ -216,6 +216,12 @@
 - **Без** Memoh, бота, LLM/RAG, новых сущностей.
 - Тесты: `studio/tests/test_admin_ui_phase13b.py`; полный `pytest tests/` (**283** passed, Docker).
 
+## 2026-05-14 — Фаза 13c (Studio Admin UI: polish + usability)
+
+- Пагинация (`pagination.py`), фильтры на списках (чаты / сводки / проекты / SLA / KB / правила), `formatting.py`, partials (`breadcrumbs`, `pagination_bar`, `filter_get_form`, `data_table`, `sidebar_nav`), offcanvas-навигация на узких экранах, `row_link_bases` для ссылок project/chat в таблицах.
+- **Без** Memoh, бота, LLM/RAG, новых сущностей.
+- Тесты: `studio/tests/test_admin_ui_phase13c.py`; полный `pytest tests/` (**289** passed, Docker).
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

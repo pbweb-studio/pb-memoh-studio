@@ -5,7 +5,7 @@ from typing import Any
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pb_studio.assistant_rules.models import StudioAssistantRule
@@ -58,6 +58,40 @@ async def list_chats(session: AsyncSession, *, limit: int = 50) -> list[StudioCh
     return list((await session.scalars(q)).all())
 
 
+def _chat_admin_conditions(*, role: str | None, q: str | None) -> list:
+    parts: list = []
+    if role and str(role).strip():
+        parts.append(StudioChat.chat_role == str(role).strip())
+    if q and str(q).strip():
+        raw = str(q).strip()
+        term = f"%{raw}%"
+        try:
+            tid = int(raw)
+            parts.append(or_(StudioChat.title.ilike(term), StudioChat.telegram_chat_id == tid))
+        except ValueError:
+            parts.append(StudioChat.title.ilike(term))
+    return parts
+
+
+async def count_chats_admin(session: AsyncSession, *, role: str | None, q: str | None) -> int:
+    stmt = select(func.count()).select_from(StudioChat)
+    conds = _chat_admin_conditions(role=role, q=q)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_chats_admin(
+    session: AsyncSession, *, role: str | None, q: str | None, limit: int, offset: int
+) -> list[StudioChat]:
+    stmt = select(StudioChat).order_by(StudioChat.updated_at.desc())
+    conds = _chat_admin_conditions(role=role, q=q)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
 async def fetch_control_group_view(session: AsyncSession) -> dict[str, Any] | None:
     res = await session.execute(
         select(StudioControlGroup, StudioChat)
@@ -78,9 +112,74 @@ async def list_summaries(session: AsyncSession, *, limit: int = 50) -> list[Stud
     return list((await session.scalars(q)).all())
 
 
+def _summary_admin_conditions(*, status: str | None, delivery_status: str | None) -> list:
+    parts: list = []
+    if status and str(status).strip():
+        parts.append(StudioChatSummary.status == str(status).strip())
+    if delivery_status and str(delivery_status).strip():
+        parts.append(StudioChatSummary.delivery_status == str(delivery_status).strip())
+    return parts
+
+
+async def count_summaries_admin(session: AsyncSession, *, status: str | None, delivery_status: str | None) -> int:
+    stmt = select(func.count()).select_from(StudioChatSummary)
+    conds = _summary_admin_conditions(status=status, delivery_status=delivery_status)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_summaries_admin(
+    session: AsyncSession,
+    *,
+    status: str | None,
+    delivery_status: str | None,
+    limit: int,
+    offset: int,
+) -> list[StudioChatSummary]:
+    stmt = select(StudioChatSummary).order_by(StudioChatSummary.created_at.desc())
+    conds = _summary_admin_conditions(status=status, delivery_status=delivery_status)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
 async def list_projects(session: AsyncSession, *, limit: int = 50) -> list[StudioProject]:
     lim = min(max(limit, 1), 200)
     q = select(StudioProject).order_by(StudioProject.created_at.desc()).limit(lim)
+    return list((await session.scalars(q)).all())
+
+
+def _project_admin_conditions(*, status: str | None) -> list:
+    parts: list = []
+    if status and str(status).strip():
+        parts.append(StudioProject.status == str(status).strip())
+    return parts
+
+
+async def count_projects_admin(session: AsyncSession, *, status: str | None) -> int:
+    stmt = select(func.count()).select_from(StudioProject)
+    conds = _project_admin_conditions(status=status)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_projects_admin(
+    session: AsyncSession, *, status: str | None, limit: int, offset: int
+) -> list[StudioProject]:
+    stmt = select(StudioProject).order_by(StudioProject.updated_at.desc())
+    conds = _project_admin_conditions(status=status)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
+async def list_projects_all_for_filter(session: AsyncSession, *, limit: int = 500) -> list[StudioProject]:
+    lim = min(max(limit, 1), 1000)
+    q = select(StudioProject).order_by(StudioProject.name.asc()).limit(lim)
     return list((await session.scalars(q)).all())
 
 
@@ -90,10 +189,80 @@ async def list_sla_incidents(session: AsyncSession, *, limit: int = 50) -> list[
     return list((await session.scalars(q)).all())
 
 
+def _sla_admin_conditions(*, status: str | None, severity: str | None) -> list:
+    parts: list = []
+    if status and str(status).strip():
+        parts.append(StudioSlaIncident.status == str(status).strip())
+    if severity and str(severity).strip():
+        parts.append(StudioSlaIncident.severity == str(severity).strip())
+    return parts
+
+
+async def count_sla_incidents_admin(session: AsyncSession, *, status: str | None, severity: str | None) -> int:
+    stmt = select(func.count()).select_from(StudioSlaIncident)
+    conds = _sla_admin_conditions(status=status, severity=severity)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_sla_incidents_admin(
+    session: AsyncSession, *, status: str | None, severity: str | None, limit: int, offset: int
+) -> list[StudioSlaIncident]:
+    stmt = select(StudioSlaIncident).order_by(StudioSlaIncident.created_at.desc())
+    conds = _sla_admin_conditions(status=status, severity=severity)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
 async def list_knowledge_documents(session: AsyncSession, *, limit: int = 50) -> list[StudioKnowledgeDocument]:
     lim = min(max(limit, 1), 200)
     q = select(StudioKnowledgeDocument).order_by(StudioKnowledgeDocument.created_at.desc()).limit(lim)
     return list((await session.scalars(q)).all())
+
+
+def _kb_doc_admin_conditions(*, status: str | None, source_type: str | None, project_id: UUID | None) -> list:
+    parts: list = []
+    if status and str(status).strip():
+        parts.append(StudioKnowledgeDocument.status == str(status).strip())
+    if source_type and str(source_type).strip():
+        parts.append(StudioKnowledgeDocument.source_type == str(source_type).strip())
+    if project_id is not None:
+        parts.append(StudioKnowledgeDocument.project_id == project_id)
+    return parts
+
+
+async def count_knowledge_documents_admin(
+    session: AsyncSession,
+    *,
+    status: str | None,
+    source_type: str | None,
+    project_id: UUID | None,
+) -> int:
+    stmt = select(func.count()).select_from(StudioKnowledgeDocument)
+    conds = _kb_doc_admin_conditions(status=status, source_type=source_type, project_id=project_id)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_knowledge_documents_admin(
+    session: AsyncSession,
+    *,
+    status: str | None,
+    source_type: str | None,
+    project_id: UUID | None,
+    limit: int,
+    offset: int,
+) -> list[StudioKnowledgeDocument]:
+    stmt = select(StudioKnowledgeDocument).order_by(StudioKnowledgeDocument.updated_at.desc())
+    conds = _kb_doc_admin_conditions(status=status, source_type=source_type, project_id=project_id)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
 
 
 async def list_assistant_rules(session: AsyncSession, *, limit: int = 100) -> list[StudioAssistantRule]:
@@ -102,10 +271,55 @@ async def list_assistant_rules(session: AsyncSession, *, limit: int = 100) -> li
     return list((await session.scalars(q)).all())
 
 
+def _rules_admin_conditions(*, status: str | None, scope: str | None) -> list:
+    parts: list = []
+    if status and str(status).strip():
+        parts.append(StudioAssistantRule.status == str(status).strip())
+    if scope and str(scope).strip():
+        parts.append(StudioAssistantRule.scope == str(scope).strip().lower())
+    return parts
+
+
+async def count_assistant_rules_admin(session: AsyncSession, *, status: str | None, scope: str | None) -> int:
+    stmt = select(func.count()).select_from(StudioAssistantRule)
+    conds = _rules_admin_conditions(status=status, scope=scope)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_assistant_rules_admin(
+    session: AsyncSession, *, status: str | None, scope: str | None, limit: int, offset: int
+) -> list[StudioAssistantRule]:
+    stmt = select(StudioAssistantRule).order_by(StudioAssistantRule.updated_at.desc())
+    conds = _rules_admin_conditions(status=status, scope=scope)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
 async def list_history_import_jobs(session: AsyncSession, *, limit: int = 50) -> list[StudioHistoryImportJob]:
     lim = min(max(limit, 1), 200)
     q = select(StudioHistoryImportJob).order_by(StudioHistoryImportJob.created_at.desc()).limit(lim)
     return list((await session.scalars(q)).all())
+
+
+async def count_history_import_jobs(session: AsyncSession) -> int:
+    stmt = select(func.count()).select_from(StudioHistoryImportJob)
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_history_import_jobs_page(
+    session: AsyncSession, *, limit: int, offset: int
+) -> list[StudioHistoryImportJob]:
+    stmt = (
+        select(StudioHistoryImportJob)
+        .order_by(StudioHistoryImportJob.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    return list((await session.scalars(stmt)).all())
 
 
 async def get_chat(session: AsyncSession, chat_id: UUID) -> StudioChat | None:

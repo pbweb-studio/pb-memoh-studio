@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Проект {{ project.slug }} — Studio Admin{% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
-  <li class="breadcrumb-item"><a href="/admin/projects">Проекты</a></li>
-  <li class="breadcrumb-item active">{{ project.slug }}</li>
-</ol></nav>
-<h1 class="h3 mb-3">{{ project.name }}</h1>
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-3">{{ project.name }}</h1>
 <div class="row g-3">
   <div class="col-lg-6">
     <div class="card shadow-sm mb-3">
@@ -20,8 +17,9 @@
             <tr><th>slug</th><td><code>{{ project.slug }}</code></td></tr>
             <tr><th>name</th><td>{{ project.name }}</td></tr>
             <tr><th>description</th><td class="small">{{ project.description or '—' }}</td></tr>
-            <tr><th>archived_at</th><td class="small">{{ project.archived_at or '—' }}</td></tr>
-            <tr><th>created_at</th><td class="small">{{ project.created_at }}</td></tr>
+            <tr><th>archived_at</th><td class="small">{{ project.archived_at|admin_dt }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ project.created_at|admin_dt }}</td></tr>
+            <tr><th>updated_at</th><td class="small">{{ project.updated_at|admin_dt }}</td></tr>
           </tbody>
         </table>
       </div>
@@ -42,7 +40,7 @@
             <select name="chat_id" class="form-select form-select-sm" required>
               <option value="" disabled selected>— выберите —</option>
               {% for c in chats_select %}
-              <option value="{{ c.id }}">{{ c.telegram_chat_id }} · {{ (c.title or '')[:48] }}</option>
+              <option value="{{ c.id }}">{{ c.telegram_chat_id }} · {{ (c.title or '')|admin_snip(48) }}</option>
               {% endfor %}
             </select>
           </div>

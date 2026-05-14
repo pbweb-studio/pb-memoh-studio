@@ -1,11 +1,8 @@
 {% extends "base.html" %}
 {% block title %}KB {{ doc.title }} — Studio Admin{% endblock %}
 {% block content %}
-<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
-  <li class="breadcrumb-item"><a href="/admin/knowledge/documents">Документы</a></li>
-  <li class="breadcrumb-item active">{{ doc.id }}</li>
-</ol></nav>
-<h1 class="h3 mb-3">{{ doc.title }}</h1>
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-3">{{ doc.title|admin_snip(120) }}</h1>
 <div class="row g-3">
   <div class="col-lg-5">
     <div class="card shadow-sm">
@@ -23,7 +20,8 @@
               {% else %}—{% endif %}
             </td></tr>
             <tr><th>source_type</th><td>{{ doc.source_type }}</td></tr>
-            <tr><th>created_at</th><td class="small">{{ doc.created_at }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ doc.created_at|admin_dt }}</td></tr>
+            <tr><th>updated_at</th><td class="small">{{ doc.updated_at|admin_dt }}</td></tr>
           </tbody>
         </table>
       </div>
@@ -58,7 +56,7 @@
             <tr>
               <td>{{ v.version_number }}</td>
               <td><span class="badge bg-light text-dark border">{{ v.status }}</span></td>
-              <td class="small">{{ v.created_at }}</td>
+              <td class="small">{{ v.created_at|admin_dt }}</td>
             </tr>
             {% endfor %}
           </tbody>

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ title }} — Studio Admin{% endblock %}
 {% block content %}
-<div class="alert alert-warning">{{ message }}</div>
+{% if breadcrumbs %}
+{% include "partials/breadcrumbs.html" %}
+{% endif %}
+<div class="alert alert-warning shadow-sm border-0">{{ message }}</div>
 <p><a href="{{ back_href }}" class="btn btn-outline-secondary btn-sm">Назад</a></p>
 {% endblock %}

@@ -6,7 +6,7 @@
 
 ## Текущая фаза
 
-**После 13b** — Studio Admin: read-only списки (**13a**) + детальные страницы и POST-формы (**13b**) под `/admin/*`; Jinja2 + Bootstrap 5; **`STUDIO_ADMIN_TOKEN`** (Bearer или cookie); формы вызывают те же сервисы, что REST; flash `fs`/`fe` без секретов; загрузка KB в админке при **`STUDIO_KB_ENABLED`**.
+**После 13c** — Studio Admin: **13a** (read-only) + **13b** (детали и формы) + **13c** (фильтры, пагинация `page`/`limit`, breadcrumbs, offcanvas-меню на мобильных, форматирование дат, компактные badges); только UI поверх тех же данных и POST из **13b**.
 
 **Фаза 12a (Studio: Telegram Desktop JSON → Event Mirror)** — `POST /history-import/telegram-json`, `GET /history-import/jobs*`, таблица `studio_history_import_jobs`; `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; запись в `studio_chats` / `studio_messages` (без Memoh/Bot API).
 
@@ -20,8 +20,8 @@
 
 ## Что уже работает
 
-- Фазы 0–13b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **13b:** детали сущностей и POST-формы в `/admin/*` (те же сервисы, что REST); см. `docs/06_DECISIONS.md`.
+- Фазы 0–13c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **13c:** фильтры и пагинация списков в `/admin/*`, UX-полировка; см. `docs/06_DECISIONS.md`.
 - **13a:** каркас Studio Admin, read-only списки; см. `docs/06_DECISIONS.md`.
 - **12a:** импорт экспорта Telegram Desktop JSON в Event Mirror (`/history-import/*`), jobs в БД.
 - **11b:** те же правила — в KB RAG (`rag.py`, `/knowledge/ask`, `/kb_ask`): `applied_rule_ids`, опциональный `chat_id` в ask body.
@@ -75,6 +75,7 @@
 - **Фаза 12a:** импорт Telegram Desktop JSON в Event Mirror + jobs API; см. `docs/06_DECISIONS.md`.
 - **Фаза 13a:** Studio Admin skeleton — read-only `/admin/*`; см. `docs/06_DECISIONS.md`.
 - **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
+- **Фаза 13c:** фильтры, пагинация и полировка списков в Studio Admin; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 

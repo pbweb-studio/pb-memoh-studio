@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block title %}KB документы — Studio Admin{% endblock %}
 {% block content %}
-<h1 class="h3 mb-2">{{ page_title }}</h1>
-<p class="text-muted small mb-3">{{ page_subtitle }}</p>
+{% include "partials/breadcrumbs.html" %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+  <div>
+    <h1 class="h4 mb-1">{{ page_title }}</h1>
+    <p class="text-muted small mb-0">{{ page_subtitle }}</p>
+  </div>
+</div>
 {% if kb_upload_enabled %}
-<div class="card shadow-sm mb-4">
-  <div class="card-header">Загрузить документ (новый)</div>
-  <div class="card-body">
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-header py-2 small fw-semibold">Загрузить документ (новый)</div>
+  <div class="card-body py-3">
     <form method="post" action="/admin/knowledge/documents/upload" enctype="multipart/form-data" class="row g-2 align-items-end">
       <div class="col-md-4">
         <label class="form-label small mb-0">Файл</label>
@@ -27,32 +32,12 @@
   </div>
 </div>
 {% else %}
-<div class="alert alert-secondary small">KB выключен — загрузка недоступна (<code>STUDIO_KB_ENABLED</code>).</div>
+<div class="alert alert-secondary small shadow-sm border-0">KB выключен — загрузка недоступна (<code>STUDIO_KB_ENABLED</code>).</div>
 {% endif %}
-{% if empty %}
-<div class="alert alert-light border">Нет данных.</div>
-{% else %}
-<div class="table-responsive card shadow-sm">
-<table class="table table-sm table-hover mb-0">
-  <thead class="table-light"><tr>
-    {% for col in columns %}<th>{{ col }}</th>{% endfor %}
-  </tr></thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>
-      {% for cell in row %}
-      <td>
-        {% if detail_prefix and loop.index0 == 0 %}
-        <a href="{{ detail_prefix }}/{{ cell }}"><code class="small">{{ cell }}</code></a>
-        {% else %}
-        <code class="small">{{ cell }}</code>
-        {% endif %}
-      </td>
-      {% endfor %}
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-</div>
+{% include "partials/filter_get_form.html" %}
+{% include "partials/pagination_bar.html" %}
+{% include "partials/data_table.html" %}
+{% if not empty %}
+{% include "partials/pagination_bar.html" %}
 {% endif %}
 {% endblock %}
