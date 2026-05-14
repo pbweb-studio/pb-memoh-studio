@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 14c (staging jar.pb-web.ru)
+## После VPS E2E smoke (jar.pb-web.ru)
 
-**Статус:** Studio развёрнут на **148.253.209.54**, публично **https://jar.pb-web.ru**; проверены health, админка, `smoke-prod.sh`, бэкап Postgres. **Memoh не менялся.** `.env.prod` только на VPS (не в git). Документация 14c и инцидент `set -x` / ротация `STUDIO_ADMIN_TOKEN` — в `docs/08`, `docs/06`, `docs/AI_CONTEXT`, memory-bank.
+**Статус:** на **148.253.209.54** checkout **синхронизирован с `origin/pb-studio/main`**; прогон **`./deploy/scripts/vps-e2e-smoke.sh`** — **PASS** с ожидаемыми **SKIP**: RAG (нет chat key / выключен), Telegram (`TELEGRAM_BOT_TOKEN` пустой или control commands выключены), history import (флаг выключен), **pytest** в prod Docker-образе (модуля pytest нет — тесты в CI/dev). **Memoh не менялся.** `.env.prod` только на VPS (не в git, не печатать).
 
-**Следующий шаг:** донастройка секретов/флагов на VPS (Telegram, RAG при необходимости), **6+** / **13+** / **10+** — по постановке.
+**Следующий шаг:** по продукту — донастройка секретов/флагов на VPS (при необходимости), **6+** / **13+** / **10+** — по отдельной постановке.

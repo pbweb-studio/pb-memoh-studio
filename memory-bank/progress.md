@@ -39,6 +39,7 @@
 | 14a Prod compose + env example + runbook/backup (no deploy) | Done |
 | 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
 | 14c Staging deploy jar.pb-web.ru (VPS 148.253.209.54) | Done |
+| VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 14c — deploy jar.pb-web.ru; документация + правило про `set -x`/секреты; коммит миграции `f8dbd06e09f7b081733061ca1c6aefcf9b727afb`.
+**Последнее:** VPS checkout = origin; E2E smoke PASS + ожидаемые SKIP; скрипты `vps-e2e-smoke.py` / `.sh` в репо; см. `docs/04_PROJECT_LOG.md`, `docs/AI_CONTEXT.md`.

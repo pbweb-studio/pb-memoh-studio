@@ -253,3 +253,9 @@
 - Таблицы `studio_assistant_rules`, `studio_assistant_rule_audit`; миграция `015_studio_assistant_rules`; пакет `pb_studio/assistant_rules/`; API `/assistant-rules` (листинг, создание, `GET/{id}`, `PATCH`, `POST …/disable`, `GET /assistant-rules/audit`) под `STUDIO_ADMIN_TOKEN`; команды `/rule_*` в control group (скан `/rule`); аудит `created` / `updated` / `disabled`.
 - **Без** Memoh, без Studio Admin UI; применение правил к KB RAG — **фаза 11b** (см. запись 11b выше).
 - Тесты: `studio/tests/test_assistant_rules_phase11a.py`; полный `pytest tests/` (**256** passed).
+
+## 2026-05-14 — VPS E2E smoke + синхронизация checkout с origin
+
+- Добавлены и закоммичены в **`origin/pb-studio/main`**: `deploy/scripts/vps-e2e-smoke.py`, `deploy/scripts/vps-e2e-smoke.sh` (без `set -x`; slug под `ProjectCreate.pattern`; проверка **302** на `/admin/chats` без auth через `curl` без следования редиректам; блок **14** — SKIP, если в prod-образе нет модуля pytest).
+- На VPS **148.253.209.54**: `git fetch` + **`git reset --hard origin/pb-studio/main`** (несохранённые правки **tracked**-файлов на сервере сброшены; **`.env.prod`** вне git — сохраняется), повторный **`./deploy/scripts/vps-e2e-smoke.sh`** — **PASS** с ожидаемыми **SKIP** (RAG / Telegram / history import / pytest в образе).
+- **Memoh не менялся.** Значения секретов в журнал не заносятся.

@@ -6,7 +6,9 @@
 
 ## Текущая фаза
 
-**После 14c** — первый **staging/prod deploy** Studio на VPS **148.253.209.54**, домен **https://jar.pb-web.ru** (Caddy → `127.0.0.1:8000`). Проверены: `GET /health`, `/admin/login`, `smoke-prod.sh`, `backup-postgres.sh`. **Memoh не менялся.** Код на сервер заливался с локального `git archive` (ветка опережала origin). Якорь миграций в репо: **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: расширение `alembic_version.version_num` до `VARCHAR(255)`). Инцидент с утечкой `STUDIO_ADMIN_TOKEN` в лог из‑за `set -x` — зафиксирован в `docs/08_RUNBOOK_PRODUCTION.md` и `docs/06_DECISIONS.md`; токен на VPS ротирован.
+**После 14c** — первый **staging/prod deploy** Studio на VPS **148.253.209.54**, домен **https://jar.pb-web.ru** (Caddy → `127.0.0.1:8000`). Проверены: `GET /health`, `/admin/login`, `smoke-prod.sh`, `backup-postgres.sh`. **Memoh не менялся.** Якорь миграций в репо: **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: расширение `alembic_version.version_num` до `VARCHAR(255)`). Инцидент с утечкой `STUDIO_ADMIN_TOKEN` в лог из‑за `set -x` — зафиксирован в `docs/08_RUNBOOK_PRODUCTION.md` и `docs/06_DECISIONS.md`; токен на VPS ротирован.
+
+**VPS E2E smoke** — скрипт `deploy/scripts/vps-e2e-smoke.sh` / `vps-e2e-smoke.py`: compose, логи, health (`env=production`), админ (редирект без auth через `curl` без follow), alembic/таблицы, Admin UI + фильтры, API smoke (проект `smoke-*`, правило, KB, embeddings/search при включённом KB), SLA при флаге, бэкапы Postgres/KB. Итог прогона: **PASS** + **SKIP** (RAG без chat key / выключен; Telegram без токена; history import выключен; **pytest** в prod-образе не установлен — ожидаемо, полный `pytest` в CI или dev-окружении). Секреты в вывод не попадают.
 
 **После 14b** — readiness: `docs/08_RUNBOOK_PRODUCTION.md`, `validate_env_prod.py`, `smoke-prod.sh`, restore/KB backup, `.env.prod.example`.
 
@@ -28,6 +30,7 @@
 
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
+- **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
 - **14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`.
 - **13a:** каркас Studio Admin, read-only списки; см. `docs/06_DECISIONS.md`.
