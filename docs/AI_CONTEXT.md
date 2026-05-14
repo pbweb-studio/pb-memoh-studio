@@ -6,23 +6,23 @@
 
 ## Текущая фаза
 
-**Фаза 6a (сводки — инфраструктура)** — таблица `studio_chat_summaries`, планировщик pending jobs из Event Mirror (`studio_messages` + `studio_chat_lifecycle_events` в периоде), админ-роуты `GET /summaries`, `POST /summaries/plan`, `GET /summaries/{id}`, Celery `plan_daily_chat_summaries`. **Без** LLM, **без** генерации текста, **без** отправки сводок в Telegram. Memoh **не** менялся.
+**Фаза 6b (сводки — шаблонная генерация текста)** — `summaries/generator.py`: pending → `summary_text` из `studio_messages` / `studio_chat_lifecycle_events` (детерминированный шаблон); Celery `generate_pending_chat_summaries`; `POST /summaries/generate-pending`, `POST /summaries/{id}/generate`; env `STUDIO_SUMMARY_*`. **Без** внешних LLM HTTP, **без** `sendMessage` для сводок. Memoh **не** менялся.
 
-Фазы **4b**, **4a**, **5a**, **5b** — как ранее.
+Фазы **6a**, **5b**, **4b** — как ранее.
 
 ## Текущая цель
 
-Полноценная фаза **6+** (генерация/UX сводок) — **не** начинать до отдельной постановки.
+Фаза **6+** (LLM / продукт / доставка сводок) — **не** начинать до отдельной постановки.
 
 ## Что уже работает
 
-- Фазы 0–6a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **6a:** `pb_studio/summaries/`, Alembic `005`, Celery `plan_daily_chat_summaries`, админ-API сводок.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**56** кейсов после фазы 6a).
+- Фазы 0–6b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **6b:** шаблонная генерация сводок, батч с изоляцией ошибок, админ-эндпоинты генерации.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**66** кейсов после фазы 6b).
 
 ## Что ещё не готово
 
-- Генерация текста сводок (LLM), отправка сводок в Telegram, продукт «сводка сегодня»; фаза 7+; SLA (8), RAG, проекты, Studio Admin.
+- Внешний LLM, RAG, отправка сводок в Telegram, продуктовые сценарии 6+; SLA (8), проекты, Studio Admin.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -42,7 +42,7 @@
 
 - Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД / ожидание доставки.
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
-- Сводки 6a: только Studio DB + планировщик; границы — см. `docs/06_DECISIONS.md` (фаза 6a).
+- Сводки 6a–6b: только Studio DB + шаблон; границы — см. `docs/06_DECISIONS.md` (фазы 6a, 6b).
 
 ## Следующая задача
 

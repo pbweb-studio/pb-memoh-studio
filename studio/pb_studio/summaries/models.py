@@ -15,7 +15,7 @@ def _utcnow() -> datetime:
 
 
 class StudioChatSummary(Base):
-    """Planned/generated digest for a mirrored Telegram chat (phase 6a: planner only, no LLM)."""
+    """Planned/generated digest for a mirrored Telegram chat (6a planner, 6b template generation)."""
 
     __tablename__ = "studio_chat_summaries"
     __table_args__ = (

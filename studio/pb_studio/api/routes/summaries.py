@@ -4,9 +4,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from pb_studio.api.deps import DbSession, verify_admin_optional
+from pb_studio.api.deps import DbSession, SettingsDep, verify_admin_optional
+from pb_studio.summaries.generator import generate_one_summary, generate_pending_summaries_batch
 from pb_studio.summaries.planner import get_summary, list_summaries, plan_summary_job
-from pb_studio.summaries.schemas import ChatSummaryOut, PlanSummaryRequest, PlanSummaryResponse
+from pb_studio.summaries.schemas import (
+    ChatSummaryOut,
+    GenerateOneResult,
+    GeneratePendingResult,
+    PlanSummaryRequest,
+    PlanSummaryResponse,
+)
 
 router = APIRouter(tags=["summaries"])
 
@@ -44,6 +51,16 @@ async def post_summaries_plan(session: DbSession, body: PlanSummaryRequest) -> P
     return PlanSummaryResponse(id=row.id, created=created)
 
 
+@router.post(
+    "/summaries/generate-pending",
+    response_model=GeneratePendingResult,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_summaries_generate_pending(session: DbSession, settings: SettingsDep) -> GeneratePendingResult:
+    raw = await generate_pending_summaries_batch(session, settings)
+    return GeneratePendingResult.model_validate(raw)
+
+
 @router.get(
     "/summaries/{summary_id}",
     response_model=ChatSummaryOut,
@@ -54,3 +71,23 @@ async def get_summary_by_id(session: DbSession, summary_id: UUID) -> ChatSummary
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="summary not found")
     return ChatSummaryOut.model_validate(row)
+
+
+@router.post(
+    "/summaries/{summary_id}/generate",
+    response_model=GenerateOneResult,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_summaries_generate_one(
+    session: DbSession,
+    settings: SettingsDep,
+    summary_id: UUID,
+) -> GenerateOneResult:
+    outcome, detail = await generate_one_summary(session, summary_id, settings)
+    if outcome == "missing":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="summary not found")
+    if outcome == "skipped":
+        return GenerateOneResult(id=summary_id, generated=False, reason=detail or "not_pending")
+    if outcome == "failed":
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=detail or "generation failed")
+    return GenerateOneResult(id=summary_id, generated=True, reason=None)

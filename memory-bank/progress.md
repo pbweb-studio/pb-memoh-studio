@@ -13,6 +13,7 @@
 | 5a Управляющая группа (Studio) | Done |
 | 5b Outbound system notifications → control group | Done |
 | 6a Summaries infra (DB + planner, no LLM) | Done |
-| 6+ Сводки (генерация / продукт) и прочее | Pending |
+| 6b Template summary_text generation (no LLM API, no TG send) | Done |
+| 6+ Сводки (LLM / продукт / доставка) и прочее | Pending |
 
-**Последнее:** фаза 6a — `studio_chat_summaries`, planner, admin API, Celery plan_daily; pytest 56 passed (Docker).
+**Последнее:** фаза 6b — generator, Celery generate_pending, admin generate endpoints; pytest 66 passed (Docker).

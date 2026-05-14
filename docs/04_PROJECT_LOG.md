@@ -85,3 +85,10 @@
 - **Без** Memoh, **без** LLM, **без** Telegram outbound для сводок; Memoh и Go-код не менялись.
 - Тесты: `pytest tests/` (включая `test_summaries_phase6a.py`); `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` на `pb-studio/main`.
+
+## 2026-05-14 — Фаза 6b (Studio: шаблонная генерация summary_text)
+
+- `pb_studio/summaries/generator.py`, Celery `generate_pending_chat_summaries`, `POST /summaries/generate-pending`, `POST /summaries/{id}/generate`; env `STUDIO_SUMMARY_GENERATION_ENABLED`, `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS`.
+- **Без** Memoh, **без** внешнего LLM API, **без** Telegram send для сводок.
+- Тесты: `pytest tests/` (включая `test_summaries_phase6b.py`); `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` на `pb-studio/main`.

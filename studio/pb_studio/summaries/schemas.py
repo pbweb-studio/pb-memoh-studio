@@ -42,3 +42,17 @@ class ChatSummaryOut(BaseModel):
     last_error: str | None
 
     model_config = {"from_attributes": True}
+
+
+class GeneratePendingResult(BaseModel):
+    examined: int
+    generated: int
+    failed: int
+    skipped_disabled: int
+    skipped_not_pending: int
+
+
+class GenerateOneResult(BaseModel):
+    id: UUID
+    generated: bool
+    reason: str | None = None

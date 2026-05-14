@@ -55,6 +55,14 @@
 - Идемпотентность: уникальность `(chat_id, summary_type, period_start, period_end)`.
 - API под `STUDIO_ADMIN_TOKEN`: `GET /summaries`, `POST /summaries/plan`, `GET /summaries/{id}`; Celery `plan_daily_chat_summaries` — только создание pending daily jobs за «вчера» (UTC).
 
+## Фаза 6b — сводки: шаблонная генерация summary_text (Studio)
+
+- **Источник данных:** только Event Mirror в Postgres (`studio_messages`, `studio_chat_lifecycle_events`); **без** RAG, **без** вызовов Memoh, **без** внешних LLM API (`httpx` к OpenAI и т.п. не используется).
+- **Результат:** для `pending` заполняется детерминированный `summary_text`, `status=generated`, `generated_at`, пересчёт `source_event_count`; пустой период — текст «За период новых событий нет.»; при ошибке строки — `failed` + `last_error`, батч продолжается.
+- **Флаги:** `STUDIO_SUMMARY_GENERATION_ENABLED` (по умолчанию `false`); лимиты `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS`.
+- **Операции:** Celery `generate_pending_chat_summaries`; `POST /summaries/generate-pending`, `POST /summaries/{id}/generate` под `STUDIO_ADMIN_TOKEN`.
+- **Не делается:** отправка сводок в Telegram (`sendMessage` для сводок), второй бот, polling/webhook.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

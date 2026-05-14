@@ -1,9 +1,9 @@
 # Текущая задача
 
-## После фазы 6a (инфраструктура сводок)
+## После фазы 6b (шаблонная генерация summary_text)
 
-**Статус:** таблица `studio_chat_summaries`, планировщик pending jobs по данным Event Mirror, админ-API и Celery `plan_daily_chat_summaries`. Генерация текста сводки (LLM) и отправка в Telegram **не** входили в 6a.
+**Статус:** для `pending` заданий `studio_chat_summaries` заполняется детерминированный `summary_text` из Event Mirror (шаблон); `POST /summaries/generate-pending`, `POST /summaries/{id}/generate`; Celery `generate_pending_chat_summaries`; флаг `STUDIO_SUMMARY_GENERATION_ENABLED`. **Без** внешнего LLM API, **без** отправки сводок в Telegram.
 
-**Следующий шаг (не начинать без задачи):** фаза **6+** — генерация/продуктовые сценарии сводок **или** фаза 7 по постановке.
+**Следующий шаг (не начинать без задачи):** фаза **6+** (LLM / продукт / доставка сводок) **или** другие фазы плана.
 
-**Ограничение:** не смешивать сводки с system notification delivery; не включать второй бот; Memoh не менять без отдельного ADR.
+**Ограничение:** не подключать внешний LLM и RAG без постановки; Memoh не менять без ADR; SLA / проекты / Studio Admin — вне scope.

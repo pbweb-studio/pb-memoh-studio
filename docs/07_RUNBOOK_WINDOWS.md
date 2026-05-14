@@ -88,6 +88,18 @@ curl -X POST "http://127.0.0.1:8000/notifications/system/deliver-pending" -H "Au
 - Список уведомлений (диагностика): `GET /notifications/system?limit=50` с тем же Bearer (если задан `STUDIO_ADMIN_TOKEN`).
 - В Docker-стеке локально доставка из **worker** использует те же переменные, что и API; для ручного `POST …/deliver-pending` достаточно поднятого `studio-api` с включённым флагом и токеном.
 
+## Studio: генерация текста сводок (фаза 6b)
+
+- **`STUDIO_SUMMARY_GENERATION_ENABLED`**: по умолчанию `false`; пока `false`, `POST /summaries/generate-pending` не обрабатывает pending (возвращает счётчики с `skipped_disabled`).
+- **`STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`**, **`STUDIO_SUMMARY_MAX_BULLETS`** — лимиты выборки и пунктов в шаблоне (без внешнего LLM).
+- Ручной запуск батча:
+
+```powershell
+curl -X POST "http://127.0.0.1:8000/summaries/generate-pending" -H "Authorization: Bearer %STUDIO_ADMIN_TOKEN%"
+```
+
+- Одна сводка по id: `POST /summaries/{uuid}/generate` с тем же Bearer. **Не** отправляет текст в Telegram.
+
 ## Полезные пути
 
 - Документация: `docs/`.

@@ -62,6 +62,18 @@ class Settings(BaseSettings):
         default=3,
         description="STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES — после исчерпания помечается failed_permanent",
     )
+    studio_summary_generation_enabled: bool = Field(
+        default=False,
+        description="STUDIO_SUMMARY_GENERATION_ENABLED — шаблонная генерация summary_text для pending jobs",
+    )
+    studio_summary_max_source_messages: int = Field(
+        default=200,
+        description="STUDIO_SUMMARY_MAX_SOURCE_MESSAGES — лимит строк сообщений/lifecycle для шаблона",
+    )
+    studio_summary_max_bullets: int = Field(
+        default=20,
+        description="STUDIO_SUMMARY_MAX_BULLETS — максимум пунктов со сниппетами текста",
+    )
 
     @property
     def celery_backend_effective(self) -> str:

@@ -157,6 +157,20 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 6b — сводки: шаблонная генерация текста (без LLM API, без Telegram)
+
+**Статус:** `summaries/generator.py` — детерминированный текст из `studio_messages` + `studio_chat_lifecycle_events`; обновление `studio_chat_summaries` (`generated` / `failed`); флаг `STUDIO_SUMMARY_GENERATION_ENABLED`; Celery `generate_pending_chat_summaries`; админ `POST /summaries/generate-pending`, `POST /summaries/{id}/generate`. **Без** Memoh, **без** внешних LLM HTTP, **без** `sendMessage` сводок.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `summaries/generator.py` | Батч pending → шаблон `summary_text`, пустой период — фиксированная строка; ошибка одной строки не отменяет батч. |
+| Celery `generate_pending_chat_summaries` | Идемпотентно обрабатывает только `pending`. |
+| Env | `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS` |
+
+**Тесты:** `studio/tests/test_summaries_phase6b.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -169,7 +183,8 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 5a | Управляющая группа: таблицы + API + system notifications из Event Mirror (**без** исходящего Telegram) |
 | 5b | Доставка `pending_for_control_group_delivery` / retry в Telegram control group: `sendMessage`, Celery, админ-эндпоинты (**без** Memoh, **без** polling/webhook Studio) |
 | 6a | Сводки: таблица `studio_chat_summaries`, планировщик pending jobs из Event Mirror, админ-API, Celery `plan_daily_chat_summaries` (**без** LLM, **без** отправки сводок в Telegram) |
-| 6+ | Сводка «сегодня» / генерация текста / продуктовые сценарии из Studio DB |
+| 6b | Шаблонная генерация `summary_text` из Event Mirror, Celery `generate_pending_chat_summaries`, POST generate (**без** внешнего LLM API, **без** Telegram send сводок) |
+| 6+ | LLM / продукт / UX сводок — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |
 | 9 | Проекты: bind/list/digest |
