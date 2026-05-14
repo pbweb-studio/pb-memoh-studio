@@ -48,4 +48,4 @@
 - Memoh: после дедупа `update_id` в `internal/channel/adapters/telegram/telegram.go` вызывается `mirrorTelegramUpdateToStudioAsync`; реализация в `internal/channel/adapters/telegram/studio_event_mirror.go`; тесты `studio_event_mirror_test.go`.
 - Env: см. корневой `.env.example` (`STUDIO_EVENTS_URL`, `STUDIO_EVENTS_INGEST_TOKEN`, `MEMOH_STUDIO_EVENTS_TOKEN`, `MEMOH_TELEGRAM_EVENT_MIRROR_*`).
 - Response Queue: только прежний флаг Studio `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES`; Memoh его не трогает.
-- Полный SHA коммита фазы 4b: `66a660e7c30866a0e1ecbc88fdb029ef574ba3fb`.
+- Полный SHA корня ветки после 4b: `git rev-parse HEAD`; коммит с сообщением `feat(telegram): memoh studio event mirror hook phase 4b variant C`: `git log --grep='memoh studio event mirror hook phase 4b variant C' -1 --format=%H`.

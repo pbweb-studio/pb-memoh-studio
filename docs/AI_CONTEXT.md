@@ -24,9 +24,10 @@
 - Полный e2e «Telegram → Memoh → Studio БД» в прод-окружении (ручная проверка/наблюдаемость по желанию).
 - Управляющая группа (Фаза 5), сводки, RAG, SLA, Studio Admin.
 
-## Последний стабильный commit (HEAD код + доки 4b)
+## Идентификатор коммита фазы 4b
 
-**Полный SHA текущего `HEAD` (фаза 4b, вариант C):** `66a660e7c30866a0e1ecbc88fdb029ef574ba3fb`
+- **Текущий корень ветки** (полный SHA): `git rev-parse HEAD` на `pb-studio/main`.
+- **Коммит с реализацией** (сообщение `feat(telegram): memoh studio event mirror hook phase 4b variant C`): `git log --grep='memoh studio event mirror hook phase 4b variant C' -1 --format=%H` (при нескольких совпадениях возьмите последний по дате).
 
 **Код Event Mirror Studio (фаза 4a, исторический якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 
