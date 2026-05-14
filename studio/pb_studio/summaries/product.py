@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
@@ -27,6 +28,7 @@ async def ensure_chat_summary_for_period(
     period_start: datetime,
     period_end: datetime,
     settings: Settings,
+    metadata_json: dict[str, Any] | None = None,
 ) -> StudioChatSummary:
     """
     Вернуть generated-сводку за период: существующая generated, иначе pending→generate, иначе plan+generate.
@@ -39,13 +41,14 @@ async def ensure_chat_summary_for_period(
     if chat is None:
         raise ValueError("studio chat not found")
 
+    meta = metadata_json if metadata_json is not None else {"source": "product_api_6c"}
     row, _created = await plan_summary_job(
         session,
         studio_chat_id=studio_chat_id,
         summary_type=summary_type,
         period_start=period_start,
         period_end=period_end,
-        metadata_json={"source": "product_api_6c"},
+        metadata_json=meta,
     )
 
     if row.status == SummaryStatus.FAILED:

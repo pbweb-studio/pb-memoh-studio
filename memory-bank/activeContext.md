@@ -1,9 +1,9 @@
 # Active context
 
-**Сейчас:** фаза **6d** в Studio — доставка готовых сводок (`generated`) в Telegram control group: `summary_delivery.py`, поля `delivery_*`, `POST /summaries/{id}/deliver-control-group`, `POST /summaries/deliver-pending`, Celery `deliver_pending_chat_summaries`; флаги `STUDIO_SUMMARY_DELIVERY_*` в compose для api/worker. Только `sendMessage`, тот же бот. Без Memoh, без LLM/RAG.
+**Сейчас:** фаза **7a** в Studio — команды `/summary_*` из Telegram control group по зеркалу Event Mirror: `studio_control_commands`, `control_commands/parser` + `service`, Celery `process_control_group_summary_commands`, админ `GET /control-commands` и `POST /control-commands/process-pending`, env `STUDIO_CONTROL_COMMANDS_*` в compose (api/worker). Ответы только в активную control group (`sendMessage`); Memoh не менялся; второго бота и polling/webhook Studio нет.
 
 **Ветка:** `pb-studio/main`.
 
-**Memoh:** не менялся в 6d.
+**Memoh:** не менялся в 7a.
 
-**Следующий шаг:** фаза **6+** только по отдельной постановке.
+**Следующий шаг:** фаза **7** (полные сценарии из плана) или **6+** только по отдельной постановке.

@@ -82,6 +82,14 @@ class Settings(BaseSettings):
         default=3,
         description="STUDIO_SUMMARY_DELIVERY_MAX_RETRIES — после исчерпания delivery → failed_permanent",
     )
+    studio_control_commands_enabled: bool = Field(
+        default=False,
+        description="STUDIO_CONTROL_COMMANDS_ENABLED — скан Event Mirror + обработка /summary_* из control group",
+    )
+    studio_control_commands_max_batch: int = Field(
+        default=50,
+        description="STUDIO_CONTROL_COMMANDS_MAX_BATCH — лимит сообщений/команд за один цикл",
+    )
 
     @property
     def celery_backend_effective(self) -> str:

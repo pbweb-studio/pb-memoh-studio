@@ -79,6 +79,14 @@
 - **Аудит:** `summaries.delivery_*`; в `delivery_last_error` и payload **не** попадает сырой токен (редукция через `redact_secrets`).
 - **Не делается:** Memoh, LLM, RAG, SLA, проекты, Studio Admin.
 
+## Фаза 7a — команды сводок из control group (Studio, Event Mirror как вход)
+
+- **Вход:** только строки `studio_messages` чата активной `studio_control_groups` (роль `control_group`); сообщения в `client_chat` / `project_chat` / `internal_chat` / `service_chat` **не** сканируются как источник команд (у них другой `chat_id`).
+- **Команды:** `/summary_today|yesterday|period|latest|help` + текстовые ошибки в control group; парсер отбрасывает не-команды и сообщения от `is_bot`; ответы только через `sendMessage` в control group (инъектируемый `send_message` в тестах).
+- **Обработка:** `summaries/product.py` (`ensure_chat_summary_for_period`, `get_latest_generated_for_chat`); при `STUDIO_SUMMARY_DELIVERY_ENABLED` — доставка 6d, иначе текстовый ответ со сводкой; идемпотентность по `source_message_id` / `source_update_id` в `studio_control_commands`; `SQLAlchemy.begin_nested` при гонке вставок.
+- **Флаги:** `STUDIO_CONTROL_COMMANDS_ENABLED` (по умолчанию `false`), `STUDIO_CONTROL_COMMANDS_MAX_BATCH` (по умолчанию `50`); Celery `process_control_group_summary_commands`; админ `GET /control-commands`, `POST /control-commands/process-pending` при заданном `STUDIO_ADMIN_TOKEN`.
+- **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG/SLA/проекты/Studio Admin UI, проектные сводки.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

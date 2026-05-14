@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from pb_studio.celery_app import celery_app
+from pb_studio.control_commands.service import run_control_commands_standalone
 from pb_studio.control_group.system_notification_delivery import run_deliver_pending_standalone
 from pb_studio.summaries.generator import run_generate_pending_standalone
 from pb_studio.summaries.planner import run_plan_daily_standalone
@@ -37,3 +39,9 @@ def generate_pending_chat_summaries() -> dict[str, int]:
 def deliver_pending_chat_summaries() -> dict[str, int]:
     """Phase 6d: deliver generated summaries to Telegram control group (sendMessage only)."""
     return asyncio.run(run_deliver_summaries_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.process_control_group_summary_commands")
+def process_control_group_summary_commands() -> dict[str, Any]:
+    """Phase 7a: Event Mirror → команды /summary_* в control group; идемпотентно по уникальным ключам."""
+    return asyncio.run(run_control_commands_standalone())

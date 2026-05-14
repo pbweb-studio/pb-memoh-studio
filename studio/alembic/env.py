@@ -11,6 +11,7 @@ from pb_studio.response_queue.models import Base
 import pb_studio.control_group.models  # noqa: F401 — регистрация моделей для autogenerate
 import pb_studio.event_mirror.models  # noqa: F401 — регистрация моделей для autogenerate
 import pb_studio.summaries.models  # noqa: F401 — phase 6a summaries
+import pb_studio.control_commands.models  # noqa: F401 — phase 7a control commands
 
 config = context.config
 

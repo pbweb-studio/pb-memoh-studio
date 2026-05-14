@@ -6,19 +6,19 @@
 
 ## Текущая фаза
 
-**Фаза 6d (сводки — доставка в control group)** — поля `delivery_*` на `studio_chat_summaries`, `summaries/summary_delivery.py`, `POST /summaries/{id}/deliver-control-group`, `POST /summaries/deliver-pending`, Celery `deliver_pending_chat_summaries`, env `STUDIO_SUMMARY_DELIVERY_*`. Отправка только в активную control group через `sendMessage` (тот же бот). **Без** Memoh, **без** LLM/RAG. Memoh **не** менялся.
+**Фаза 7a (команды сводок из control group через Event Mirror)** — таблица `studio_control_commands`, пакет `control_commands`, скан `studio_messages` активной control group, продуктовая логика `summaries/product.py`, ответы `sendMessage` в control group (и доставка 6d при флаге), Celery `process_control_group_summary_commands`, админ `GET /control-commands` и `POST /control-commands/process-pending`, env `STUDIO_CONTROL_COMMANDS_*`. **Без** Memoh, **без** второго бота и polling/webhook Studio, **без** LLM/RAG. Memoh **не** менялся.
 
-Фазы **6c**, **6b**, **6a**, **5b**, **4b** — как ранее.
+Фазы **6d**, **6c**, **6b**, **6a**, **5b**, **4b** — как ранее.
 
 ## Текущая цель
 
-Фаза **6+** (LLM и/или расширенная продуктовая доставка) — **не** начинать до отдельной постановки.
+Фаза **6+** (LLM и/или расширенная продуктовая доставка) или полная **фаза 7** по плану — **не** начинать до отдельной постановки.
 
 ## Что уже работает
 
-- Фазы 0–6d по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **6d:** доставка готовых сводок в Telegram control group с ретраями и аудитом.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**90** кейсов после фазы 6d).
+- Фазы 0–7a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **7a:** команды `/summary_*` из control group по зеркалу + админ API + Celery.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**105** кейсов после фазы 7a).
 
 ## Что ещё не готово
 
@@ -43,10 +43,11 @@
 - Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД / ожидание доставки.
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
 - Сводки 6a–6d: Studio DB + шаблон + продуктовый API + доставка в control group — см. `docs/06_DECISIONS.md` (фазы 6a–6d).
+- Фаза **7a:** команды `/summary_*` только из зеркала control group → ответы только в control group; см. `docs/06_DECISIONS.md` (фаза 7a).
 
 ## Следующая задача
 
-- По постановке: фаза **6+** или другая фаза из плана.
+- По постановке: фаза **7** (полный scope плана) или **6+** / другая фаза из плана.
 
 ## Вопросы к GPT
 

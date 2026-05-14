@@ -107,3 +107,10 @@
 - **Без** Memoh, **без** LLM/RAG/SLA/проектов/Studio Admin; только `sendMessage` в активную control group (тот же бот).
 - Тесты: `pytest tests/` (**90** passed в Docker); `docker compose -f docker-compose.local.yml config`; autouse-изоляция admin/env в `tests/conftest.py`.
 - SHA: `git rev-parse HEAD` на `pb-studio/main`.
+
+## 2026-05-14 — Фаза 7a (Studio: команды сводок из control group через Event Mirror)
+
+- Таблица `studio_control_commands` (Alembic `007_studio_control_commands`); `pb_studio/control_commands/` (parser, service, schemas); `summaries/product.py` — опциональный `metadata_json` для команд; Celery `process_control_group_summary_commands`; API `GET /control-commands`, `POST /control-commands/process-pending` под `STUDIO_ADMIN_TOKEN`; env `STUDIO_CONTROL_COMMANDS_ENABLED`, `STUDIO_CONTROL_COMMANDS_MAX_BATCH` в `.env.example` и `docker-compose.local.yml` (studio-api, studio-worker).
+- **Без** Memoh, **без** второго бота, **без** polling/webhook Studio, **без** LLM/RAG/SLA/проектов/Studio Admin UI; ответы только в активную control group.
+- Тесты: `studio/tests/test_control_commands_phase7a.py`; полный `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` после фиксирующего коммита.

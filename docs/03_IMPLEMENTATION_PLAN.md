@@ -201,6 +201,23 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 7a — команды сводок из control group (Event Mirror → scan → product → sendMessage)
+
+**Статус:** таблица `studio_control_commands` (Alembic `007_studio_control_commands`), пакет `pb_studio/control_commands/` (parser, service), скан только **активной** control group по `studio_messages` (без client/project/internal/service как источника команд), ответы только `sendMessage` в control group; переиспользование `summaries/product.py` и при включённом флаге — `deliver_summary_to_control_group_by_id` (6d). Флаги `STUDIO_CONTROL_COMMANDS_ENABLED`, `STUDIO_CONTROL_COMMANDS_MAX_BATCH`; Celery `process_control_group_summary_commands`; админ `GET /control-commands`, `POST /control-commands/process-pending`. **Без** Memoh, **без** второго бота, **без** polling/webhook Studio, **без** LLM/RAG/SLA/проектов/Studio Admin UI.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `control_commands/models.py` | `StudioControlCommand`, уникальности по `source_message_id` / `source_update_id` |
+| `control_commands/parser.py` | `/summary_today|yesterday|period|latest|help`, валидация UUID и дат |
+| `control_commands/service.py` | scan mirror, `begin_nested` при дублях, batch-обработка pending |
+| `api/routes/control_commands.py` | админ-эндпоинты |
+| `worker/tasks.py` | `process_control_group_summary_commands` |
+| `docker-compose.local.yml` | проброс `STUDIO_CONTROL_COMMANDS_*` в api/worker |
+
+**Тесты:** `studio/tests/test_control_commands_phase7a.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -216,6 +233,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 6b | Шаблонная генерация `summary_text` из Event Mirror, Celery `generate_pending_chat_summaries`, POST generate (**без** внешнего LLM API, **без** Telegram send сводок) |
 | 6c | Продуктовый API сводок по чату: today/yesterday/period/latest под `STUDIO_ADMIN_TOKEN` (**без** LLM, **без** Telegram send сводок; только Studio DB) |
 | 6d | Доставка готовых сводок в control group: `sendMessage`, поля `delivery_*`, Celery `deliver_pending_chat_summaries` (**без** Memoh, **без** LLM; тот же `TELEGRAM_BOT_TOKEN`) |
+| 7a | Команды `/summary_*` из control group по зеркалу: `studio_control_commands`, scan `studio_messages`, product + доставка 6d, Celery + админ API (**без** Memoh, второго бота, polling/webhook Studio) |
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |
