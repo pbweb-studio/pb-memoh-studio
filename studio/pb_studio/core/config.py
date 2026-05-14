@@ -116,6 +116,18 @@ class Settings(BaseSettings):
         default=False,
         description="STUDIO_SLA_WORKING_HOURS_ENABLED — учитывать рабочие часы/holidays при расчёте due_at",
     )
+    studio_sla_notification_cooldown_minutes: int = Field(
+        default=30,
+        description="STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES — минимальный интервал между повторными уведомлениями по инциденту",
+    )
+    studio_sla_notification_digest_max_items: int = Field(
+        default=10,
+        description="STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS — макс. строк в одном digest за цикл",
+    )
+    studio_sla_notification_text_max_len: int = Field(
+        default=3500,
+        description="STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN — безопасная обрезка текста digest/single",
+    )
 
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:

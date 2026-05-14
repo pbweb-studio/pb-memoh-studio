@@ -13,3 +13,9 @@ class SlaIncidentStatus(StrEnum):
 class SlaSeverity(StrEnum):
     WARNING = "warning"
     BREACHED = "breached"
+
+
+class SlaNotificationEventStatus(StrEnum):
+    SENT = "sent"
+    SUPPRESSED = "suppressed"
+    FAILED = "failed"

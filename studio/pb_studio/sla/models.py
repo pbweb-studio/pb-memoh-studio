@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from pb_studio.response_queue.models import Base, JSONCompat
 
@@ -80,10 +80,40 @@ class StudioSlaIncident(Base):
     acknowledged_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_notification_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_notification_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     notification_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    suppressed_notification_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_notification_reason: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     metadata_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONCompat, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )
+
+    notification_events: Mapped[list["StudioSlaNotificationEvent"]] = relationship(
+        "StudioSlaNotificationEvent", back_populates="incident", cascade="all, delete-orphan"
+    )
+
+
+class StudioSlaNotificationEvent(Base):
+    """Audit trail for SLA Telegram notifications to control group (sent / suppressed / failed)."""
+
+    __tablename__ = "studio_sla_notification_events"
+    __table_args__ = (
+        Index("ix_studio_sla_notification_events_incident_id", "incident_id"),
+        Index("ix_studio_sla_notification_events_created_at", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    incident_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("studio_sla_incidents.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    telegram_message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    payload_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONCompat, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    incident: Mapped["StudioSlaIncident"] = relationship("StudioSlaIncident", back_populates="notification_events")

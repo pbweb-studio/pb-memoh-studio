@@ -20,9 +20,9 @@ from pb_studio.core.config import Settings, get_settings
 from pb_studio.event_mirror.models import StudioChat, StudioMessage
 from pb_studio.response_queue.models import Base
 from pb_studio.response_queue.service import create_tables
-from pb_studio.sla.constants import SlaIncidentStatus
+from pb_studio.sla.constants import SlaIncidentStatus, SlaNotificationEventStatus
 from pb_studio.sla.detector import run_sla_detection_cycle
-from pb_studio.sla.models import StudioSlaIncident
+from pb_studio.sla.models import StudioSlaIncident, StudioSlaNotificationEvent
 from pb_studio.worker import tasks as worker_tasks
 
 
@@ -299,6 +299,13 @@ async def test_telegram_error_does_not_raise(sla_session: AsyncSession):
     assert inc.last_error is not None
     assert "SECRETTOKEN" not in (inc.last_error or "")
     assert "***BOT_TOKEN***" in (inc.last_error or "")
+    ev = await sla_session.scalar(
+        select(StudioSlaNotificationEvent).where(StudioSlaNotificationEvent.incident_id == inc.id)
+    )
+    assert ev is not None
+    assert ev.status == SlaNotificationEventStatus.FAILED.value
+    assert ev.error is not None
+    assert "SECRETTOKEN" not in ev.error
 
 
 @pytest.mark.asyncio

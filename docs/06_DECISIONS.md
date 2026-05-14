@@ -108,6 +108,13 @@
 - **Mute:** `is_muted` или `muted_until` в будущем блокирует **только создание** новых инцидентов; открытые инциденты и уведомления по ним не ломаются; `POST /sla/policies/{id}/mute|unmute`, `PATCH /sla/policies/{id}`.
 - **Не делается:** Memoh, LLM/RAG, проекты, Studio Admin UI.
 
+## Фаза 8c — антиспам SLA-уведомлений в control group (Studio DB, без LLM)
+
+- **Аудит:** `studio_sla_notification_events` (status sent/suppressed/failed); на инциденте — `next_notification_at`, счётчик подавлений, `last_notification_reason`.
+- **Поведение:** первое уведомление сразу; повтор только при `now >= next_notification_at`, интервал `max(STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES, followup_minutes)` если followup задан; при достижении лимита `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT` — suppress без `sendMessage`; за один прогон детектора несколько инцидентов → один digest (до `STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS` + «и ещё N»), обрезка по `STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN`; ошибки Telegram → `failed` в событиях, детектор продолжает.
+- **API:** `GET /sla/notification-events`, `POST /sla/incidents/{id}/notify` (ручной notify, обход cooldown, не лимита); фильтры на списке инцидентов.
+- **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG, проекты, Studio Admin UI, отправка в client/project/internal/service чаты.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

@@ -21,11 +21,27 @@ class SlaIncidentOut(BaseModel):
     acknowledged_at: datetime | None
     resolved_at: datetime | None
     last_notification_at: datetime | None
+    next_notification_at: datetime | None
     notification_count: int
+    suppressed_notification_count: int = 0
+    last_notification_reason: str | None
     last_error: str | None
     metadata_json: dict[str, Any] | None
     created_at: datetime
     updated_at: datetime
+
+
+class SlaNotificationEventOut(BaseModel):
+    model_config = {"from_attributes": True}
+
+    id: UUID
+    incident_id: UUID
+    status: str
+    reason: str | None
+    telegram_message_id: int | None
+    error: str | None
+    payload_json: dict[str, Any] | None
+    created_at: datetime
 
 
 class SlaPolicyOut(BaseModel):
@@ -83,3 +99,18 @@ class SlaDetectResponse(BaseModel):
     created: int
     duplicate_skipped: int
     skipped_disabled: int
+    sla_notify_sent: int = 0
+    sla_notify_suppressed: int = 0
+    sla_notify_failed: int = 0
+    sla_notify_skipped: int = 0
+    sla_notify_digest: int = 0
+
+
+class SlaManualNotifyResponse(BaseModel):
+    ok: bool
+    error: str | None = None
+    sla_notify_sent: int = 0
+    sla_notify_suppressed: int = 0
+    sla_notify_failed: int = 0
+    sla_notify_skipped: int = 0
+    sla_notify_digest: int = 0

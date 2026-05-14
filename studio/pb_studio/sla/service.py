@@ -8,8 +8,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pb_studio.control_group.service import _audit
+from pb_studio.control_group.telegram_outbound import telegram_send_message
+from pb_studio.core.config import Settings
 from pb_studio.sla.constants import SlaIncidentStatus
-from pb_studio.sla.models import StudioSlaIncident, StudioSlaPolicy
+from pb_studio.sla.models import StudioSlaIncident, StudioSlaNotificationEvent, StudioSlaPolicy
+from pb_studio.sla.notifications import (
+    list_notification_events as _sla_list_notification_events,
+    manual_notify_incident as _sla_manual_notify_incident,
+)
 
 
 def utcnow() -> datetime:
@@ -24,14 +30,39 @@ async def list_sla_incidents(
     session: AsyncSession,
     *,
     status: str | None = None,
+    severity: str | None = None,
+    chat_id: UUID | None = None,
     limit: int = 100,
 ) -> list[StudioSlaIncident]:
     lim = min(max(limit, 1), 500)
     stmt = select(StudioSlaIncident)
     if status:
         stmt = stmt.where(StudioSlaIncident.status == status)
+    if severity:
+        stmt = stmt.where(StudioSlaIncident.severity == severity)
+    if chat_id is not None:
+        stmt = stmt.where(StudioSlaIncident.chat_id == chat_id)
     stmt = stmt.order_by(StudioSlaIncident.created_at.desc()).limit(lim)
     return list((await session.scalars(stmt)).all())
+
+
+async def list_sla_notification_events(
+    session: AsyncSession,
+    *,
+    incident_id: UUID | None = None,
+    limit: int = 100,
+) -> list[StudioSlaNotificationEvent]:
+    return await _sla_list_notification_events(session, incident_id=incident_id, limit=limit)
+
+
+async def sla_manual_notify(
+    session: AsyncSession,
+    settings: Settings,
+    incident_id: UUID,
+) -> dict[str, Any]:
+    return await _sla_manual_notify_incident(
+        session, settings, incident_id, telegram_send_message, now=utcnow()
+    )
 
 
 async def list_sla_policies(session: AsyncSession) -> list[StudioSlaPolicy]:

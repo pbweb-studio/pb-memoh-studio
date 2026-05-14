@@ -265,6 +265,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 8c — антиспам и rate-limit SLA-уведомлений (Studio DB, без LLM)
+
+**Статус:** таблица `studio_sla_notification_events` (Alembic `010_studio_sla_notification_events`); поля инцидента `next_notification_at`, `suppressed_notification_count`, `last_notification_reason`; модуль `sla/notifications.py` — планирование уведомлений, digest за один цикл детектора (один `sendMessage` на несколько open-инцидентов), cooldown `STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES` с учётом `max(cooldown, policy.followup_minutes)` при заданном followup; обрезка текста `STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN`; события `sent` / `suppressed` / `failed` в audit-таблице; ошибки Telegram не валят детектор; токен не попадает в `payload_json` / `error` / `last_error` (через `redact_secrets` / `_safe_payload`). Env: `STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS`. API: `GET /sla/notification-events`, `POST /sla/incidents/{id}/notify`, фильтры `severity` / `chat_id` на `GET /sla/incidents`; счётчики в ответе `POST /sla/detect`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/проектов/Studio Admin UI.
+
+**Тесты:** `studio/tests/test_sla_phase8c.py`, регрессия `test_sla_phase8a.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -284,9 +292,10 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7b | UX: `/summary_chats`, `/summary_all_today/yesterday`, ACL по Telegram user id (`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`), агрегаты и обрезка ответов (**без** Memoh/LLM/второго бота) |
 | 8a | SLA: политики + инциденты по зеркалу, детектор first response, уведомления только в control group, Celery + админ API (**без** LLM/Memoh/проектов) |
 | 8b | SLA: рабочие часы / timezone / holidays / mute на policy, `calculate_due_at`, PATCH/mute/unmute (**без** LLM/проектов) |
+| 8c | SLA: аудит уведомлений, cooldown/digest, `studio_sla_notification_events`, ручной notify (**без** LLM/проектов) |
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
-| 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8b:** инфра + календарь/mute (см. секции выше) |
+| 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: bind/list/digest |
 | 10 | База знаний: Docling, embeddings, pgvector |
 | 11 | Правила: save/list/disable/audit |

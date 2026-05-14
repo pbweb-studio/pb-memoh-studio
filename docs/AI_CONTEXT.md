@@ -6,23 +6,23 @@
 
 ## Текущая фаза
 
-**Фаза 8b (SLA: рабочие часы и mute)** — расширение `studio_sla_policies` (Alembic `009_studio_sla_working_hours`): timezone IANA, рабочие дни/часы, holidays, `is_muted` / `muted_until` / `mute_reason`; `sla/calendar.py` — `calculate_due_at` при `STUDIO_SLA_WORKING_HOURS_ENABLED` с учётом только рабочих минут и переносом старта; детектор использует календарь; mute блокирует только **новые** инциденты; API `PATCH /sla/policies/{id}`, mute/unmute; env `STUDIO_SLA_DEFAULT_TIMEZONE`, `STUDIO_SLA_WORKING_HOURS_ENABLED`. **Без** Memoh, **без** второго бота и polling/webhook Studio, **без** LLM/RAG. Memoh **не** менялся.
+**Фаза 8c (SLA: антиспам уведомлений в control group)** — таблица `studio_sla_notification_events`, поля инцидента `next_notification_at` / `suppressed_notification_count` / `last_notification_reason` (Alembic `010_studio_sla_notification_events`); `sla/notifications.py`: первое уведомление сразу, повтор по cooldown и `max(cooldown, followup_minutes)`, лимит `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`, digest за один цикл детектора, обрезка текста; события sent/suppressed/failed; ошибки Telegram не валят детектор; токен не попадает в `payload_json`/`error`/`last_error`. Env `STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES`, `STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS`, `STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN`. API: `GET /sla/notification-events`, `POST /sla/incidents/{id}/notify`, фильтры на `GET /sla/incidents`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/проектов/Studio Admin UI.
 
-Фазы **8a**, **7b**–**4b** — см. журнал.
+Фазы **8a–8b**, **7b**–**4b** — см. журнал.
 
 ## Текущая цель
 
-Оставшаяся **фаза 8** по плану или **6+** / **7** — только по отдельной постановке.
+**6+** или **9** — только по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–8b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **8a–8b:** SLA по зеркалу, календарь due, mute на policy, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**144** кейса после фазы 8b, Docker).
+- Фазы 0–8c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**156** кейсов после фазы 8c, Docker).
 
 ## Что ещё не готово
 
-- Внешний LLM, RAG, остальное из фазы 8 (антиспам и т.д.), проекты, Studio Admin; прочие сценарии 6+.
+- Внешний LLM, RAG, проекты, Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 

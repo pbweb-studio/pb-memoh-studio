@@ -20,6 +20,7 @@
 | 7b UX summary commands + ACL in control group | Done |
 | 8a SLA infra (policies + incidents, mirror, no LLM) | Done |
 | 8b SLA working hours + mute on policies | Done |
+| 8c SLA notification antispam + digest + audit | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 8b — calendar.py, migration 009, detector+API; pytest **144** passed (Docker); compose config ok.
+**Последнее:** фаза 8c — `sla/notifications.py`, migration 010, detector batch notify, API; pytest **156** passed (Docker); compose config ok.

@@ -135,3 +135,10 @@
 - **Без** Memoh, LLM/RAG/проектов/Studio Admin UI.
 - Тесты: `tests/test_sla_calendar.py`, `tests/test_sla_phase8b.py`; `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` после коммита 8b (см. отчёт / CI).
+
+## 2026-05-14 — Фаза 8c (Studio: SLA антиспам уведомлений в control group)
+
+- Таблица `studio_sla_notification_events`, расширение `studio_sla_incidents` (Alembic `010_studio_sla_notification_events`); `sla/notifications.py`; детектор — батч уведомлений с digest и cooldown; env `STUDIO_SLA_NOTIFICATION_*`; API `GET /sla/notification-events`, `POST /sla/incidents/{id}/notify`, фильтры на `GET /sla/incidents`.
+- **Без** Memoh, LLM/RAG/проектов/Studio Admin UI, второго бота, polling/webhook Studio.
+- Тесты: `studio/tests/test_sla_phase8c.py`; полный `pytest tests/` в Docker (**156** passed); `docker compose -f docker-compose.local.yml config`.
+- SHA: `795ce12b5cc5cf56aedfc9d08adcd3ab263887d9` (коммит 8c).

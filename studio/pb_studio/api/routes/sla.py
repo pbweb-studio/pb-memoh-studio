@@ -9,6 +9,8 @@ from pb_studio.sla.detector import run_sla_detection_cycle
 from pb_studio.sla.schemas import (
     SlaDetectResponse,
     SlaIncidentOut,
+    SlaManualNotifyResponse,
+    SlaNotificationEventOut,
     SlaPolicyCreate,
     SlaPolicyMuteBody,
     SlaPolicyOut,
@@ -18,10 +20,12 @@ from pb_studio.sla.service import (
     acknowledge_incident,
     create_sla_policy,
     list_sla_incidents,
+    list_sla_notification_events,
     list_sla_policies,
     mute_sla_policy,
     patch_sla_policy_fields,
     resolve_incident,
+    sla_manual_notify,
     unmute_sla_policy,
 )
 
@@ -32,16 +36,46 @@ router = APIRouter(prefix="/sla", tags=["sla"])
 async def get_sla_incidents(
     session: DbSession,
     status_filter: str | None = Query(default=None, alias="status"),
+    severity: str | None = Query(default=None),
+    chat_id: UUID | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[SlaIncidentOut]:
-    rows = await list_sla_incidents(session, status=status_filter, limit=limit)
+    rows = await list_sla_incidents(
+        session, status=status_filter, severity=severity, chat_id=chat_id, limit=limit
+    )
     return [SlaIncidentOut.model_validate(r) for r in rows]
+
+
+@router.get(
+    "/notification-events",
+    response_model=list[SlaNotificationEventOut],
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def get_sla_notification_events(
+    session: DbSession,
+    incident_id: UUID | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> list[SlaNotificationEventOut]:
+    rows = await list_sla_notification_events(session, incident_id=incident_id, limit=limit)
+    return [SlaNotificationEventOut.model_validate(r) for r in rows]
 
 
 @router.post("/detect", response_model=SlaDetectResponse, dependencies=[Depends(verify_admin_optional)])
 async def post_sla_detect(session: DbSession, settings: SettingsDep) -> SlaDetectResponse:
     raw = await run_sla_detection_cycle(session, settings)
     return SlaDetectResponse.model_validate(raw)
+
+
+@router.post(
+    "/incidents/{incident_id}/notify",
+    response_model=SlaManualNotifyResponse,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_sla_incident_notify(
+    session: DbSession, settings: SettingsDep, incident_id: UUID
+) -> SlaManualNotifyResponse:
+    raw = await sla_manual_notify(session, settings, incident_id)
+    return SlaManualNotifyResponse.model_validate(raw)
 
 
 @router.post(

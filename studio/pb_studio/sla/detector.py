@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, Callable
+from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -10,18 +10,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pb_studio.control_group.constants import ChatRole
-from pb_studio.control_group.service import _audit, get_control_group_chat
-from pb_studio.control_group.telegram_outbound import redact_secrets, telegram_send_message
+from pb_studio.control_group.service import _audit
+from pb_studio.control_group.telegram_outbound import telegram_send_message
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import StudioChat, StudioMessage
 from pb_studio.sla.constants import SlaIncidentStatus, SlaSeverity
 from pb_studio.sla.calendar import calculate_due_at, policy_blocks_new_incidents
 from pb_studio.sla.models import StudioSlaIncident, StudioSlaPolicy
+from pb_studio.sla.notifications import SendMessageFn, dispatch_sla_notifications
 
 logger = logging.getLogger(__name__)
-
-SendMessageFn = Callable[..., Awaitable[tuple[bool, int | None, str, int | None]]]
 
 
 def utcnow() -> datetime:
@@ -86,13 +85,6 @@ def effective_first_response_minutes(settings: Settings, policy: StudioSlaPolicy
     if policy is not None:
         return max(1, int(policy.first_response_minutes))
     return max(1, int(settings.studio_sla_default_first_response_minutes))
-
-
-def effective_followup_minutes(policy: StudioSlaPolicy | None) -> int | None:
-    if policy is None or policy.followup_minutes is None:
-        return None
-    v = int(policy.followup_minutes)
-    return v if v > 0 else None
 
 
 async def _load_messages(session: AsyncSession, chat_id: UUID) -> list[StudioMessage]:
@@ -178,97 +170,6 @@ async def resolve_stale_open_incidents(
     return n
 
 
-async def _maybe_notify_control_group(
-    session: AsyncSession,
-    settings: Settings,
-    incident: StudioSlaIncident,
-    *,
-    send_message: SendMessageFn,
-    source_chat: StudioChat,
-    now: datetime,
-) -> None:
-    max_n = max(0, int(settings.studio_sla_max_notifications_per_incident))
-    if max_n == 0:
-        return
-
-    token = (settings.telegram_bot_token or "").strip()
-    if not token:
-        return
-
-    dest = await get_control_group_chat(session)
-    if dest is None:
-        return
-    if dest.chat_role != ChatRole.CONTROL_GROUP.value:
-        return
-
-    if int(dest.telegram_chat_id) == int(source_chat.telegram_chat_id):
-        return
-
-    policy = await _effective_policy_row(session, incident.chat_role)
-    followup = effective_followup_minutes(policy)
-
-    can_send = False
-    if incident.notification_count == 0:
-        can_send = True
-    elif (
-        followup is not None
-        and incident.notification_count < max_n
-        and incident.last_notification_at is not None
-        and _as_utc(now) >= _as_utc(incident.last_notification_at) + timedelta(minutes=followup)
-    ):
-        can_send = True
-
-    if not can_send or incident.notification_count >= max_n:
-        return
-
-    timeout_s = max(0.5, settings.studio_telegram_send_timeout_ms / 1000.0)
-    text = (
-        f"SLA: чат {source_chat.telegram_chat_id} ({incident.chat_role}), "
-        f"нарушение first response, incident={incident.id}"
-    )[:4090]
-    try:
-        ok, http_status, err, _mid = await send_message(
-            bot_token=token,
-            chat_id=int(dest.telegram_chat_id),
-            text=text,
-            timeout_seconds=timeout_s,
-        )
-    except Exception as exc:  # noqa: BLE001
-        incident.last_error = redact_secrets(str(exc), token)
-        incident.updated_at = now
-        await _audit(
-            session,
-            action="sla.notification_exception",
-            entity_type="studio_sla_incident",
-            entity_id=str(incident.id),
-            payload={"error": incident.last_error},
-        )
-        return
-
-    if ok:
-        incident.notification_count += 1
-        incident.last_notification_at = now
-        incident.last_error = None
-        incident.updated_at = now
-        await _audit(
-            session,
-            action="sla.notification_sent",
-            entity_type="studio_sla_incident",
-            entity_id=str(incident.id),
-            payload={"telegram_http": http_status},
-        )
-    else:
-        incident.last_error = redact_secrets(err or f"http_{http_status}", token)
-        incident.updated_at = now
-        await _audit(
-            session,
-            action="sla.notification_failed",
-            entity_type="studio_sla_incident",
-            entity_id=str(incident.id),
-            payload={"http_status": http_status, "detail": incident.last_error},
-        )
-
-
 async def run_sla_detection_cycle(
     session: AsyncSession,
     settings: Settings,
@@ -285,11 +186,18 @@ async def run_sla_detection_cycle(
         "created": 0,
         "duplicate_skipped": 0,
         "skipped_disabled": 0,
+        "sla_notify_sent": 0,
+        "sla_notify_suppressed": 0,
+        "sla_notify_failed": 0,
+        "sla_notify_skipped": 0,
+        "sla_notify_digest": 0,
     }
     if not settings.studio_sla_enabled:
         counts["skipped_disabled"] = 1
         logger.info("SLA detection skipped: STUDIO_SLA_ENABLED=false")
         return counts
+
+    notify_queue: list[tuple[StudioSlaIncident, StudioChat, StudioSlaPolicy | None, bool]] = []
 
     counts["resolved_answered"] = await resolve_open_incidents_answered(session, now=now)
 
@@ -320,14 +228,7 @@ async def run_sla_detection_cycle(
             )
         )
         if existing is not None:
-            await _maybe_notify_control_group(
-                session,
-                settings,
-                existing,
-                send_message=send_message,
-                source_chat=chat,
-                now=now,
-            )
+            notify_queue.append((existing, chat, policy_row, False))
             continue
 
         if policy_blocks_new_incidents(policy_row, now):
@@ -372,9 +273,12 @@ async def run_sla_detection_cycle(
             entity_id=str(inc.id),
             payload={"chat_id": str(chat.id), "trigger_message_id": str(tail.id)},
         )
-        await _maybe_notify_control_group(
-            session, settings, inc, send_message=send_message, source_chat=chat, now=now
-        )
+        notify_queue.append((inc, chat, policy_row, False))
+
+    notify_counts = await dispatch_sla_notifications(
+        session, settings, notify_queue, send_message, now=now
+    )
+    counts.update(notify_counts)
 
     return counts
 

@@ -1,7 +1,7 @@
 # Active context
 
-**Сейчас:** фаза **8b** в Studio — SLA календарь: рабочие дни/часы, timezone policy, holidays, расчёт `due_at` через `calculate_due_at` при `STUDIO_SLA_WORKING_HOURS_ENABLED`; mute на policy (`is_muted`, `muted_until`) блокирует только новые инциденты; API `PATCH /sla/policies/{id}`, mute/unmute; Alembic `009`. Поверх 8a: инциденты, детектор, Celery. Memoh не менялся.
+**Сейчас:** фаза **8c** в Studio — SLA уведомления в control group: таблица `studio_sla_notification_events`, поля инцидента `next_notification_at` / `suppressed_notification_count` / `last_notification_reason`; `sla/notifications.py` (cooldown + `max(cooldown, followup_minutes)`, digest за цикл, обрезка текста); Alembic `010`; API `GET /sla/notification-events`, `POST /sla/incidents/{id}/notify`, фильтры на `GET /sla/incidents`; env `STUDIO_SLA_NOTIFICATION_*`. Поверх 8a–8b. Memoh не менялся.
 
 **Ветка:** `pb-studio/main`.
 
-**Следующий шаг:** остаток **фазы 8** по плану или **6+** по постановке.
+**Следующий шаг:** **6+** или **9** — по отдельной постановке.
