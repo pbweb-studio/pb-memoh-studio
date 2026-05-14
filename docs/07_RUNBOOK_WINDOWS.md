@@ -49,6 +49,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 10g (KB импорт из Telegram control group)** добавьте в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_TELEGRAM_IMPORT_ENABLED` (по умолчанию `false`), `STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS`, `STUDIO_KB_TELEGRAM_MAX_FILE_BYTES` (0 = лимит как `STUDIO_KB_UPLOAD_MAX_BYTES`). Нужны также `STUDIO_KB_ENABLED`, `TELEGRAM_BOT_TOKEN`, `STUDIO_CONTROL_COMMANDS_ENABLED` и (при необходимости ACL) `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`. Команды `/kb_import_last` и `/kb_import_file` — см. `/kb_import_help`; скачивание через Bot API, без polling Studio.
 
+Для **фазы 11a (assistant rules)** эндпоинты `GET/POST/PATCH /assistant-rules`, `POST /assistant-rules/{id}/disable`, `GET /assistant-rules/audit` — под тем же `STUDIO_ADMIN_TOKEN`, что `/projects` и `/knowledge` (если токен задан — Bearer обязателен). Отдельных env-флагов нет.
+
 Проверка API:
 
 ```powershell

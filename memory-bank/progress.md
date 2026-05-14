@@ -30,6 +30,7 @@
 | 10e KB RAG question answering MVP (ask API + /kb_ask) | Done |
 | 10f KB HTTP upload + optional Docling (pdf/docx) | Done |
 | 10g KB Telegram document import (control group) | Done |
+| 11a Assistant rules storage + API + /rule_* (no LLM apply) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10g — `/kb_import_last` / `/kb_import_file`, `telegram_file_download` + `telegram_kb_import`, env в compose; `_redact_kb_error_message` + `redact_kb_import_error`; pytest **249** passed; compose config ok.
+**Последнее:** фаза 11a — `studio_assistant_rules`, `studio_assistant_rule_audit`, `/assistant-rules` API, команды `/rule_*`; pytest **256** passed.

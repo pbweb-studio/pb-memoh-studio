@@ -197,3 +197,9 @@
 - `STUDIO_KB_TELEGRAM_IMPORT_ENABLED`, `STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS`, `STUDIO_KB_TELEGRAM_MAX_FILE_BYTES` (0 = как upload max); `telegram_file_download.py`, `telegram_kb_import.py`; команды `/kb_import_last`, `/kb_import_file`; поиск последнего `document` в зеркале CG от того же user; скачивание → `ingest_new_document_from_upload` (как 10f); `_redact_kb_error_message` дополнен `redact_kb_import_error` (sk-).
 - **Без** Memoh, второго бота, polling/webhook Studio, отдельного admin API для импорта; RAG 10e не менялся.
 - Тесты: `studio/tests/test_knowledge_phase10g.py`; полный `pytest tests/` (**249** passed); `docker compose -f docker-compose.local.yml config`.
+
+## 2026-05-14 — Фаза 11a (Studio: assistant rules — storage, API, control commands)
+
+- Таблицы `studio_assistant_rules`, `studio_assistant_rule_audit`; миграция `015_studio_assistant_rules`; пакет `pb_studio/assistant_rules/`; API `/assistant-rules` (листинг, создание, `GET/{id}`, `PATCH`, `POST …/disable`, `GET /assistant-rules/audit`) под `STUDIO_ADMIN_TOKEN`; команды `/rule_*` в control group (скан `/rule`); аудит `created` / `updated` / `disabled`.
+- **Без** Memoh, без применения правил к LLM/RAG prompt, без Studio Admin UI.
+- Тесты: `studio/tests/test_assistant_rules_phase11a.py`; полный `pytest tests/` (**256** passed).

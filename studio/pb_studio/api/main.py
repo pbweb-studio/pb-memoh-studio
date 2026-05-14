@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from pb_studio.api.routes import assistant_rules as assistant_rules_routes
 from pb_studio.api.routes import control as control_routes
 from pb_studio.api.routes import control_commands as control_commands_routes
 from pb_studio.api.routes import events as events_routes
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     application.include_router(projects_routes.router)
     application.include_router(project_digests_routes.router)
     application.include_router(knowledge_routes.router)
+    application.include_router(assistant_rules_routes.router)
 
     return application
 

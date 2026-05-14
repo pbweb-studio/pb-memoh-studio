@@ -40,6 +40,12 @@ class ControlCommandName:
     KB_IMPORT_HELP = "kb_import_help"
     KB_IMPORT_LAST = "kb_import_last"
     KB_IMPORT_FILE = "kb_import_file"
+    RULE_HELP = "rule_help"
+    RULE_LIST = "rule_list"
+    RULE_ADD = "rule_add"
+    RULE_ADD_PROJECT = "rule_add_project"
+    RULE_ADD_CHAT = "rule_add_chat"
+    RULE_DISABLE = "rule_disable"
 
 
 # Лимиты UX для Telegram sendMessage (оставляем запас под «обрезано»)
@@ -116,6 +122,8 @@ KB_HELP_TEXT = """Команды базы знаний (Studio, только и�
 /kb_import_help — импорт в KB (HTTP + Telegram из control group, см. текст)
 /kb_import_last [--project <slug>] <title> — последний document-файл в этой группе от вас → KB
 /kb_import_file <telegram_file_id> <title> — скачать по file_id → KB
+
+Правила ассистента (без LLM, фаза 11a): /rule_help
 
 Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.
 """

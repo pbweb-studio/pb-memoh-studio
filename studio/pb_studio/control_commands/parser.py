@@ -346,16 +346,94 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
     return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "unknown_kb_command"})
 
 
+def _parse_rule_command_line(line: str) -> ParsedControlCommand:
+    parts = line.split()
+    if not parts:
+        return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
+    cmd = parts[0].strip().lower()
+
+    if cmd == "/rule_help":
+        if len(parts) > 1:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "rule_help takes no arguments"},
+            )
+        return ParsedControlCommand(ControlCommandName.RULE_HELP, {})
+
+    if cmd == "/rule_list":
+        if len(parts) > 1:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "rule_list takes no arguments"},
+            )
+        return ParsedControlCommand(ControlCommandName.RULE_LIST, {})
+
+    if cmd == "/rule_add":
+        tail = line[len("/rule_add") :].strip()
+        if not tail:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "rule_add needs text"})
+        return ParsedControlCommand(ControlCommandName.RULE_ADD, {"rule_text": tail})
+
+    if cmd == "/rule_add_project":
+        if len(parts) < 3:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "rule_add_project needs slug and text"},
+            )
+        slug_t = parts[1].strip()
+        if not _SLUG_TOKEN_RE.match(slug_t):
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+        text = " ".join(parts[2:]).strip()
+        if not text:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty rule text"})
+        return ParsedControlCommand(
+            ControlCommandName.RULE_ADD_PROJECT,
+            {"project_slug": slug_t.lower(), "rule_text": text},
+        )
+
+    if cmd == "/rule_add_chat":
+        if len(parts) < 3:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "rule_add_chat needs chat_uuid and text"},
+            )
+        uid = _parse_uuid(parts[1])
+        if uid is None:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_chat_uuid"})
+        text = " ".join(parts[2:]).strip()
+        if not text:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty rule text"})
+        return ParsedControlCommand(
+            ControlCommandName.RULE_ADD_CHAT,
+            {"chat_id": str(uid), "rule_text": text},
+        )
+
+    if cmd == "/rule_disable":
+        if len(parts) != 2:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "rule_disable needs rule_uuid"},
+            )
+        rid = _parse_uuid(parts[1])
+        if rid is None:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_rule_uuid"})
+        return ParsedControlCommand(ControlCommandName.RULE_DISABLE, {"rule_id": str(rid)})
+
+    return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "unknown_rule_command"})
+
+
 def parse_control_group_command_line(text: str | None) -> ParsedControlCommand | None:
     """
     Разобрать строку сообщения из control group.
-    Возвращает None, если это не команда /summary_* или /project* или /kb_*.
+    Возвращает None, если это не команда /summary_* или /project* или /kb_* или /rule_*.
     """
     if not text or not isinstance(text, str):
         return None
     line = text.strip()
     if line.startswith("/kb"):
         return _parse_kb_command_line(line)
+    if line.startswith("/rule"):
+        return _parse_rule_command_line(line)
     if line.startswith("/project_digest"):
         return _parse_project_digest_command_line(line)
     if line.startswith("/project"):

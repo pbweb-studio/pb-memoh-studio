@@ -28,6 +28,8 @@ from pb_studio.control_commands.parser import parse_control_group_command_line, 
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
+from pb_studio.assistant_rules import service as assistant_rules_service
+from pb_studio.assistant_rules.constants import AssistantRuleScope, AssistantRuleSource, RULE_HELP_TEXT
 from pb_studio.knowledge import service as studio_kb_service
 from pb_studio.knowledge import telegram_kb_import as tg_kb_import
 from pb_studio.knowledge.embeddings import redact_embedding_error
@@ -235,6 +237,7 @@ async def scan_mirror_for_control_commands(
                 StudioMessage.text.startswith("/summary"),
                 StudioMessage.text.startswith("/project"),
                 StudioMessage.text.startswith("/kb"),
+                StudioMessage.text.startswith("/rule"),
             ),
             not_(dup_exists),
         )
@@ -321,6 +324,9 @@ async def _process_one_command(
 
     try:
         raw_cmd = (cmd.command_text or "").strip()
+        if raw_cmd.startswith("/rule"):
+            await _dispatch_rule_control_commands(session, cmd, settings, reply, now)
+            return
         if raw_cmd.startswith("/kb"):
             await _dispatch_kb_control_commands(session, cmd, settings, reply, now)
             return
@@ -335,6 +341,7 @@ async def _process_one_command(
             cmd.command_name == ControlCommandName.UNKNOWN
             and not raw_cmd.startswith("/project")
             and not raw_cmd.startswith("/kb")
+            and not raw_cmd.startswith("/rule")
         ):
             text_out = SUMMARY_HELP_TEXT
             if cmd.command_name == ControlCommandName.UNKNOWN:
@@ -516,6 +523,179 @@ def _redact_kb_error_message(message: str, settings: Settings, telegram_token: s
     out = redact_embedding_error(message, chat_key)
     out = redact_kb_import_error(out)
     return redact_secrets(out, telegram_token or None)
+
+
+async def _dispatch_rule_control_commands(
+    session: AsyncSession,
+    cmd: StudioControlCommand,
+    settings: Settings,
+    reply,
+    now: datetime,
+) -> None:
+    token = (settings.telegram_bot_token or "").strip()
+    sender_id = _parse_sender_id(cmd.args_json)
+    try:
+        if cmd.command_name == ControlCommandName.UNKNOWN:
+            reason = str(cmd.args_json.get("reason") or "")
+            text_out = RULE_HELP_TEXT
+            if reason:
+                text_out = f"Ошибка: {reason}\n\n" + text_out
+            mid = await reply(text_out)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.RULE_HELP:
+            mid = await reply(RULE_HELP_TEXT)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.rule_help",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.RULE_LIST:
+            rows = await assistant_rules_service.list_rules(session, limit=40)
+            lines = ["Правила (последние):"]
+            for r in rows:
+                snip = (r.rule_text or "").replace("\n", " ")[:120]
+                lines.append(f"- {r.id} scope={r.scope} status={r.status} … {snip}")
+            if not rows:
+                lines.append("(пусто)")
+            mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.RULE_ADD:
+            text = str(cmd.args_json.get("rule_text") or "")
+            row = await assistant_rules_service.create_rule(
+                session,
+                scope=AssistantRuleScope.GLOBAL,
+                rule_text=text,
+                source=AssistantRuleSource.CONTROL_GROUP,
+                created_by_telegram_user_id=sender_id,
+                created_from_message_id=int(cmd.source_message_id) if cmd.source_message_id is not None else None,
+            )
+            mid = await reply(f"Правило создано: id={row.id} scope=global")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.rule_add",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"rule_id": str(row.id)},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.RULE_ADD_PROJECT:
+            slug = str(cmd.args_json.get("project_slug") or "")
+            text = str(cmd.args_json.get("rule_text") or "")
+            proj = await studio_projects_service.get_project_by_slug(session, slug)
+            if proj is None:
+                mid = await reply("Проект не найден.")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            row = await assistant_rules_service.create_rule(
+                session,
+                scope=AssistantRuleScope.PROJECT,
+                rule_text=text,
+                project_id=proj.id,
+                source=AssistantRuleSource.CONTROL_GROUP,
+                created_by_telegram_user_id=sender_id,
+                created_from_message_id=int(cmd.source_message_id) if cmd.source_message_id is not None else None,
+            )
+            mid = await reply(f"Правило создано: id={row.id} scope=project slug={slug}")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.rule_add_project",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"rule_id": str(row.id), "project_slug": slug},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.RULE_ADD_CHAT:
+            chat_uid = UUID(str(cmd.args_json.get("chat_id") or ""))
+            text = str(cmd.args_json.get("rule_text") or "")
+            row = await assistant_rules_service.create_rule(
+                session,
+                scope=AssistantRuleScope.CHAT,
+                rule_text=text,
+                chat_id=chat_uid,
+                source=AssistantRuleSource.CONTROL_GROUP,
+                created_by_telegram_user_id=sender_id,
+                created_from_message_id=int(cmd.source_message_id) if cmd.source_message_id is not None else None,
+            )
+            mid = await reply(f"Правило создано: id={row.id} scope=chat chat_id={chat_uid}")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.rule_add_chat",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"rule_id": str(row.id), "chat_id": str(chat_uid)},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.RULE_DISABLE:
+            rid = UUID(str(cmd.args_json.get("rule_id") or ""))
+            row = await assistant_rules_service.disable_rule(
+                session,
+                rid,
+                reason="control_group",
+                actor_telegram_user_id=sender_id,
+            )
+            if row is None:
+                mid = await reply("Правило не найдено.")
+            else:
+                mid = await reply(f"Правило отключено: id={row.id} status={row.status}")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.rule_disable",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"rule_id": str(rid)},
+            )
+            return
+
+        cmd.status = ControlCommandStatus.IGNORED
+        cmd.processed_at = now
+        cmd.last_error = "unsupported rule command"
+    except ValueError as exc:
+        mid = await reply(f"Ошибка: {redact_secrets(str(exc), token or None)[:500]}")
+        cmd.status = ControlCommandStatus.PROCESSED
+        cmd.processed_at = now
+        cmd.response_telegram_message_id = mid
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("rule control command failed id=%s", cmd.id)
+        safe_err = redact_secrets(str(exc), token or None)[:4000]
+        cmd.status = ControlCommandStatus.FAILED
+        cmd.last_error = safe_err
+        cmd.processed_at = now
+        try:
+            await reply(f"Правило: не выполнено: {redact_secrets(str(exc)[:500], token or None)}")
+        except Exception:  # noqa: BLE001
+            pass
 
 
 async def _dispatch_kb_control_commands(
