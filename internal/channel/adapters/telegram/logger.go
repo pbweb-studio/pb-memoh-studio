@@ -3,8 +3,21 @@ package telegram
 import (
 	"fmt"
 	"log/slog"
+	"regexp"
 	"sync"
 )
+
+var (
+	telegramFileBotPathURL = regexp.MustCompile(`(?i)/file/bot\d+:[a-z0-9_-]+/`)
+	telegramBotPathURL     = regexp.MustCompile(`(?i)/bot\d+:[a-z0-9_-]+/`)
+)
+
+// redactTelegramBotAPIURLs masks bot tokens in Telegram Bot API URLs (e.g. .../bot<token>/getUpdates).
+func redactTelegramBotAPIURLs(msg string) string {
+	msg = telegramFileBotPathURL.ReplaceAllString(msg, "/file/bot<redacted>/")
+	msg = telegramBotPathURL.ReplaceAllString(msg, "/bot<redacted>/")
+	return msg
+}
 
 // slogBotLogger adapts slog.Logger to tgbotapi.BotLogger so library logs go through slog.
 type slogBotLogger struct {
@@ -37,12 +50,12 @@ func (s *slogBotLogger) current() *slog.Logger {
 }
 
 func (s *slogBotLogger) Println(v ...interface{}) {
-	s.current().Warn("telegram bot sdk log", slog.String("message", fmt.Sprint(v...)))
+	s.current().Warn("telegram bot sdk log", slog.String("message", redactTelegramBotAPIURLs(fmt.Sprint(v...))))
 }
 
 func (s *slogBotLogger) Printf(format string, v ...interface{}) {
 	s.current().Warn(
 		"telegram bot sdk log",
-		slog.String("message", fmt.Sprintf(format, v...)),
+		slog.String("message", redactTelegramBotAPIURLs(fmt.Sprintf(format, v...))),
 	)
 }

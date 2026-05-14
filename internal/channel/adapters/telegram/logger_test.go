@@ -3,6 +3,7 @@ package telegram
 import (
 	"bytes"
 	"log/slog"
+	"strings"
 	"testing"
 )
 
@@ -42,5 +43,37 @@ func TestSlogBotLogger_Printf(t *testing.T) {
 	}
 	if !bytes.Contains(buf.Bytes(), []byte("retrying in 3 seconds")) {
 		t.Fatalf("expected formatted message: %s", buf.String())
+	}
+}
+
+func TestRedactTelegramBotAPIURLs_getUpdatesErrorDoesNotLeakToken(t *testing.T) {
+	t.Parallel()
+
+	secret := "AAHqTtestSecretReplaceMe"
+	raw := `Post "https://api.telegram.org/bot123456789:` + secret + `/getUpdates": context deadline exceeded`
+	got := redactTelegramBotAPIURLs(raw)
+	if strings.Contains(got, secret) {
+		t.Fatalf("token leaked in redacted string: %q", got)
+	}
+	if !strings.Contains(got, "/bot<redacted>/getUpdates") {
+		t.Fatalf("expected masked path, got %q", got)
+	}
+}
+
+func TestSlogBotLogger_Println_redactsGetUpdatesURL(t *testing.T) {
+	t.Parallel()
+
+	secret := "AAHqTtestSecretReplaceMe"
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	w := &slogBotLogger{log: log}
+
+	w.Println(`Post "https://api.telegram.org/bot123456789:` + secret + `/getUpdates": Client.Timeout exceeded`)
+	out := buf.String()
+	if strings.Contains(out, secret) {
+		t.Fatalf("token leaked in slog output: %q", out)
+	}
+	if !strings.Contains(out, "bot<redacted>") {
+		t.Fatalf("expected redacted bot path in output: %q", out)
 	}
 }

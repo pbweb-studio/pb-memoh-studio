@@ -28,6 +28,10 @@ const (
 	telegramMaxMessageLength        = 4096
 	telegramMediaGroupCollectWindow = 700 * time.Millisecond
 	telegramUpdateDedupeTTL         = 10 * time.Minute
+	// Long poll: Telegram holds the HTTP request open for up to this many seconds.
+	telegramLongPollTimeoutSeconds = 30
+	// HTTP client timeout must exceed long poll + TLS/network slack, or getUpdates fails with "context deadline exceeded".
+	telegramHTTPClientTimeout = 90 * time.Second
 )
 
 var (
@@ -115,7 +119,7 @@ func (a *TelegramAdapter) getOrCreateBot(cfg Config, configID string) (*tgbotapi
 	if bot, ok := a.bots[cacheKey]; ok {
 		return bot, nil
 	}
-	httpClient, err := common.NewHTTPClient(30*time.Second, cfg.HTTPProxy)
+	httpClient, err := common.NewHTTPClient(telegramHTTPClientTimeout, cfg.HTTPProxy)
 	if err != nil {
 		if a.logger != nil {
 			a.logger.Error("create bot http client failed", slog.String("config_id", configID), slog.Any("error", err))
@@ -279,7 +283,7 @@ func (a *TelegramAdapter) Connect(ctx context.Context, cfg channel.ChannelConfig
 		return nil, err
 	}
 	updateConfig := tgbotapi.NewUpdate(0)
-	updateConfig.Timeout = 30
+	updateConfig.Timeout = telegramLongPollTimeoutSeconds
 	updates := bot.GetUpdatesChan(updateConfig)
 	connCtx, cancel := context.WithCancel(ctx)
 	mediaGroups := make(map[string]*telegramMediaGroupBuffer)
