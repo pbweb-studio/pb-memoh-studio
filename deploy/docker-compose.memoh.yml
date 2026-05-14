@@ -46,7 +46,12 @@ services:
       - memoh-internal
 
   migrate:
-    image: memohai/server:latest
+    # Сборка из этого репо — включает Event Mirror (internal/channel/adapters/telegram/studio_event_mirror.go).
+    # На VPS: из корня репо с заданным MEMOH_ROOT: docker compose -f deploy/docker-compose.memoh.yml build server && docker compose ... up -d
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    image: pb-memoh-server:jar
     entrypoint: ["/app/memoh-server", "migrate", "up"]
     volumes:
       - ${MEMOH_ROOT}/config.toml:/app/config.toml:ro
@@ -61,7 +66,10 @@ services:
       - memoh-internal
 
   server:
-    image: memohai/server:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    image: pb-memoh-server:jar
     privileged: true
     pid: host
     volumes:
