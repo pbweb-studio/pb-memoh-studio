@@ -8,6 +8,7 @@ RUN apt-get update \
 
 COPY pyproject.toml README.md ./
 COPY pb_studio ./pb_studio
+COPY tests ./tests
 COPY alembic.ini ./
 COPY alembic ./alembic
 

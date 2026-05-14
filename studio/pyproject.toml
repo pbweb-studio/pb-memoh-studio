@@ -14,6 +14,8 @@ dependencies = [
   "pydantic-settings>=2.6,<3",
   "fastapi>=0.115,<1",
   "uvicorn[standard]>=0.32,<1",
+  "jinja2>=3.1,<4",
+  "itsdangerous>=2.2,<3",
   "asyncpg>=0.30,<1",
   "redis[hiredis]>=5.2,<6",
   "celery[redis]>=5.4,<6",
@@ -36,6 +38,10 @@ docling = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["pb_studio"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"pb_studio/admin_ui/templates" = "pb_studio/admin_ui/templates"
+"pb_studio/admin_ui/static" = "pb_studio/admin_ui/static"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -204,6 +204,12 @@
 - **Без** Memoh, Telegram Bot API, polling/webhook Studio, LLM/RAG/embeddings, Studio Admin UI, исходящих сообщений в Telegram.
 - Тесты: `studio/tests/test_history_import_phase12a.py`; полный `pytest tests/` (**268** passed).
 
+## 2026-05-14 — Фаза 13a (Studio Admin UI skeleton)
+
+- Пакет `pb_studio/admin_ui/` (Jinja2, Bootstrap 5 CDN, read-only страницы); `api/routes/admin_ui.py`: `GET /admin/`, разделы чатов / control group / сводок / проектов / SLA / KB / правил / history-import jobs; `GET/POST /admin/login`, `POST /admin/logout`; авторизация **`STUDIO_ADMIN_TOKEN`** (Bearer или cookie `studio_admin_session` через `itsdangerous`, секрет = токен; токен в логи не пишем); `GET /admin` → 302 на `/admin/`; статика `/admin/static`.
+- **Без** Memoh, bot/polling/webhook, LLM/RAG, мутаций сущностей (кроме входа/выхода сессии).
+- Тесты: `studio/tests/test_admin_ui_phase13a.py`; полный `pytest tests/` (**277** passed, Docker).
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

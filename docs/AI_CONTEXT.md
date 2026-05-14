@@ -6,6 +6,8 @@
 
 ## Текущая фаза
 
+**Фаза 13a (Studio Admin UI skeleton)** — HTML под `/admin/*`: Jinja2 + Bootstrap 5, read-only таблицы и дашборд; **`STUDIO_ADMIN_TOKEN`** обязателен для защищённых путей (Bearer или cookie после `POST /admin/login`); `GET /admin` → `/admin/`, статика `/admin/static`. Без Memoh, бота, LLM/RAG, мутаций сущностей.
+
 **Фаза 12a (Studio: Telegram Desktop JSON → Event Mirror)** — `POST /history-import/telegram-json`, `GET /history-import/jobs*`, таблица `studio_history_import_jobs`; `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; запись в `studio_chats` / `studio_messages` (без Memoh/Bot API).
 
 **Фаза 11b (Studio: assistant rules → KB RAG)** — активные правила в user-prompt `ask_knowledge_base` (global + project при `project_id` + chat при `chat_id`); `POST /knowledge/ask` — `applied_rule_ids`, опциональный `chat_id`; `/kb_ask` использует `studio_chats.id` control group для chat-rules. **Без** Memoh и без применения правил к сводкам/SLA/digest.
@@ -14,11 +16,12 @@
 
 ## Текущая цель
 
-**6+** (LLM для сводок и пр.) или расширение **10+** (полный Docling pipeline, прочие KB UX) — по отдельной постановке.
+Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.) или **10+** — по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–12a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- Фазы 0–13a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **13a:** каркас Studio Admin (`/admin/*`), read-only страницы, auth по `STUDIO_ADMIN_TOKEN`.
 - **12a:** импорт экспорта Telegram Desktop JSON в Event Mirror (`/history-import/*`), jobs в БД.
 - **11b:** те же правила — в KB RAG (`rag.py`, `/knowledge/ask`, `/kb_ask`): `applied_rule_ids`, опциональный `chat_id` в ask body.
 - **11a:** правила ассистента в БД + audit, API `/assistant-rules*`, команды `/rule_*`.
@@ -31,11 +34,11 @@
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**268** кейсов после фазы 12a, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (число кейсов — после последнего полного прогона, см. журнал).
 
 ## Что ещё не готово
 
-- Studio Admin; прочие сценарии 6+.
+- Расширенный Studio Admin (формы, HTMX, мутации) без отдельной постановки; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -69,10 +72,11 @@
 - **Фаза 11a:** assistant rules в Studio DB + audit + admin API + `/rule_*` из control group; см. `docs/06_DECISIONS.md`.
 - **Фаза 11b:** assistant rules в user-prompt KB RAG + `applied_rule_ids`; см. `docs/06_DECISIONS.md`.
 - **Фаза 12a:** импорт Telegram Desktop JSON в Event Mirror + jobs API; см. `docs/06_DECISIONS.md`.
+- **Фаза 13a:** Studio Admin UI skeleton (`/admin/*`, read-only, `STUDIO_ADMIN_TOKEN`); см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 
-- По постановке: **6+** или расширение **10+** из плана.
+- По постановке: **13+** (расширение админки), **6+** или расширение **10+** из плана.
 
 ## Вопросы к GPT
 

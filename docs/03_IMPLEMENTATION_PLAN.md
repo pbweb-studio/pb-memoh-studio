@@ -369,6 +369,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 13a — Studio Admin UI skeleton (read-only)
+
+**Статус:** пакет [`studio/pb_studio/admin_ui/`](studio/pb_studio/admin_ui/) (Jinja2 + Bootstrap 5 CDN, `base.html` + sidebar); роутер [`api/routes/admin_ui.py`](studio/pb_studio/api/routes/admin_ui.py); монтирование статики `/admin/static`, редирект `GET /admin` → `/admin/`. Доступ ко всему **`/admin/*`** (кроме `GET /admin/login` без сессии) при заданном **`STUDIO_ADMIN_TOKEN`**: `Authorization: Bearer …` или cookie-сессия после **`POST /admin/login`** (форма, токен не логируется); без токена в env — **503**; HTML без авторизации — **302** на логин; не-HTML Accept — **401**. Страницы: обзор со счётчиками, чаты, control group, сводки, проекты, SLA incidents, KB documents, assistant rules, history-import jobs — **только чтение**; **`POST /admin/logout`**. **Без** Memoh, Telegram bot/polling/webhook, LLM/RAG, мутаций данных.
+
+**Тесты:** [`studio/tests/test_admin_ui_phase13a.py`](studio/tests/test_admin_ui_phase13a.py).
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -396,5 +404,5 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10f** — HTTP upload + Docling (pdf/docx); **10g** — импорт document из Telegram (control group); **10+** — расширенный RAG/Docling pipeline |
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
-| 13 | Studio Admin (HTMX/Jinja/Bootstrap) |
+| 13 | Studio Admin: **13a** — Jinja2 + Bootstrap 5, read-only `/admin/*`, `STUDIO_ADMIN_TOKEN` (Bearer или cookie после login); дальше — HTMX/мутации по постановке |
 | 14 | Prod compose, Caddy, runbook, backup (деплой только с подтверждением) |

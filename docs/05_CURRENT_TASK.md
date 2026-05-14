@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 12a (Telegram Desktop JSON → Event Mirror)
+## После фазы 13a (Studio Admin UI skeleton)
 
-**Статус:** импорт JSON в те же таблицы зеркала (`studio_chats`, `studio_messages`, …), jobs API, флаги `STUDIO_HISTORY_IMPORT_*`; **без** Memoh/Bot API/LLM/Admin UI.
+**Статус:** read-only веб-админка `/admin/*` (Jinja2 + Bootstrap 5), auth через **`STUDIO_ADMIN_TOKEN`** (Bearer или cookie после login); дашборд и таблицы разделов; **без** Memoh, бота, LLM/RAG, мутаций данных.
 
-**Следующий шаг:** по постановке — **6+**, **13–14**, доработки импорта (другие форматы / инкрементальный UI), или иной эпик.
+**Следующий шаг:** по постановке — **13b** (HTMX/формы), **6+**, **14**, или доработки импорта / RAG.

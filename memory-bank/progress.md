@@ -33,6 +33,7 @@
 | 11a Assistant rules storage + API + /rule_* (no LLM apply) | Done |
 | 11b Assistant rules in KB RAG prompt + applied_rule_ids | Done |
 | 12a Telegram Desktop JSON → Event Mirror import | Done |
+| 13a Studio Admin UI skeleton (read-only /admin) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 12a — `history_import`, `studio_history_import_jobs`, API `/history-import/*`; pytest **268** passed.
+**Последнее:** фаза 13a — `admin_ui`, HTML `/admin/*`, тесты `test_admin_ui_phase13a.py`; полный `pytest tests/` **277** passed (Docker).

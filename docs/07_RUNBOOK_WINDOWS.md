@@ -53,6 +53,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 12a (импорт Telegram Desktop JSON)** включите **`STUDIO_HISTORY_IMPORT_ENABLED=true`** в **`studio-api`** (и при необходимости **`studio-worker`** для единообразия env); **`STUDIO_HISTORY_IMPORT_MAX_BYTES`** — лимит размера JSON (по умолчанию 52428800). API: `POST /history-import/telegram-json` (multipart `file`), `GET /history-import/jobs`, `GET /history-import/jobs/{id}` — только с **`STUDIO_ADMIN_TOKEN`**. Без Memoh и без Telegram Bot API.
 
+Для **фазы 13a (Studio Admin UI skeleton)** в **`studio-api`** задайте **`STUDIO_ADMIN_TOKEN`** (в `docker-compose.local.yml` переменная проброшена из окружения хоста). В браузере: `http://127.0.0.1:8000/admin/login` → ввод токена → cookie-сессия; либо для скриптов — `Authorization: Bearer <токен>` на `GET /admin/` и разделы. Контент read-only; токен не логируется.
+
 Проверка API:
 
 ```powershell
@@ -64,7 +66,13 @@ curl -X POST http://127.0.0.1:8000/events/telegram -H "Content-Type: application
 
 ## Тесты Python-пакета Studio
 
-Локально без установленного Python 3.12 — прогон тестов Studio в Docker:
+Локально без установленного Python 3.12 — прогон тестов Studio в Docker. Образ студии (`studio/Dockerfile`) включает каталог `tests/`; после сборки, например `docker build -t pb-studio-local:test ./studio` из каталога `studio`:
+
+```powershell
+docker run --rm pb-studio-local:test sh -c "pip install -q -e '.[dev]' && pytest tests/ -q"
+```
+
+Вариант без предсборки образа — смонтировать `./studio` в контейнер `python:3.12-slim` (нужны компилятор и `libpq-dev` для зависимостей, см. Dockerfile студии):
 
 ```powershell
 docker run --rm -v "${PWD}/studio:/app" -w /app python:3.12-slim bash -c "pip install -q -e '.[dev]' && pytest tests/ -v"

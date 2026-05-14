@@ -64,6 +64,7 @@ services:
     container_name: pb-studio-api
     environment:
       <<: *studio-common-env
+      STUDIO_ADMIN_TOKEN: ${STUDIO_ADMIN_TOKEN:-}
       # Фаза 5b: outbound sendMessage (тот же бот; без polling/webhook Studio) — из .env / окружения хоста
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       STUDIO_SYSTEM_NOTIFICATIONS_ENABLED: ${STUDIO_SYSTEM_NOTIFICATIONS_ENABLED:-false}

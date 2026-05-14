@@ -3,7 +3,12 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
+from pb_studio.admin_ui import static_dir
+from pb_studio.admin_ui.auth import AdminAuthRedirect, admin_auth_redirect_handler
+from pb_studio.api.routes import admin_ui as admin_ui_routes
 from pb_studio.api.routes import assistant_rules as assistant_rules_routes
 from pb_studio.api.routes import control as control_routes
 from pb_studio.api.routes import control_commands as control_commands_routes
@@ -39,6 +44,15 @@ def create_app() -> FastAPI:
         s = get_settings()
         return {"status": "ok", "service": "studio-api", "env": s.studio_env}
 
+    application.add_exception_handler(AdminAuthRedirect, admin_auth_redirect_handler)
+
+    sd = static_dir()
+    application.mount("/admin/static", StaticFiles(directory=str(sd)), name="admin_static")
+
+    @application.get("/admin", include_in_schema=False)
+    async def admin_redirect_slash() -> RedirectResponse:
+        return RedirectResponse("/admin/", status_code=302)
+
     application.include_router(events_routes.router)
     application.include_router(control_routes.router)
     application.include_router(control_commands_routes.router)
@@ -50,6 +64,7 @@ def create_app() -> FastAPI:
     application.include_router(knowledge_routes.router)
     application.include_router(assistant_rules_routes.router)
     application.include_router(history_import_routes.router)
+    application.include_router(admin_ui_routes.router)
 
     return application
 

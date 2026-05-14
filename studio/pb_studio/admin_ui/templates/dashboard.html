@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Обзор — Studio Admin{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4">Обзор</h1>
+<p class="text-muted small mb-4">Только чтение. Пагинация и фильтры — позже.</p>
+<div class="row g-3">
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Чаты</div>
+      <div class="fs-4 fw-semibold">{{ counts.chats }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Сообщения</div>
+      <div class="fs-4 fw-semibold">{{ counts.messages }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Проекты</div>
+      <div class="fs-4 fw-semibold">{{ counts.projects }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">KB документы</div>
+      <div class="fs-4 fw-semibold">{{ counts.knowledge_documents }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Правила</div>
+      <div class="fs-4 fw-semibold">{{ counts.assistant_rules }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Импорт jobs</div>
+      <div class="fs-4 fw-semibold">{{ counts.history_import_jobs }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Сводки</div>
+      <div class="fs-4 fw-semibold">{{ counts.summaries }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">SLA инциденты</div>
+      <div class="fs-4 fw-semibold">{{ counts.sla_incidents }}</div>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

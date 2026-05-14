@@ -268,3 +268,10 @@
 - Данные: **`studio_chats`** (upsert по `telegram_chat_id`), **`studio_messages`** с **`raw_update_id = null`** и `raw_message` в форме, совместимой с потребителями зеркала (`message_id`, `date`, `chat`, опционально `from`, `text`/`caption`, вложенный фрагмент экспорта под **`studio_history_import`**); **`studio_telegram_users`** при наличии `from`; **`studio_chat_lifecycle_events`** для сообщений типа **`service`** (без `TelegramRawUpdate`).
 - **Без** Memoh, Telegram Bot API, polling/webhook Studio, LLM/RAG/embeddings, Studio Admin UI, исходящих сообщений в Telegram.
 
+## Фаза 13a — Studio Admin UI skeleton (выполнено)
+
+- Доступ к **`/admin/*`** (кроме `GET /admin/login` для формы входа) только при заданном **`STUDIO_ADMIN_TOKEN`** в env: **503**, если токен не настроен.
+- Клиент: **`Authorization: Bearer <STUDIO_ADMIN_TOKEN>`** или подписанная cookie после **`POST /admin/login`** (`admin_token` в форме); сервер не логирует значение токена.
+- HTML без валидной авторизации: **302** на `/admin/login` (параметр `next`); не-HTML **Accept** (например только `application/json`) без Bearer — **401**.
+- Контент **read-only** (таблицы и счётчики из БД); **без** изменений Memoh, бота, LLM/RAG; `POST /admin/logout` — сброс cookie.
+
