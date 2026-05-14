@@ -1,9 +1,9 @@
 # Active context
 
-**Сейчас:** фаза **4b** выполнена по **варианту C** — асинхронное зеркалирование сырого Telegram `Update` из [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) в Studio (`STUDIO_EVENTS_URL`), модуль [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go), тесты `studio_event_mirror_test.go`. По умолчанию выключено (`MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED=false`).
+**Сейчас:** фаза **4b** реализована и **проверена** (вариант C): Go-тесты `internal/channel/adapters/telegram` и Studio `pytest tests/` прошли в Docker; `docker compose -f docker-compose.local.yml config` валиден. Код зеркала не менялся при проверке.
 
 **Ветка:** `pb-studio/main`.
 
 **Блокеры:** нет.
 
-**Следующий безопасный шаг:** e2e-проверка с реальным или тестовым ботом при поднятом `studio-api` и заполненных env; затем планирование фазы 5+.
+**Фаза 5:** не открыта; следующий шаг — только по явной задаче (e2e или фаза 5).

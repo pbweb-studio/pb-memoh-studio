@@ -10,12 +10,13 @@
 
 ## Текущая цель
 
-Следующие шаги продукта: e2e-проверка Memoh + Studio с включённым зеркалом, затем фазы 5+ (управляющая группа, сводки, RAG и т.д.) по плану.
+Фаза **5 не открыта** до явного решения. Опционально: e2e Memoh + Studio с включённым зеркалом; иначе — планирование фазы 5 по отдельной задаче.
 
 ## Что уже работает
 
 - Фазы 0–4a: см. `docs/04_PROJECT_LOG.md`.
 - **4b:** зеркало в [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go), вызов в [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go).
+- **Проверка 4b закрыта (CI в агенте):** Go-тесты пакета Telegram adapter прошли (`docker run … golang:1.25` → `go test ./internal/channel/adapters/telegram/... -count=1`, образ соответствует директиве `go` в `go.mod`); Studio — `pytest tests/ -v` в Docker `python:3.12-slim`, **32 passed**; `docker compose -f docker-compose.local.yml config` — без ошибок.
 - Инжест и нормализация в Studio: `studio/pb_studio/event_mirror/`.
 - Решение по интеграции: `docs/06_DECISIONS.md` (ADR A/B/C; для raw Update утверждён и закодирован **C**).
 
@@ -24,10 +25,11 @@
 - Полный e2e «Telegram → Memoh → Studio БД» в прод-окружении (ручная проверка/наблюдаемость по желанию).
 - Управляющая группа (Фаза 5), сводки, RAG, SLA, Studio Admin.
 
-## Идентификатор коммита фазы 4b
+## Идентификаторы коммитов (фаза 4b)
 
-- **Текущий корень ветки** (полный SHA): `git rev-parse HEAD` на `pb-studio/main`.
-- **Коммит с реализацией** (сообщение `feat(telegram): memoh studio event mirror hook phase 4b variant C`): `git log --grep='memoh studio event mirror hook phase 4b variant C' -1 --format=%H` (при нескольких совпадениях возьмите последний по дате).
+- **Реализация Go-hook (feat telegram mirror, вариант C):** `67bc573d1b5891f6cf9d3613580f59ca92200ec9`
+- **Коммит, фиксирующий результаты автоматической проверки 4b в документации:** см. `git log -1 --format=%H` сразу после `git pull` коммита с сообщением `docs: close phase 4b verification` (или следующий doc-only коммит с SHA — см. историю).
+- **Актуальный корень ветки:** `git rev-parse HEAD`.
 
 **Код Event Mirror Studio (фаза 4a, исторический якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 
@@ -54,7 +56,7 @@
 
 ## Следующая задача
 
-- Проверка в связке: Memoh + `studio-api`, ingest в `studio_telegram_raw_updates`, мониторинг логов `studio event mirror` при сбоях Studio.
+- По необходимости: e2e Memoh + `studio-api` и ingest в `studio_telegram_raw_updates`. Открытие **фазы 5** — только по явной постановке (не начинать самовольно).
 
 ## Вопросы к GPT
 

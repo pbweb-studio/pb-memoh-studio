@@ -48,4 +48,11 @@
 - Memoh: после дедупа `update_id` в `internal/channel/adapters/telegram/telegram.go` вызывается `mirrorTelegramUpdateToStudioAsync`; реализация в `internal/channel/adapters/telegram/studio_event_mirror.go`; тесты `studio_event_mirror_test.go`.
 - Env: см. корневой `.env.example` (`STUDIO_EVENTS_URL`, `STUDIO_EVENTS_INGEST_TOKEN`, `MEMOH_STUDIO_EVENTS_TOKEN`, `MEMOH_TELEGRAM_EVENT_MIRROR_*`).
 - Response Queue: только прежний флаг Studio `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES`; Memoh его не трогает.
-- Полный SHA корня ветки после 4b: `git rev-parse HEAD`; коммит с сообщением `feat(telegram): memoh studio event mirror hook phase 4b variant C`: `git log --grep='memoh studio event mirror hook phase 4b variant C' -1 --format=%H`.
+
+## 2026-05-14 — Проверка фазы 4b закрыта (Go + Studio + compose)
+
+- Статус: автоматические проверки пройдены; код 4b **не** менялся.
+- **Go:** `docker run --rm -v "<repo>:/src" -w /src golang:1.25 go test ./internal/channel/adapters/telegram/... -count=1` — **ok** (образ `golang:1.25` соответствует директиве `go 1.25.7` в `go.mod`).
+- **Studio:** `docker run --rm -v "<repo>/studio:/app" -w /app python:3.12-slim bash -c "pip install -q -e '.[dev]' && pytest tests/ -v"` — **32 passed**.
+- **Compose:** `docker compose -f docker-compose.local.yml config` — без ошибок.
+- Полный SHA корня ветки после записи этой строки в журнал: `git rev-parse HEAD`.

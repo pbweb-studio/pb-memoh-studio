@@ -9,6 +9,7 @@
 | 4a Event Mirror ingest | Done |
 | ADR интеграции TG→Studio (перед 4b) | Done |
 | 4b Транспорт Memoh → ingest (вариант C) | Done |
+| 4b Проверка (go test / pytest / compose config) | Done |
 | 5+ | Pending |
 
-**Последнее:** утверждён и реализован вариант **C** — тонкий hook в Telegram adapter (без второго бота, без gateway, без смены webhook/polling); Studio остаётся источником raw/normalize/опциональной очереди.
+**Последнее:** закрыта автоматическая проверка 4b; готовность к фазе 5 — только после явного решения, не автоматически.
