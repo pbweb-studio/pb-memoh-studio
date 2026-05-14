@@ -409,6 +409,12 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 14c — Первый staging/prod deploy jar.pb-web.ru
+
+**Статус:** VPS **148.253.209.54**, домен **https://jar.pb-web.ru**; Caddy → `127.0.0.1:8000`; `/opt/pb-studio/pb-memoh-studio`, `.env.prod` на сервере (**не** в git). Проверены health, `/admin`, `smoke-prod.sh`, `backup-postgres.sh`. **Memoh не менялся.** В репозитории: фикс Alembic `006` — коммит **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`alembic_version.version_num` → `VARCHAR(255)`). Инцидент `set -x` / утечка `STUDIO_ADMIN_TOKEN` в лог — ротация токена на VPS, правило в [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md), [`docs/06_DECISIONS.md`](06_DECISIONS.md).
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -437,4 +443,4 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
 | 13 | Studio Admin: **13a** — каркас read-only; **13b** — детали + формы; **13c** — фильтры, пагинация, UX-полировка |
-| 14 | Prod: **14a** — compose + `.env.prod.example` + Caddy/backup/runbook skeleton; **14b** — readiness (checklist, smoke, env validation, restore/KB backup scripts); деплой/TLS только после согласования |
+| 14 | Prod: **14a** — compose + `.env.prod.example` + Caddy/backup/runbook skeleton; **14b** — readiness; **14c** — staging **jar.pb-web.ru** (VPS 148.253.209.54), инцидент/правило `set -x`+секреты в `docs/08`, `docs/06` |

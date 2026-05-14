@@ -38,6 +38,7 @@
 | 13c Studio Admin UI polish (filters, pagination, UX) | Done |
 | 14a Prod compose + env example + runbook/backup (no deploy) | Done |
 | 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
+| 14c Staging deploy jar.pb-web.ru (VPS 148.253.209.54) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 14b — readiness-скрипты и runbook; полный `pytest tests/` **289** passed (Docker). Деплой на VPS не выполнялся.
+**Последнее:** фаза 14c — deploy jar.pb-web.ru; документация + правило про `set -x`/секреты; коммит миграции `f8dbd06e09f7b081733061ca1c6aefcf9b727afb`.

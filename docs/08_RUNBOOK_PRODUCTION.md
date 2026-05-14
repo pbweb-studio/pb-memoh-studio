@@ -1,6 +1,6 @@
 # Runbook: staging / первый production-запуск Studio (readiness)
 
-Репозиторий **не выполняет** деплой. Memoh, реальные DNS, выпуск сертификатов и Caddy на боевом домене — только после отдельного согласования.
+Репозиторий **не выполняет** деплой автоматически; зафиксированный **staging** Studio: **jar.pb-web.ru** (см. раздел F). Memoh в этом процессе не меняется.
 
 Связанные файлы:
 
@@ -116,6 +116,8 @@ export STUDIO_BASE_URL=http://127.0.0.1:8000
 
 Скрипт **не печатает** токены. При незаданном `STUDIO_ADMIN_TOKEN` в окружении скрипта проверка Bearer к `/projects` пропускается.
 
+**Правило (после инцидента 14c):** не запускать обёртки деплоя/smoke с **`bash -x`** / **`set -x`**, если в том же процессе выполняется **`export VAR=…`** для секретов (`STUDIO_ADMIN_TOKEN`, `TELEGRAM_BOT_TOKEN`, API keys) — иначе значение попадёт в stdout/stderr (CI, Cursor, `journalctl`). Использовать **`set -eu`** (без `x`) или явный редирект логов без трассировки export.
+
 ---
 
 ## B. Feature flags (включать по одному)
@@ -137,6 +139,12 @@ export STUDIO_BASE_URL=http://127.0.0.1:8000
 
 - [ ] `docker compose … logs studio-api --tail 200` — без утечек секретов.
 - [ ] `STUDIO_ADMIN_TOKEN` и `TELEGRAM_BOT_TOKEN` не в репозитории и не в публичных логах CI.
+- [ ] **`.env.prod`** в `.gitignore`, на сервере только **`chmod 600`**, не копировать в чаты и не коммитить.
+- [ ] Временный файл с одноразовым токеном на VPS (например **`/root/.studio_admin_token_once`**): после сохранения значения в менеджер секретов — **`rm`** на сервере.
+
+### Инцидент 14c (раскрытие токена в логе)
+
+При отладочном запуске вспомогательного shell с **`set -x`** в лог попала строка **`export STUDIO_ADMIN_TOKEN=…`**. **Меры:** токен на VPS **немедленно ротирован**; в репозитории и в **docs/** значения токенов **не** фиксировались. **Правило:** см. блок выше про `bash -x` и секреты; то же относится к любым deploy-обёрткам вокруг `smoke-prod.sh` и `docker compose`.
 
 ---
 
@@ -155,3 +163,21 @@ docker compose -f docker-compose.prod.yml config
 ```
 
 Для реального окружения всегда используйте `--env-file .env.prod`.
+
+---
+
+## F. Зафиксированный staging: jar.pb-web.ru (фаза 14c)
+
+| Параметр | Значение |
+|-----------|----------|
+| VPS (основной IP) | `148.253.209.54` |
+| Публичный URL API / health | `https://jar.pb-web.ru` |
+| Админка | `https://jar.pb-web.ru/admin/login` |
+| Compose | `docker compose --env-file .env.prod -f docker-compose.prod.yml` из `/opt/pb-studio/pb-memoh-studio` |
+| Секреты | только в `.env.prod` на сервере; **не** в git (см. `.gitignore`) |
+| Якорь кода миграции в репо | `f8dbd06e09f7b081733061ca1c6aefcf9b727afb` |
+
+Проверено на стенде: **health**, **admin**, **smoke-prod.sh**, **backup-postgres.sh**. **Memoh** репозитория и образы Memoh **не** затрагивались.
+
+Одноразовый перенос токена админки на хост (если использовался): **`/root/.studio_admin_token_once`** — после копирования в менеджер секретов **удалить** (`rm` на сервере).
+

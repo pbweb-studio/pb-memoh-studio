@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 14b (deploy readiness, без деплоя)
+## После фазы 14c (staging jar.pb-web.ru)
 
-**Статус:** расширены `.env.prod.example` (REQUIRED/optional/secret, feature flags), [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md) (полный checklist), скрипты `deploy/scripts/` (smoke, validate env, restore Postgres, backup KB volume), обновлены Caddy placeholder и [`deploy/BACKUP_RESTORE.md`](deploy/BACKUP_RESTORE.md). Memoh и логика приложения не менялись; **деплой на VPS не выполнялся**.
+**Статус:** Studio развёрнут на **148.253.209.54**, публично **https://jar.pb-web.ru**; проверены health, админка, `smoke-prod.sh`, бэкап Postgres. **Memoh не менялся.** `.env.prod` только на VPS (не в git). Документация 14c и инцидент `set -x` / ротация `STUDIO_ADMIN_TOKEN` — в `docs/08`, `docs/06`, `docs/AI_CONTEXT`, memory-bank.
 
-**Следующий шаг:** по постановке — **14+** (реальный деплой + Caddy/TLS после согласования домена), **6+**, **13+** или доработки Studio.
+**Следующий шаг:** донастройка секретов/флагов на VPS (Telegram, RAG при необходимости), **6+** / **13+** / **10+** — по постановке.

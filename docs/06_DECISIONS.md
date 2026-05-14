@@ -300,3 +300,11 @@
 - **Бэкап/restore:** `restore-postgres.sh`, `backup-kb-volume.sh`; Postgres и KB volume документированы раздельно в `deploy/BACKUP_RESTORE.md`.
 - **Runbook:** расширен `docs/08_RUNBOOK_PRODUCTION.md` (чеклист VPS → smoke, ручные шаги control group и `/kb_ask` при включённом KB+RAG).
 - **Caddy:** только комментарии-заглушки (домен, email ACME, upstream); реальные домены не добавлялись.
+
+## Фаза 14c — Первый staging/prod deploy jar.pb-web.ru (выполнено)
+
+- **VPS / домен:** `148.253.209.54`, публично **https://jar.pb-web.ru** (Caddy reverse proxy на `127.0.0.1:8000`); каталог деплоя на сервере: `/opt/pb-studio/pb-memoh-studio`; `.env.prod` только на хосте (**chmod 600**), **не** в git.
+- **Проверки:** `GET /health`, `/admin/login`, `deploy/scripts/smoke-prod.sh`, `deploy/scripts/backup-postgres.sh`. **Memoh** не изменялся.
+- **Код на сервер:** синхронизация с локального дерева (`git archive`), т.к. удалённая ветка отставала по `docker-compose.prod.yml`.
+- **Миграции (репо):** `f8dbd06e09f7b081733061ca1c6aefcf9b727afb` — в ревизии `006_summary_delivery_control_group` выполняется `ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)` до записи длинных revision id.
+- **Инцидент безопасности (14c):** при запуске вспомогательного shell с **`set -x`** в лог попала команда **`export STUDIO_ADMIN_TOKEN=…`**; **токен ротирован** на VPS. **Правило:** deploy- и smoke-обвязки **не** запускать с **`bash -x` / `set -x`**, если в том же процессе экспортируются секреты; предпочитать **`set -eu`**. Детали и чеклист — `docs/08_RUNBOOK_PRODUCTION.md` (разделы C, F).

@@ -234,6 +234,14 @@
 - **Без** Memoh, логики приложения, реального деплоя, реальных доменов.
 - Проверки: `docker compose -f docker-compose.prod.yml config`, `docker compose -f docker-compose.local.yml config` — ok; полный `pytest tests/` (**289** passed, Docker).
 
+## 2026-05-14 — Фаза 14c (Studio: staging/prod deploy jar.pb-web.ru)
+
+- VPS **148.253.209.54**, домен **https://jar.pb-web.ru** (Caddy → `127.0.0.1:8000`); stack `docker-compose.prod.yml`; `.env.prod` на сервере (**chmod 600**, в **`.gitignore`**, не в репозитории).
+- Проверки: `GET /health`, `/admin/login`, `deploy/scripts/smoke-prod.sh`, `deploy/scripts/backup-postgres.sh` — ok.
+- **Memoh не менялся.** Код на сервер — из локального дерева (`git archive`), т.к. `origin/pb-studio/main` отставал по `docker-compose.prod.yml`.
+- Миграции: коммит **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** — в `006_summary_delivery_control_group` расширение `alembic_version.version_num` до `VARCHAR(255)` (длинные revision id).
+- **Security:** при одном прогоне вспомогательного shell с `set -x` значение `STUDIO_ADMIN_TOKEN` попало в лог; токен **ротирован** на VPS; правило: не использовать `bash -x` / `set -x` вокруг `export` секретов — см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`. Файл **`/root/.studio_admin_token_once`** (если создавался): сохранить токен в менеджер секретов и **удалить** на сервере.
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

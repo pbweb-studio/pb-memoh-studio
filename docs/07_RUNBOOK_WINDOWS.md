@@ -136,9 +136,11 @@ curl -X POST "http://127.0.0.1:8000/summaries/generate-pending" -H "Authorizatio
 
 - Одна сводка по id: `POST /summaries/{uuid}/generate` с тем же Bearer. **Не** отправляет текст в Telegram.
 
-## Production (фазы 14a–14b)
+## Production (фазы 14a–14c)
 
-Фактический деплой из репозитория **не выполняется**. Артефакты для VPS/staging:
+**Зафиксированный staging:** **https://jar.pb-web.ru** (VPS `148.253.209.54`) — см. [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md) (раздел F), журнал [`docs/04_PROJECT_LOG.md`](04_PROJECT_LOG.md). **Memoh** в деплое Studio не менялся.
+
+Артефакты и процедуры:
 
 - [`docker-compose.prod.yml`](../docker-compose.prod.yml) — Postgres, Redis, migrate, api, worker, beat; healthcheck API на `/health`.
 - [`.env.prod.example`](../.env.prod.example) — шаблон с маркировкой REQUIRED/optional; скопировать в `.env.prod` (в `.gitignore`).

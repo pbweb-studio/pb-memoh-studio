@@ -6,9 +6,11 @@
 
 ## Текущая фаза
 
-**После 14b** — readiness к первому запуску на VPS/staging **без деплоя**: полный checklist в `docs/08_RUNBOOK_PRODUCTION.md`, `validate_env_prod.py`, `smoke-prod.sh`, restore Postgres + backup KB volume, уточнены `.env.prod.example` и Caddy-комментарии.
+**После 14c** — первый **staging/prod deploy** Studio на VPS **148.253.209.54**, домен **https://jar.pb-web.ru** (Caddy → `127.0.0.1:8000`). Проверены: `GET /health`, `/admin/login`, `smoke-prod.sh`, `backup-postgres.sh`. **Memoh не менялся.** Код на сервер заливался с локального `git archive` (ветка опережала origin). Якорь миграций в репо: **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: расширение `alembic_version.version_num` до `VARCHAR(255)`). Инцидент с утечкой `STUDIO_ADMIN_TOKEN` в лог из‑за `set -x` — зафиксирован в `docs/08_RUNBOOK_PRODUCTION.md` и `docs/06_DECISIONS.md`; токен на VPS ротирован.
 
-**После 14a** — `docker-compose.prod.yml`, `.env.prod.example`, `deploy/` (Caddy placeholder, backup), `docs/08_RUNBOOK_PRODUCTION.md`. Memoh и логика приложения не менялись.
+**После 14b** — readiness: `docs/08_RUNBOOK_PRODUCTION.md`, `validate_env_prod.py`, `smoke-prod.sh`, restore/KB backup, `.env.prod.example`.
+
+**После 14a** — `docker-compose.prod.yml`, `.env.prod.example`, `deploy/`, runbook.
 
 **После 13c** — Studio Admin: **13a** + **13b** + **13c** (фильтры, пагинация, breadcrumbs, offcanvas, форматирование дат).
 
@@ -20,11 +22,12 @@
 
 ## Текущая цель
 
-Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.), **10+**, или **14+** (фактический деплой + Caddy/TLS на домене с подтверждением) — по отдельной постановке.
+Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.), **10+**, донастройка staging (**Telegram**/RAG-ключи на VPS) — по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–14b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
 - **14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`.
 - **13a:** каркас Studio Admin, read-only списки; см. `docs/06_DECISIONS.md`.
@@ -53,6 +56,7 @@
 - **Реализация Go-hook 4b:** `67bc573d1b5891f6cf9d3613580f59ca92200ec9`
 - **Коммит записи проверки 4b в доках:** `1c8f9f6c0ef1ec71e78c3dcc92879c8c3b8c2b42`
 - **Актуальный корень ветки:** `git rev-parse HEAD` на `pb-studio/main`.
+- **Фаза 14c (fix Alembic `version_num` длины ревизий):** `f8dbd06e09f7b081733061ca1c6aefcf9b727afb`
 
 **Код Event Mirror Studio (фаза 4a, якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 
@@ -83,12 +87,13 @@
 - **Фаза 13a:** Studio Admin skeleton — read-only `/admin/*`; см. `docs/06_DECISIONS.md`.
 - **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
 - **Фаза 13c:** фильтры, пагинация и полировка списков в Studio Admin; см. `docs/06_DECISIONS.md`.
+- **Фаза 14c:** первый deploy Studio на VPS + домен; инцидент `set -x` / ротация admin token — см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 - **Фаза 14b:** deploy readiness — checklist, `validate_env_prod.py`, `smoke-prod.sh`, restore/backup KB; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 - **Фаза 14a:** prod compose + env example + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 
 ## Следующая задача
 
-- По постановке: **14+** (реальный деплой после выбора сервера и домена), **13+**, **6+** или расширение **10+** из плана.
+- По постановке: **13+**, **6+**, расширение **10+**, донастройка **jar.pb-web.ru** (секреты Telegram/RAG на VPS) — по постановке.
 
 ## Вопросы к GPT
 
