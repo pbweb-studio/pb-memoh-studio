@@ -23,6 +23,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Переменные `POSTGRES_*`, `DATABASE_URL`, `REDIS_URL`, `CELERY_BROKER_URL` должны быть согласованы между `.env.local` и compose (в compose заданы значения по умолчанию для Docker-сети; на хосте для локального pytest без Docker используйте порты **5433** / **6380** как в `.env.example`).
 
+Для **фазы 5b** в `docker-compose.local.yml` в контейнеры **`studio-api`** и **`studio-worker`** проброшены (со значениями по умолчанию, кроме токена): `TELEGRAM_BOT_TOKEN`, `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`, `STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES`. Подстановка — из переменных окружения при запуске compose; удобно положить значения в файл **`.env`** в корне репозитория (compose подхватывает его автоматически) или вызвать `docker compose --env-file .env.local -f docker-compose.local.yml ...`. Токен в git не коммитить.
+
 Проверка API:
 
 ```powershell
@@ -84,6 +86,7 @@ curl -X POST "http://127.0.0.1:8000/notifications/system/deliver-pending" -H "Au
 ```
 
 - Список уведомлений (диагностика): `GET /notifications/system?limit=50` с тем же Bearer (если задан `STUDIO_ADMIN_TOKEN`).
+- В Docker-стеке локально доставка из **worker** использует те же переменные, что и API; для ручного `POST …/deliver-pending` достаточно поднятого `studio-api` с включённым флагом и токеном.
 
 ## Полезные пути
 

@@ -72,3 +72,9 @@
 - Env: `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`, `STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES` (см. `.env.example`).
 - Тесты: `pytest tests/` (включая `test_system_notification_delivery.py`); `docker compose -f docker-compose.local.yml config`.
 - Полный SHA фиксирующего коммита: `git rev-parse HEAD` на `pb-studio/main`.
+
+## 2026-05-14 — Фаза 5b: эксплуатационный хвост (compose)
+
+- В `docker-compose.local.yml` для `studio-api` и `studio-worker` проброшены: `TELEGRAM_BOT_TOKEN`, `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`, `STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES` (значения с хоста / `.env`; мигратор и beat без изменений).
+- Проверки: `docker compose -f docker-compose.local.yml config`; `pytest tests/` в Docker.
+- SHA: `git rev-parse HEAD` на `pb-studio/main`.

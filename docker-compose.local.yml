@@ -64,6 +64,11 @@ services:
     container_name: pb-studio-api
     environment:
       <<: *studio-common-env
+      # Фаза 5b: outbound sendMessage (тот же бот; без polling/webhook Studio) — из .env / окружения хоста
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      STUDIO_SYSTEM_NOTIFICATIONS_ENABLED: ${STUDIO_SYSTEM_NOTIFICATIONS_ENABLED:-false}
+      STUDIO_TELEGRAM_SEND_TIMEOUT_MS: ${STUDIO_TELEGRAM_SEND_TIMEOUT_MS:-3000}
+      STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES: ${STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES:-3}
     ports:
       - "${STUDIO_API_PORT:-8000}:8000"
     depends_on:
@@ -82,6 +87,10 @@ services:
     container_name: pb-studio-worker
     environment:
       <<: *studio-common-env
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      STUDIO_SYSTEM_NOTIFICATIONS_ENABLED: ${STUDIO_SYSTEM_NOTIFICATIONS_ENABLED:-false}
+      STUDIO_TELEGRAM_SEND_TIMEOUT_MS: ${STUDIO_TELEGRAM_SEND_TIMEOUT_MS:-3000}
+      STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES: ${STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES:-3}
     command: >
       celery -A pb_studio.celery_app:celery_app worker
       --loglevel=info --queues=studio

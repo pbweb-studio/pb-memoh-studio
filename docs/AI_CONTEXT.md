@@ -19,7 +19,7 @@
 - Фазы 0–5b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
 - **4b:** Memoh mirror (см. журнал и `internal/channel/adapters/telegram/*`).
 - **5a:** `pb_studio/control_group/` — роли чатов, `studio_control_groups`, `studio_system_notifications`, интеграция после `my_chat_member`, админ-роуты, `STUDIO_ADMIN_TOKEN`.
-- **5b:** `telegram_outbound`, `system_notification_delivery`, Alembic `004`, Celery `deliver_pending_system_notifications`, `GET/POST /notifications/system*`.
+- **5b:** `telegram_outbound`, `system_notification_delivery`, Alembic `004`, Celery `deliver_pending_system_notifications`, `GET/POST /notifications/system*`; локальный compose пробрасывает токен и флаги 5b в `studio-api` / `studio-worker` (см. `docker-compose.local.yml`, `docs/07_RUNBOOK_WINDOWS.md`).
 - **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**48** кейсов после фазы 5b).
 
 ## Что ещё не готово

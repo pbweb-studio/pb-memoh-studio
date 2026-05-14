@@ -14,4 +14,4 @@
 | 5b Outbound system notifications → control group | Done |
 | 6+ Сводки и прочее | Pending |
 
-**Последнее:** фаза 5b — sendMessage delivery, Celery, admin notifications API, pytest 48 passed (Docker).
+**Последнее:** хвост 5b — `docker-compose.local.yml`: TELEGRAM + флаги доставки для `studio-api` / `studio-worker`; compose config + pytest ok.
