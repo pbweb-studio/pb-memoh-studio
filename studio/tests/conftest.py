@@ -8,8 +8,22 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from pb_studio.core.config import get_settings
 from pb_studio.response_queue.models import Base
 from pb_studio.response_queue.service import QueueService, create_tables
+
+
+@pytest.fixture(autouse=True)
+def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Сброс env, влияющих на admin/Telegram/summary delivery, между тестами (изоляция от порядка запуска)."""
+    for key in (
+        "STUDIO_ADMIN_TOKEN",
+        "STUDIO_SUMMARY_DELIVERY_ENABLED",
+        "STUDIO_SUMMARY_GENERATION_ENABLED",
+        "TELEGRAM_BOT_TOKEN",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    get_settings.cache_clear()
 
 
 @pytest_asyncio.fixture

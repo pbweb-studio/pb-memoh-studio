@@ -4,10 +4,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from pb_studio.response_queue.models import Base, JSONCompat
+from pb_studio.summaries.constants import SummaryDeliveryStatus
 
 
 def _utcnow() -> datetime:
@@ -28,6 +29,7 @@ class StudioChatSummary(Base):
         ),
         Index("ix_studio_chat_summaries_chat_status", "chat_id", "status"),
         Index("ix_studio_chat_summaries_created", "created_at"),
+        Index("ix_studio_chat_summaries_delivery_status", "delivery_status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
@@ -48,3 +50,13 @@ class StudioChatSummary(Base):
     )
     generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delivery_status: Mapped[str] = mapped_column(
+        String(64), nullable=False, default=SummaryDeliveryStatus.NOT_REQUESTED
+    )
+    delivery_retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    delivery_last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    delivered_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    destination_control_group_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        ForeignKey("studio_control_groups.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    telegram_message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)

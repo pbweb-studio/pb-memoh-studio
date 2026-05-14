@@ -186,6 +186,21 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 6d — сводки: доставка `generated` в Telegram control group
+
+**Статус:** поля доставки в `studio_chat_summaries` (Alembic `006_summary_delivery_control_group`), `summaries/summary_delivery.py`, `telegram_send_message` возвращает `telegram_message_id` при `ok`; флаги `STUDIO_SUMMARY_DELIVERY_ENABLED`, `STUDIO_SUMMARY_DELIVERY_MAX_RETRIES`; админ `POST /summaries/{id}/deliver-control-group`, `POST /summaries/deliver-pending`, опционально `GET /summaries?delivery_status=`; Celery `deliver_pending_chat_summaries`. Только активная control group, роль destination `control_group`, отказ если исходный чат сводки совпадает с destination; **без** Memoh, **без** LLM/RAG, **без** второго бота, **без** polling/webhook Studio.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `summaries/constants.py` | `SummaryDeliveryStatus` |
+| `summaries/summary_delivery.py` | `try_deliver_summary_row`, батч, форматирование текста |
+| `api/routes/summaries.py` | deliver endpoints, фильтр `delivery_status` |
+| `docker-compose.local.yml` | Проброс `STUDIO_SUMMARY_DELIVERY_*` в api/worker |
+
+**Тесты:** `studio/tests/test_summaries_phase6d.py`; изоляция env в `tests/conftest.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -200,7 +215,8 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 6a | Сводки: таблица `studio_chat_summaries`, планировщик pending jobs из Event Mirror, админ-API, Celery `plan_daily_chat_summaries` (**без** LLM, **без** отправки сводок в Telegram) |
 | 6b | Шаблонная генерация `summary_text` из Event Mirror, Celery `generate_pending_chat_summaries`, POST generate (**без** внешнего LLM API, **без** Telegram send сводок) |
 | 6c | Продуктовый API сводок по чату: today/yesterday/period/latest под `STUDIO_ADMIN_TOKEN` (**без** LLM, **без** Telegram send сводок; только Studio DB) |
-| 6+ | LLM / доставка сводок в Telegram / прочее — только после отдельной постановки |
+| 6d | Доставка готовых сводок в control group: `sendMessage`, поля `delivery_*`, Celery `deliver_pending_chat_summaries` (**без** Memoh, **без** LLM; тот же `TELEGRAM_BOT_TOKEN`) |
+| 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |
 | 9 | Проекты: bind/list/digest |

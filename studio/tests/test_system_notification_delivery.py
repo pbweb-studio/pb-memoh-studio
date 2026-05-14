@@ -96,7 +96,7 @@ async def test_delivery_disabled_noop(del_client):
     )
     await session.commit()
     s = _settings_delivery(studio_system_notifications_enabled=False)
-    counts = await deliver_pending_batch(session, settings=s, send_message=AsyncMock(return_value=(True, 200, "")))
+    counts = await deliver_pending_batch(session, settings=s, send_message=AsyncMock(return_value=(True, 200, "", 42)))
     assert counts["delivered"] == 0
     n = await session.scalar(select(StudioSystemNotification).order_by(StudioSystemNotification.created_at.desc()))
     assert n.status == SystemNotificationStatus.PENDING_FOR_CONTROL_GROUP_DELIVERY.value
@@ -120,7 +120,7 @@ async def test_delivery_success_mock(del_client):
         )
     )
     await session.commit()
-    mock = AsyncMock(return_value=(True, 200, ""))
+    mock = AsyncMock(return_value=(True, 200, "", 99))
     s = _settings_delivery()
     counts = await deliver_pending_batch(session, settings=s, send_message=mock)
     assert counts["delivered"] == 1
@@ -151,7 +151,7 @@ async def test_delivery_500_retryable_then_permanent(del_client):
     )
     await session.commit()
     s = _settings_delivery(studio_system_notification_max_retries=2)
-    mock = AsyncMock(return_value=(False, 500, "internal"))
+    mock = AsyncMock(return_value=(False, 500, "internal", None))
     c1 = await deliver_pending_batch(session, settings=s, send_message=mock)
     assert c1["failed_retryable"] == 1
     await session.commit()
@@ -173,7 +173,7 @@ async def test_delivery_blocked_wrong_destination_role(del_client):
     chat = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -2004))
     chat.chat_role = ChatRole.CLIENT_CHAT.value
     await session.commit()
-    mock = AsyncMock(return_value=(True, 200, ""))
+    mock = AsyncMock(return_value=(True, 200, "", None))
     s = _settings_delivery()
     counts = await deliver_pending_batch(session, settings=s, send_message=mock)
     assert counts["skipped"] == 1
@@ -199,8 +199,8 @@ async def test_audit_logs_redact_token(del_client):
     )
     await session.commit()
 
-    async def bad_send(**kwargs: object) -> tuple[bool, int | None, str]:
-        return False, 400, "bad BOT_SECRET_XYZ token"
+    async def bad_send(**kwargs: object) -> tuple[bool, int | None, str, int | None]:
+        return False, 400, "bad BOT_SECRET_XYZ token", None
 
     s = _settings_delivery(telegram_bot_token="BOT_SECRET_XYZ")
     await deliver_pending_batch(session, settings=s, send_message=bad_send)
@@ -229,8 +229,8 @@ async def test_post_deliver_pending_endpoint(del_client, monkeypatch):
     )
     await session.commit()
 
-    async def ok_send(**kwargs: object) -> tuple[bool, int | None, str]:
-        return True, 200, ""
+    async def ok_send(**kwargs: object) -> tuple[bool, int | None, str, int | None]:
+        return True, 200, "", 555
 
     monkeypatch.setattr(
         "pb_studio.control_group.system_notification_delivery.telegram_send_message",

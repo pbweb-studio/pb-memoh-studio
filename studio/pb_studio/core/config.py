@@ -74,6 +74,14 @@ class Settings(BaseSettings):
         default=20,
         description="STUDIO_SUMMARY_MAX_BULLETS — максимум пунктов со сниппетами текста",
     )
+    studio_summary_delivery_enabled: bool = Field(
+        default=False,
+        description="STUDIO_SUMMARY_DELIVERY_ENABLED — отправка generated сводок в control group",
+    )
+    studio_summary_delivery_max_retries: int = Field(
+        default=3,
+        description="STUDIO_SUMMARY_DELIVERY_MAX_RETRIES — после исчерпания delivery → failed_permanent",
+    )
 
     @property
     def celery_backend_effective(self) -> str:

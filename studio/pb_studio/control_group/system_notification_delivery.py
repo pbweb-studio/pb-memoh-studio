@@ -117,7 +117,7 @@ async def deliver_pending_batch(
             continue
 
         text = "\n".join(x for x in (row.title or "", row.body or "") if x).strip() or "(system notification)"
-        ok, http_status, err = await send_message(
+        ok, http_status, err, _msg_id = await send_message(
             bot_token=token,
             chat_id=dest_tid,
             text=text,

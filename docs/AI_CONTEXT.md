@@ -6,23 +6,23 @@
 
 ## Текущая фаза
 
-**Фаза 6c (сводки — продуктовый API по чату)** — `summaries/product.py` + `POST /summaries/chat/{uuid}/today|yesterday|period`, `GET .../latest` под `STUDIO_ADMIN_TOKEN`; планировщик + шаблонная генерация (6b); периоды today/yesterday в UTC; без дубликатов для `generated`; `failed` за период → 409. Env `STUDIO_SUMMARY_*` проброшены в `studio-api` / `studio-worker` в `docker-compose.local.yml`. **Без** внешних LLM HTTP, **без** `sendMessage` для сводок. Memoh **не** менялся.
+**Фаза 6d (сводки — доставка в control group)** — поля `delivery_*` на `studio_chat_summaries`, `summaries/summary_delivery.py`, `POST /summaries/{id}/deliver-control-group`, `POST /summaries/deliver-pending`, Celery `deliver_pending_chat_summaries`, env `STUDIO_SUMMARY_DELIVERY_*`. Отправка только в активную control group через `sendMessage` (тот же бот). **Без** Memoh, **без** LLM/RAG. Memoh **не** менялся.
 
-Фазы **6b**, **6a**, **5b**, **4b** — как ранее.
+Фазы **6c**, **6b**, **6a**, **5b**, **4b** — как ранее.
 
 ## Текущая цель
 
-Фаза **6+** (LLM и/или доставка сводок в Telegram) — **не** начинать до отдельной постановки.
+Фаза **6+** (LLM и/или расширенная продуктовая доставка) — **не** начинать до отдельной постановки.
 
 ## Что уже работает
 
-- Фазы 0–6c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **6c:** продуктовые эндпоинты сводок по `studio_chats.id`, идемпотентность и догенерация `pending`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**75** кейсов после фазы 6c).
+- Фазы 0–6d по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **6d:** доставка готовых сводок в Telegram control group с ретраями и аудитом.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**90** кейсов после фазы 6d).
 
 ## Что ещё не готово
 
-- Внешний LLM, RAG, отправка сводок в Telegram, продуктовые сценарии 6+; SLA (8), проекты, Studio Admin.
+- Внешний LLM, RAG, SLA, проекты, Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -42,7 +42,7 @@
 
 - Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД / ожидание доставки.
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
-- Сводки 6a–6c: только Studio DB + шаблон; продуктовые маршруты 6c — см. `docs/06_DECISIONS.md` (фаза 6c); границы 6a–6b — там же.
+- Сводки 6a–6d: Studio DB + шаблон + продуктовый API + доставка в control group — см. `docs/06_DECISIONS.md` (фазы 6a–6d).
 
 ## Следующая задача
 

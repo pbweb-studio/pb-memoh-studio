@@ -159,16 +159,17 @@ async def list_summaries(
     *,
     limit: int = 100,
     chat_id: UUID | None = None,
+    delivery_status: str | None = None,
 ) -> list[StudioChatSummary]:
     lim = min(max(limit, 1), 500)
-    stmt = select(StudioChatSummary).order_by(StudioChatSummary.created_at.desc()).limit(lim)
+    conditions = []
     if chat_id is not None:
-        stmt = (
-            select(StudioChatSummary)
-            .where(StudioChatSummary.chat_id == chat_id)
-            .order_by(StudioChatSummary.created_at.desc())
-            .limit(lim)
-        )
+        conditions.append(StudioChatSummary.chat_id == chat_id)
+    if delivery_status is not None:
+        conditions.append(StudioChatSummary.delivery_status == delivery_status)
+    stmt = select(StudioChatSummary).order_by(StudioChatSummary.created_at.desc()).limit(lim)
+    if conditions:
+        stmt = stmt.where(and_(*conditions))
     return list((await session.scalars(stmt)).all())
 
 

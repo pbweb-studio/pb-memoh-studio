@@ -6,6 +6,7 @@ from pb_studio.celery_app import celery_app
 from pb_studio.control_group.system_notification_delivery import run_deliver_pending_standalone
 from pb_studio.summaries.generator import run_generate_pending_standalone
 from pb_studio.summaries.planner import run_plan_daily_standalone
+from pb_studio.summaries.summary_delivery import run_deliver_summaries_standalone
 
 
 @celery_app.task(name="pb_studio.worker.ping")
@@ -30,3 +31,9 @@ def plan_daily_chat_summaries() -> dict[str, int]:
 def generate_pending_chat_summaries() -> dict[str, int]:
     """Phase 6b: template summary_text for pending jobs (no Telegram send, no external LLM)."""
     return asyncio.run(run_generate_pending_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.deliver_pending_chat_summaries")
+def deliver_pending_chat_summaries() -> dict[str, int]:
+    """Phase 6d: deliver generated summaries to Telegram control group (sendMessage only)."""
+    return asyncio.run(run_deliver_summaries_standalone())

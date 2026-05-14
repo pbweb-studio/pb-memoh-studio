@@ -25,7 +25,7 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 5b** в `docker-compose.local.yml` в контейнеры **`studio-api`** и **`studio-worker`** проброшены (со значениями по умолчанию, кроме токена): `TELEGRAM_BOT_TOKEN`, `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`, `STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES`. Подстановка — из переменных окружения при запуске compose; удобно положить значения в файл **`.env`** в корне репозитория (compose подхватывает его автоматически) или вызвать `docker compose --env-file .env.local -f docker-compose.local.yml ...`. Токен в git не коммитить.
 
-Для **фаз 6b–6c** в те же сервисы **`studio-api`** и **`studio-worker`** проброшены: `STUDIO_SUMMARY_GENERATION_ENABLED`, `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS` (см. `.env.example`). Продуктовые эндпоинты `/summaries/chat/...` дополнительно требуют `STUDIO_ADMIN_TOKEN` на API.
+Для **фаз 6b–6d** в те же сервисы **`studio-api`** и **`studio-worker`** проброшены: `STUDIO_SUMMARY_GENERATION_ENABLED`, `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS`, `STUDIO_SUMMARY_DELIVERY_ENABLED`, `STUDIO_SUMMARY_DELIVERY_MAX_RETRIES` (см. `.env.example`). Продуктовые эндпоинты `/summaries/chat/...` и доставка сводок требуют `STUDIO_ADMIN_TOKEN` на API (когда задан).
 
 Проверка API:
 

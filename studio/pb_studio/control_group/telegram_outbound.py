@@ -23,8 +23,8 @@ async def telegram_send_message(
     chat_id: int,
     text: str,
     timeout_seconds: float,
-) -> tuple[bool, int | None, str]:
-    """POST sendMessage. Returns (ok, http_status, error_detail_redacted). Never raises for HTTP/network."""
+) -> tuple[bool, int | None, str, int | None]:
+    """POST sendMessage. Returns (ok, http_status, error_detail_redacted, telegram_message_id if ok). Never raises for HTTP/network."""
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     payload: dict[str, Any] = {
         "chat_id": chat_id,
@@ -35,16 +35,22 @@ async def telegram_send_message(
         async with httpx.AsyncClient(timeout=timeout_seconds) as client:
             resp = await client.post(url, json=payload)
     except httpx.TimeoutException:
-        return False, None, "timeout"
+        return False, None, "timeout", None
     except httpx.RequestError as exc:
-        return False, None, redact_secrets(str(exc), bot_token)
+        return False, None, redact_secrets(str(exc), bot_token), None
     body_text = redact_secrets(resp.text, bot_token)
     try:
         data = resp.json()
     except json.JSONDecodeError:
         data = None
     if resp.status_code == 200 and isinstance(data, dict) and data.get("ok") is True:
-        return True, 200, ""
+        msg_id: int | None = None
+        result = data.get("result")
+        if isinstance(result, dict):
+            raw_mid = result.get("message_id")
+            if isinstance(raw_mid, int):
+                msg_id = raw_mid
+        return True, 200, "", msg_id
     detail = ""
     if isinstance(data, dict):
         desc = data.get("description")
@@ -52,4 +58,4 @@ async def telegram_send_message(
             detail = redact_secrets(desc, bot_token)
     if not detail and body_text:
         detail = body_text[:512]
-    return False, resp.status_code, detail or f"http_{resp.status_code}"
+    return False, resp.status_code, detail or f"http_{resp.status_code}", None

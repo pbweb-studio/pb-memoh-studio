@@ -70,6 +70,15 @@
 - **Семантика:** если за период уже есть строка `generated` — возврат без дубликата; если `pending` — генерация и возврат; если строки нет — `plan` + генерация; периоды today/yesterday считаются в **UTC**; для `failed` за тот же период — HTTP **409** (ручное вмешательство в БД).
 - **Не делается:** Memoh, внешние LLM HTTP, `sendMessage` для сводок, RAG, SLA, проекты, Studio Admin UI, изменения polling/webhook, второй бот.
 
+## Фаза 6d — сводки: доставка в Telegram control group (Studio)
+
+- **Транспорт:** только Bot API `sendMessage` через существующий `telegram_send_message` (httpx к `api.telegram.org`); тот же `TELEGRAM_BOT_TOKEN`, что и у 5b; **без** второго бота, **без** polling/webhook из Studio.
+- **Куда:** только `chat_id` активной записи `studio_control_groups` → `studio_chats` с ролью `control_group`. Не в исходный чат сводки (`row.chat_id`), не в `client_chat` / `project_chat` / `internal_chat` / `service_chat` как destination; если роль destination не `control_group` — блокировка и `failed_permanent` по доставке; если исходный `telegram_chat_id` совпадает с destination — отказ (`refused`).
+- **Состояния доставки:** `not_requested`, `pending_control_group_delivery`, `delivered_to_control_group`, `failed_retryable`, `failed_permanent`; при отсутствии control group строка сводки **не** теряется — остаётся `pending` с `delivery_last_error`.
+- **Флаги:** `STUDIO_SUMMARY_DELIVERY_ENABLED` (по умолчанию `false`); `STUDIO_SUMMARY_DELIVERY_MAX_RETRIES`; токен и таймаут — как у 5b (`TELEGRAM_BOT_TOKEN`, `STUDIO_TELEGRAM_SEND_TIMEOUT_MS`).
+- **Аудит:** `summaries.delivery_*`; в `delivery_last_error` и payload **не** попадает сырой токен (редукция через `redact_secrets`).
+- **Не делается:** Memoh, LLM, RAG, SLA, проекты, Studio Admin.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

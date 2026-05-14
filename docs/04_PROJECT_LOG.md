@@ -100,3 +100,10 @@
 - **Без** Memoh, **без** внешнего LLM, **без** Telegram send для сводок, **без** RAG/SLA/проектов/Studio Admin.
 - Тесты: `pytest tests/` (включая `test_summaries_phase6c.py`); `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` на `pb-studio/main`.
+
+## 2026-05-14 — Фаза 6d (Studio: доставка сводок в control group)
+
+- Alembic `006_summary_delivery_control_group`: поля доставки на `studio_chat_summaries`; `pb_studio/summaries/summary_delivery.py`; `POST /summaries/{id}/deliver-control-group`, `POST /summaries/deliver-pending`, фильтр `GET /summaries?delivery_status=`; Celery `deliver_pending_chat_summaries`; env `STUDIO_SUMMARY_DELIVERY_ENABLED`, `STUDIO_SUMMARY_DELIVERY_MAX_RETRIES` в compose (api/worker); `telegram_send_message` — четвёртое значение `telegram_message_id`.
+- **Без** Memoh, **без** LLM/RAG/SLA/проектов/Studio Admin; только `sendMessage` в активную control group (тот же бот).
+- Тесты: `pytest tests/` (**90** passed в Docker); `docker compose -f docker-compose.local.yml config`; autouse-изоляция admin/env в `tests/conftest.py`.
+- SHA: `git rev-parse HEAD` на `pb-studio/main`.

@@ -40,8 +40,36 @@ class ChatSummaryOut(BaseModel):
     updated_at: datetime
     generated_at: datetime | None
     last_error: str | None
+    delivery_status: str = "not_requested"
+    delivery_retry_count: int = 0
+    delivery_last_error: str | None = None
+    delivered_at: datetime | None = None
+    destination_control_group_id: UUID | None = None
+    telegram_message_id: int | None = None
 
     model_config = {"from_attributes": True}
+
+
+class DeliverPendingSummariesResult(BaseModel):
+    examined: int
+    delivered: int
+    failed_retryable: int
+    failed_permanent: int
+    skipped_disabled: int
+    skipped_no_token: int
+    waiting_no_control_group: int
+    skipped_already_delivered: int
+    skipped_not_generated: int
+    failed_permanent_config: int
+    refused_source_equals_dest: int
+
+
+class DeliverSummaryResult(BaseModel):
+    id: UUID
+    delivery_status: str
+    telegram_message_id: int | None = None
+    delivered_at: datetime | None = None
+    reason: str | None = None
 
 
 class GeneratePendingResult(BaseModel):
