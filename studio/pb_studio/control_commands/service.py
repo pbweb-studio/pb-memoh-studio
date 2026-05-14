@@ -582,6 +582,45 @@ async def _dispatch_kb_control_commands(
             cmd.response_telegram_message_id = mid
             return
 
+        if cmd.command_name == ControlCommandName.KB_PARSE:
+            did = UUID(str(cmd.args_json.get("document_id") or ""))
+            try:
+                out = await studio_kb_service.parse_all_pending_versions_for_document(session, did, settings)
+                mid = await reply(f"KB parse: parsed={out['parsed']} failed={out['failed']}")
+            except ValueError as exc:
+                mid = await reply(f"Ошибка: {exc}")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_parse",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"document_id": str(did)},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.KB_STATUS:
+            did = UUID(str(cmd.args_json.get("document_id") or ""))
+            doc = await studio_kb_service.get_document(session, did)
+            if doc is None:
+                mid = await reply("Документ не найден.")
+            else:
+                vers = await studio_kb_service.list_versions(session, did)
+                lines = [f"KB status: {doc.title}\nid={doc.id} doc_status={doc.status}"]
+                for v in vers[-20:]:
+                    n = len(await studio_kb_service.list_chunks(session, v.id))
+                    err = (v.last_error or "")[:120]
+                    lines.append(
+                        f"v{v.version_number} id={v.id} {v.status} chunks={n} parser={v.parser_name or '-'} err={err or '-'}"
+                    )
+                mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
         if cmd.command_name == ControlCommandName.KB_ADD:
             title = str(cmd.args_json.get("title") or "")
             text_body = str(cmd.args_json.get("text") or "")

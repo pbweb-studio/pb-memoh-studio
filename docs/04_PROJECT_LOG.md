@@ -161,3 +161,10 @@
 - Таблицы `studio_knowledge_documents`, `studio_knowledge_document_versions`, `studio_knowledge_chunks` (Alembic `013_studio_knowledge_base`); пакет `pb_studio/knowledge`; API `/knowledge/*` при `STUDIO_KB_ENABLED` и `STUDIO_ADMIN_TOKEN`; команды `/kb_*` из control group; env `STUDIO_KB_CHUNK_*` и флаг в `docker-compose.local.yml`.
 - **Без** Memoh, LLM/embeddings/RAG retrieval/Docling, Studio Admin UI, второго бота, polling/webhook Studio.
 - Тесты: `studio/tests/test_knowledge_phase10a.py`; полный `pytest tests/` (**192** passed); `docker compose -f docker-compose.local.yml config`.
+
+## 2026-05-14 — Фаза 10b (Studio: KB parse pipeline)
+
+- `pb_studio/knowledge/parsers.py`; pending-версии (`defer_parse` на `POST .../versions/text`); `POST /knowledge/documents/{id}/parse`, `POST /knowledge/parse-pending`; Celery `parse_pending_knowledge_documents`; команды `/kb_parse`, `/kb_status`.
+- **Без** Memoh, LLM/embeddings/RAG retrieval, Studio Admin UI.
+- Тесты: `studio/tests/test_knowledge_phase10b.py`; полный `pytest tests/` (**201** passed).
+

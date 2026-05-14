@@ -5,12 +5,14 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from pb_studio.core.config import Settings
+from pb_studio.core.config import Settings, get_settings
+from pb_studio.core.database import get_session_factory
 from pb_studio.knowledge.constants import (
     KnowledgeDocumentStatus,
+    KnowledgeParserName,
     KnowledgeVersionStatus,
 )
 from pb_studio.knowledge.models import (
@@ -18,6 +20,7 @@ from pb_studio.knowledge.models import (
     StudioKnowledgeDocument,
     StudioKnowledgeDocumentVersion,
 )
+from pb_studio.knowledge.parsers import parse_document_version_content
 from pb_studio.projects.models import StudioProject
 
 
@@ -150,6 +153,51 @@ async def list_versions(session: AsyncSession, document_id: UUID) -> list[Studio
     return list((await session.scalars(q)).all())
 
 
+def pending_import_content_hash(document_id: UUID, version_number: int, text: str, mime: str | None) -> str:
+    return content_sha256_hex(f"{document_id}\n{version_number}\n{mime or ''}\n{text}")
+
+
+async def _delete_chunks_for_version(session: AsyncSession, version_id: UUID) -> None:
+    await session.execute(delete(StudioKnowledgeChunk).where(StudioKnowledgeChunk.document_version_id == version_id))
+
+
+async def _finalize_parsed_version_with_plaintext(
+    session: AsyncSession,
+    ver: StudioKnowledgeDocumentVersion,
+    document_id: UUID,
+    plaintext: str,
+    settings: Settings,
+    *,
+    parser_name: str | None,
+    parser_version: str | None,
+) -> None:
+    await _delete_chunks_for_version(session, ver.id)
+    max_chars = settings.studio_kb_chunk_max_chars
+    overlap = settings.studio_kb_chunk_overlap_chars
+    parts = split_text_into_chunks(plaintext, max_chars, overlap)
+    for idx, chunk in enumerate(parts):
+        session.add(
+            StudioKnowledgeChunk(
+                document_version_id=ver.id,
+                chunk_index=idx,
+                content_text=chunk,
+                token_count=None,
+                metadata_json=None,
+            )
+        )
+    now = utcnow()
+    ver.content_text = plaintext
+    ver.status = KnowledgeVersionStatus.PARSED
+    ver.parsed_at = now
+    ver.last_error = None
+    if parser_name:
+        ver.parser_name = parser_name
+    if parser_version:
+        ver.parser_version = parser_version
+    await session.flush()
+    await activate_parsed_version(session, document_id, ver.id)
+
+
 async def list_chunks(session: AsyncSession, version_id: UUID) -> list[StudioKnowledgeChunk]:
     q = (
         select(StudioKnowledgeChunk)
@@ -220,9 +268,6 @@ async def create_document_version_from_text(
     )
     next_num = int(max_ver or 0) + 1
 
-    max_chars = settings.studio_kb_chunk_max_chars
-    overlap = settings.studio_kb_chunk_overlap_chars
-
     ver = StudioKnowledgeDocumentVersion(
         document_id=document_id,
         version_number=next_num,
@@ -237,23 +282,15 @@ async def create_document_version_from_text(
     await session.flush()
 
     try:
-        parts = split_text_into_chunks(body, max_chars, overlap)
-        for idx, chunk in enumerate(parts):
-            session.add(
-                StudioKnowledgeChunk(
-                    document_version_id=ver.id,
-                    chunk_index=idx,
-                    content_text=chunk,
-                    token_count=None,
-                    metadata_json=None,
-                )
-            )
-        now = utcnow()
-        ver.status = KnowledgeVersionStatus.PARSED
-        ver.parsed_at = now
-        ver.last_error = None
-        await session.flush()
-        await activate_parsed_version(session, document_id, ver.id)
+        await _finalize_parsed_version_with_plaintext(
+            session,
+            ver,
+            document_id,
+            body,
+            settings,
+            parser_name=parser_name or KnowledgeParserName.PLAIN,
+            parser_version=parser_version or "10b",
+        )
     except Exception as exc:  # noqa: BLE001
         ver.status = KnowledgeVersionStatus.FAILED
         ver.last_error = str(exc)[:4000]
@@ -261,3 +298,183 @@ async def create_document_version_from_text(
         raise
 
     return ver, True
+
+
+async def create_document_version_pending_import(
+    session: AsyncSession,
+    document_id: UUID,
+    text: str,
+    settings: Settings,
+    *,
+    mime_type: str | None = None,
+    parser_name: str | None = None,
+    parser_version: str | None = None,
+    metadata_json: dict[str, Any] | None = None,
+) -> tuple[StudioKnowledgeDocumentVersion, bool]:
+    """Create a version in pending state (no chunks) for async parse pipeline."""
+    doc = await session.get(StudioKnowledgeDocument, document_id)
+    if doc is None:
+        raise ValueError("document not found")
+    if doc.status == KnowledgeDocumentStatus.ARCHIVED:
+        raise ValueError("document is archived")
+
+    max_ver = await session.scalar(
+        select(func.max(StudioKnowledgeDocumentVersion.version_number)).where(
+            StudioKnowledgeDocumentVersion.document_id == document_id
+        )
+    )
+    next_num = int(max_ver or 0) + 1
+    meta = dict(metadata_json or {})
+    if mime_type:
+        meta["mime_type"] = mime_type
+
+    h = pending_import_content_hash(document_id, next_num, text, mime_type)
+    existing = await session.scalar(
+        select(StudioKnowledgeDocumentVersion).where(
+            StudioKnowledgeDocumentVersion.document_id == document_id,
+            StudioKnowledgeDocumentVersion.content_hash == h,
+        )
+    )
+    if existing is not None:
+        return existing, False
+
+    ver = StudioKnowledgeDocumentVersion(
+        document_id=document_id,
+        version_number=next_num,
+        content_text=text,
+        content_hash=h,
+        parser_name=parser_name,
+        parser_version=parser_version,
+        status=KnowledgeVersionStatus.PENDING,
+        metadata_json=meta or None,
+    )
+    session.add(ver)
+    await session.flush()
+    return ver, True
+
+
+async def parse_document_version(
+    session: AsyncSession,
+    version_id: UUID,
+    settings: Settings,
+) -> StudioKnowledgeDocumentVersion:
+    ver = await session.get(StudioKnowledgeDocumentVersion, version_id)
+    if ver is None:
+        raise ValueError("version not found")
+    if ver.status == KnowledgeVersionStatus.PARSED:
+        return ver
+
+    doc = await session.get(StudioKnowledgeDocument, ver.document_id)
+    if doc is None:
+        raise ValueError("document not found")
+    if doc.status == KnowledgeDocumentStatus.ARCHIVED:
+        raise ValueError("document is archived")
+
+    await _delete_chunks_for_version(session, ver.id)
+    outcome = parse_document_version_content(document=doc, version=ver)
+
+    if outcome.unsupported or not outcome.ok:
+        ver.status = (
+            KnowledgeVersionStatus.FAILED_UNSUPPORTED
+            if outcome.unsupported
+            else KnowledgeVersionStatus.FAILED
+        )
+        ver.last_error = (outcome.error_message or "parse failed")[:4000]
+        ver.parsed_at = None
+        ver.parser_name = outcome.parser_name
+        ver.parser_version = outcome.parser_version
+        await session.flush()
+        return ver
+
+    try:
+        await _finalize_parsed_version_with_plaintext(
+            session,
+            ver,
+            doc.id,
+            outcome.plain_text,
+            settings,
+            parser_name=outcome.parser_name,
+            parser_version=outcome.parser_version,
+        )
+    except Exception as exc:  # noqa: BLE001
+        ver.status = KnowledgeVersionStatus.FAILED
+        ver.last_error = str(exc)[:4000]
+        ver.parsed_at = None
+        await session.flush()
+        raise
+
+    return ver
+
+
+async def parse_all_pending_versions_for_document(
+    session: AsyncSession,
+    document_id: UUID,
+    settings: Settings,
+) -> dict[str, int]:
+    rows = list(
+        (
+            await session.scalars(
+                select(StudioKnowledgeDocumentVersion)
+                .where(
+                    StudioKnowledgeDocumentVersion.document_id == document_id,
+                    StudioKnowledgeDocumentVersion.status == KnowledgeVersionStatus.PENDING,
+                )
+                .order_by(StudioKnowledgeDocumentVersion.version_number.asc())
+            )
+        ).all()
+    )
+    parsed = failed = 0
+    for row in rows:
+        try:
+            updated = await parse_document_version(session, row.id, settings)
+            if updated.status == KnowledgeVersionStatus.PARSED:
+                parsed += 1
+            else:
+                failed += 1
+        except Exception:  # noqa: BLE001
+            failed += 1
+    return {"parsed": parsed, "failed": failed}
+
+
+async def list_pending_version_ids(session: AsyncSession, *, limit: int = 50) -> list[UUID]:
+    lim = min(max(limit, 1), 200)
+    rows = list(
+        (
+            await session.scalars(
+                select(StudioKnowledgeDocumentVersion.id)
+                .where(StudioKnowledgeDocumentVersion.status == KnowledgeVersionStatus.PENDING)
+                .order_by(StudioKnowledgeDocumentVersion.created_at.asc())
+                .limit(lim)
+            )
+        ).all()
+    )
+    return [r for r in rows]
+
+
+async def parse_pending_knowledge_versions_batch(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    limit: int = 50,
+) -> dict[str, int]:
+    ids = await list_pending_version_ids(session, limit=limit)
+    parsed = failed = 0
+    for vid in ids:
+        try:
+            updated = await parse_document_version(session, vid, settings)
+            if updated.status == KnowledgeVersionStatus.PARSED:
+                parsed += 1
+            else:
+                failed += 1
+        except Exception:  # noqa: BLE001
+            failed += 1
+    return {"parsed": parsed, "failed": failed}
+
+
+async def run_parse_pending_knowledge_standalone(settings: Settings | None = None) -> dict[str, int]:
+    settings = settings or get_settings()
+    factory = get_session_factory(settings)
+    async with factory() as session:
+        out = await parse_pending_knowledge_versions_batch(session, settings, limit=50)
+        await session.commit()
+    return out

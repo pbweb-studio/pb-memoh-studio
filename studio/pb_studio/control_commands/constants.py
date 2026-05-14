@@ -32,6 +32,8 @@ class ControlCommandName:
     KB_HELP = "kb_help"
     KB_LIST = "kb_list"
     KB_GET = "kb_get"
+    KB_PARSE = "kb_parse"
+    KB_STATUS = "kb_status"
     KB_ADD = "kb_add"
 
 
@@ -77,6 +79,8 @@ KB_HELP_TEXT = """Команды базы знаний (Studio, только и�
 /kb_help — этот текст
 /kb_list — список документов KB
 /kb_get <document_uuid> — карточка документа и активная версия
+/kb_parse <document_uuid> — распарсить все pending-версии документа
+/kb_status <document_uuid> — статусы версий и число чанков
 /kb_add <title> | <text> — новый документ (manual) и первая версия из текста (разбиение на чанки в Studio)
 
 Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.

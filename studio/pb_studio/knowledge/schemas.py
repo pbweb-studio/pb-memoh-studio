@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class KnowledgeDocumentCreate(BaseModel):
@@ -58,10 +58,22 @@ class KnowledgeVersionOut(BaseModel):
 
 
 class KnowledgeVersionTextBody(BaseModel):
-    text: str = Field(min_length=1)
+    text: str = ""
+    defer_parse: bool = False
     parser_name: str | None = None
     parser_version: str | None = None
     metadata_json: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _validate_text_or_defer(self) -> KnowledgeVersionTextBody:
+        if not self.defer_parse and not (self.text or "").strip():
+            raise ValueError("text must be non-empty unless defer_parse is true")
+        return self
+
+
+class KnowledgeParseBatchOut(BaseModel):
+    parsed: int
+    failed: int
 
 
 class KnowledgeChunkOut(BaseModel):

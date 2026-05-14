@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** фаза **10a** в Studio — knowledge base: `studio_knowledge_*` (Alembic `013`); `pb_studio/knowledge`; API `/knowledge/*` при `STUDIO_KB_ENABLED`; команды `/kb_*` из active control group (тот же цикл control commands). Memoh не менялся.
+**Сейчас:** фаза **10b** в Studio — KB parse pipeline: `knowledge/parsers.py`, `defer_parse` + `POST .../parse`, `POST /knowledge/parse-pending`, Celery `parse_pending_knowledge_documents`, команды `/kb_parse` и `/kb_status`. Memoh не менялся.
 
 **Ветка:** `pb-studio/main`.
 

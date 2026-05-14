@@ -198,6 +198,28 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_document_uuid"})
         return ParsedControlCommand(ControlCommandName.KB_GET, {"document_id": str(uid)})
 
+    if cmd == "/kb_parse":
+        if not rest:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_parse needs document_uuid"},
+            )
+        uid = _parse_uuid(rest)
+        if uid is None:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_document_uuid"})
+        return ParsedControlCommand(ControlCommandName.KB_PARSE, {"document_id": str(uid)})
+
+    if cmd == "/kb_status":
+        if not rest:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_status needs document_uuid"},
+            )
+        uid = _parse_uuid(rest)
+        if uid is None:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_document_uuid"})
+        return ParsedControlCommand(ControlCommandName.KB_STATUS, {"document_id": str(uid)})
+
     if cmd == "/kb_add":
         sep = " | "
         if sep not in rest:

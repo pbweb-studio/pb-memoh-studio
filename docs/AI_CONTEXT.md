@@ -6,9 +6,9 @@
 
 ## Текущая фаза
 
-**Фаза 10a (Studio: knowledge base без embeddings)** — таблицы `studio_knowledge_documents`, `studio_knowledge_document_versions`, `studio_knowledge_chunks` (Alembic `013_studio_knowledge_base`); пакет `pb_studio/knowledge`; админ-API `/knowledge/*` при `STUDIO_KB_ENABLED` и `STUDIO_ADMIN_TOKEN`; команды `/kb_help`, `/kb_list`, `/kb_get`, `/kb_add` из active control group (Event Mirror + ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`); детерминированный splitter `STUDIO_KB_CHUNK_*`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/embeddings/RAG retrieval/Docling, Studio Admin UI; не шлём в client/project/internal/service чаты.
+**Фаза 10b (Studio: KB parse pipeline без embeddings)** — модуль `pb_studio/knowledge/parsers.py` (plain text / markdown; PDF/DOCX → `failed_unsupported`); отложенные версии через `defer_parse` на `POST /knowledge/documents/{id}/versions/text`; `POST /knowledge/documents/{id}/parse`, `POST /knowledge/parse-pending`; Celery `parse_pending_knowledge_documents`; команды `/kb_parse`, `/kb_status` + обновлённый `/kb_help`. **Без** Memoh, LLM, embeddings, RAG retrieval, Docling, Studio Admin UI.
 
-Фазы **9b**, **9a**, **8a–8c**, **7b**–**4b** — см. журнал.
+Фазы **10a**, **9b**, **9a**, **8a–8c**, **7b**–**4b** — см. журнал.
 
 ## Текущая цель
 
@@ -16,11 +16,12 @@
 
 ## Что уже работает
 
-- Фазы 0–10a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **10a:** KB в БД, версии из текста, чанки, HTTP API, команды `/kb_*` из control group.
+- Фазы 0–10b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **10b:** staged import + parse pending, батч API и Celery, команды `/kb_parse` / `/kb_status`.
+- **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**192** кейса после фазы 10a, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**201** кейс после фазы 10b, локально/Docker).
 
 ## Что ещё не готово
 
@@ -50,6 +51,7 @@
 - **Фаза 9a:** проекты и bind чатов только в Studio DB; команды `/project_*` — те же правила доставки и ACL, что `/summary_*`; см. `docs/06_DECISIONS.md`.
 - **Фаза 9b:** project digest из summaries, только Studio DB + шаблон; доставка и команды — только control group; см. `docs/06_DECISIONS.md`.
 - **Фаза 10a:** KB — только Studio DB + детерминированные чанки; API при флаге `STUDIO_KB_ENABLED`; команды `/kb_*` — только control group; см. `docs/06_DECISIONS.md`.
+- **Фаза 10b:** parse pipeline для pending-версий; PDF/DOCX без Docling → `failed_unsupported`; идемпотентный повторный parse; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 

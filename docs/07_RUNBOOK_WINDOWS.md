@@ -37,6 +37,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 10a (knowledge base)** в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_ENABLED`, `STUDIO_KB_CHUNK_MAX_CHARS`, `STUDIO_KB_CHUNK_OVERLAP_CHARS` (см. `.env.example`). Эндпоинты `GET/POST/PATCH /knowledge/documents`, archive, `POST .../versions/text`, списки версий и чанков — под `STUDIO_ADMIN_TOKEN` и при `STUDIO_KB_ENABLED=true`; команды `/kb_*` используют те же `STUDIO_CONTROL_COMMANDS_*`, что `/summary_*`.
 
+Для **фазы 10b (KB parse)** те же env; дополнительно: `POST /knowledge/documents/{id}/parse`, `POST /knowledge/parse-pending` (ручной/периодический запуск батча); Celery-задача `parse_pending_knowledge_documents`; в теле `POST .../versions/text` можно передать `defer_parse: true` и при необходимости `metadata_json.mime_type` для staged import.
+
 Проверка API:
 
 ```powershell

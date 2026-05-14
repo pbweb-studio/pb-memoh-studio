@@ -8,6 +8,7 @@ from pb_studio.control_commands.service import run_control_commands_standalone
 from pb_studio.control_group.system_notification_delivery import run_deliver_pending_standalone
 from pb_studio.summaries.generator import run_generate_pending_standalone
 from pb_studio.summaries.planner import run_plan_daily_standalone
+from pb_studio.knowledge.service import run_parse_pending_knowledge_standalone
 from pb_studio.project_digests.service import (
     run_deliver_pending_project_digests_standalone,
     run_generate_daily_project_digests_standalone,
@@ -74,3 +75,9 @@ def generate_daily_project_digests() -> dict[str, int]:
 def deliver_pending_project_digests() -> dict[str, int]:
     """Phase 9b: доставка project digest в control group (sendMessage)."""
     return asyncio.run(run_deliver_pending_project_digests_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.parse_pending_knowledge_documents")
+def parse_pending_knowledge_documents() -> dict[str, int]:
+    """Phase 10b: parse pending KB document versions (plain text / markdown; no embeddings)."""
+    return asyncio.run(run_parse_pending_knowledge_standalone())

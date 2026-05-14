@@ -297,6 +297,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 10b — KB: импорт/парсинг pending-версий (без embeddings/LLM)
+
+**Статус:** модуль [`studio/pb_studio/knowledge/parsers.py`](studio/pb_studio/knowledge/parsers.py) (plain text / markdown; PDF/DOCX → `failed_unsupported`); отложенная версия `POST .../versions/text` с `defer_parse=true`; `parse_document_version` / батч `parse_pending_knowledge_versions_batch`; API `POST /knowledge/documents/{id}/parse`, `POST /knowledge/parse-pending`; Celery `parse_pending_knowledge_documents`; команды `/kb_parse`, `/kb_status`, обновление `/kb_help`. Повторный `parse` для уже `parsed` не плодит чанки. **Без** Memoh, LLM, embeddings, RAG retrieval, Docling, Studio Admin UI.
+
+**Тесты:** [`studio/tests/test_knowledge_phase10b.py`](studio/tests/test_knowledge_phase10b.py); регрессия 10a.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -321,7 +329,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
-| 10 | База знаний: **10a** — документы/версии/чанки, API `/knowledge`, команды `/kb_*` (без embeddings/LLM); **10+** — Docling, embeddings, pgvector — по постановке |
+| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline, pending+parse API, Celery `parse_pending_knowledge_documents`, `/kb_parse|status`; **10+** — Docling, embeddings, pgvector |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |

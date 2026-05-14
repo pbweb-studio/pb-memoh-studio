@@ -24,6 +24,7 @@
 | 9a Projects + project↔chat binding (Studio DB, no RAG) | Done |
 | 9b Project digest from chat summaries (no LLM for digest text) | Done |
 | 10a Knowledge base documents/versions/chunks (no embeddings) | Done |
+| 10b KB parse pipeline (pending, plain/md, unsupported MIME) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10a — `pb_studio/knowledge`, migration 013, `/knowledge` API, `/kb_*` commands, env `STUDIO_KB_*`; pytest **192** passed; `docker compose -f docker-compose.local.yml config` ok.
+**Последнее:** фаза 10b — parsers + parse API + Celery `parse_pending_knowledge_documents` + `/kb_parse|status`; pytest **201** passed; compose config ok.

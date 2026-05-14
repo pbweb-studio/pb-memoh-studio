@@ -20,3 +20,10 @@ class KnowledgeVersionStatus:
     PENDING = "pending"
     PARSED = "parsed"
     FAILED = "failed"
+    FAILED_UNSUPPORTED = "failed_unsupported"
+
+
+class KnowledgeParserName:
+    PLAIN = "plain_text"
+    MARKDOWN = "markdown"
+    PLACEHOLDER = "placeholder"

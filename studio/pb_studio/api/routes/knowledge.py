@@ -12,6 +12,7 @@ from pb_studio.knowledge.schemas import (
     KnowledgeDocumentCreate,
     KnowledgeDocumentOut,
     KnowledgeDocumentPatch,
+    KnowledgeParseBatchOut,
     KnowledgeVersionOut,
     KnowledgeVersionTextBody,
 )
@@ -87,19 +88,56 @@ async def post_knowledge_document_version_text(
     session: DbSession, document_id: UUID, body: KnowledgeVersionTextBody
 ) -> KnowledgeVersionOut:
     settings = get_settings()
+    mime_type = None
+    if body.metadata_json:
+        mime_type = body.metadata_json.get("mime_type")
+        if mime_type is not None:
+            mime_type = str(mime_type)
     try:
-        ver, _created = await kb_service.create_document_version_from_text(
-            session,
-            document_id,
-            body.text,
-            settings,
-            parser_name=body.parser_name,
-            parser_version=body.parser_version,
-            metadata_json=body.metadata_json,
-        )
+        if body.defer_parse:
+            ver, _created = await kb_service.create_document_version_pending_import(
+                session,
+                document_id,
+                body.text,
+                settings,
+                mime_type=mime_type,
+                parser_name=body.parser_name,
+                parser_version=body.parser_version,
+                metadata_json=body.metadata_json,
+            )
+        else:
+            ver, _created = await kb_service.create_document_version_from_text(
+                session,
+                document_id,
+                body.text,
+                settings,
+                parser_name=body.parser_name,
+                parser_version=body.parser_version,
+                metadata_json=body.metadata_json,
+            )
         return KnowledgeVersionOut.model_validate(ver)
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/documents/{document_id}/parse", response_model=KnowledgeParseBatchOut)
+async def post_knowledge_document_parse(session: DbSession, document_id: UUID) -> KnowledgeParseBatchOut:
+    settings = get_settings()
+    doc = await kb_service.get_document(session, document_id)
+    if doc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="document not found")
+    try:
+        out = await kb_service.parse_all_pending_versions_for_document(session, document_id, settings)
+        return KnowledgeParseBatchOut.model_validate(out)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/parse-pending", response_model=KnowledgeParseBatchOut)
+async def post_knowledge_parse_pending(session: DbSession) -> KnowledgeParseBatchOut:
+    settings = get_settings()
+    out = await kb_service.parse_pending_knowledge_versions_batch(session, settings, limit=50)
+    return KnowledgeParseBatchOut.model_validate(out)
 
 
 @router.get("/documents/{document_id}/versions", response_model=list[KnowledgeVersionOut])

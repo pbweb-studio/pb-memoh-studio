@@ -206,3 +206,9 @@
 - Документы, версии и чанки живут только в **Studio DB**; разбиение текста — детерминированный splitter по `STUDIO_KB_CHUNK_*`, без embeddings и без внешних LLM.
 - API `/knowledge/*` включён только при **`STUDIO_KB_ENABLED=true`** и (если задан) **`STUDIO_ADMIN_TOKEN`**; команды `/kb_*` — тот же Event Mirror + ACL, ответы только в active control group.
 - Повтор `POST .../versions/text` с тем же содержимым не создаёт вторую версию (unique `document_id` + `content_hash`).
+
+## Фаза 10b — KB parse pipeline (выполнено)
+
+- Pending-версии (`status=pending`) обрабатываются детерминированным парсером в Studio: `text/plain`, `text/markdown` → чанки; PDF/DOCX и прочие «бинарные» MIME без текстового тела → `failed_unsupported` без падения батча.
+- Повторный `parse` для версии в `parsed` идемпотентен (чанки не дублируются).
+- Celery `parse_pending_knowledge_documents` и админ-`POST /knowledge/parse-pending` не расширяют SLA и не трогают Memoh.
