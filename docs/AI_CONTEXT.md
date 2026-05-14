@@ -28,8 +28,8 @@
 ## Идентификаторы коммитов (фаза 4b)
 
 - **Реализация Go-hook (feat telegram mirror, вариант C):** `67bc573d1b5891f6cf9d3613580f59ca92200ec9`
-- **Коммит, фиксирующий результаты автоматической проверки 4b в документации:** см. `git log -1 --format=%H` сразу после `git pull` коммита с сообщением `docs: close phase 4b verification` (или следующий doc-only коммит с SHA — см. историю).
-- **Актуальный корень ветки:** `git rev-parse HEAD`.
+- **Коммит с записью результатов автоматической проверки 4b (доки + memory-bank):** `1c8f9f6c0ef1ec71e78c3dcc92879c8c3b8c2b42` (сообщение `docs: close phase 4b verification (tests documented)`).
+- **Актуальный корень ветки** (если есть только doc-follow-up поверх): `git rev-parse HEAD`.
 
 **Код Event Mirror Studio (фаза 4a, исторический якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 

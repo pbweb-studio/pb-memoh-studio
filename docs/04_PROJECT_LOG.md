@@ -55,4 +55,4 @@
 - **Go:** `docker run --rm -v "<repo>:/src" -w /src golang:1.25 go test ./internal/channel/adapters/telegram/... -count=1` — **ok** (образ `golang:1.25` соответствует директиве `go 1.25.7` в `go.mod`).
 - **Studio:** `docker run --rm -v "<repo>/studio:/app" -w /app python:3.12-slim bash -c "pip install -q -e '.[dev]' && pytest tests/ -v"` — **32 passed**.
 - **Compose:** `docker compose -f docker-compose.local.yml config` — без ошибок.
-- Полный SHA корня ветки после записи этой строки в журнал: `git rev-parse HEAD`.
+- Запись о проверке вошла в коммит доков `1c8f9f6c0ef1ec71e78c3dcc92879c8c3b8c2b42` (см. `docs/AI_CONTEXT.md`); актуальный корень ветки: `git rev-parse HEAD`.
