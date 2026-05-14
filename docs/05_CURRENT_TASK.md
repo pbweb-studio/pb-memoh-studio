@@ -1,9 +1,11 @@
 # Текущая задача
 
-## Фаза 4b+ — транспорт Event Mirror и интеграция с Memoh
+## Стоп перед 4b — утверждение варианта интеграции
 
-**Цель:** подать события в уже работающий ingest Studio (`POST /events/telegram` или внутренний вызов) из согласованной границы (webhook/proxy к Memoh, sidecar, и т.д.) **без** правок Memoh до выбора A/B/C в `docs/06_DECISIONS.md`.
+**Статус:** реализация транспорта Telegram/Memoh → `POST /events/telegram` **не** ведётся, код Memoh **не** меняется.
 
-**Зависимости:** Фаза 4a (таблицы + HTTP ingest); вариант интеграции зафиксировать в ADR.
+**Сделано:** в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md) зафиксирован **ADR** (сравнение A/B/C и рекомендация **C**, запасной **A**, **B** крайний случай); краткая отсылка в [`docs/03_IMPLEMENTATION_PLAN.md`](docs/03_IMPLEMENTATION_PLAN.md).
 
-**Ограничение:** не патчить `internal/channel/adapters/telegram`, `internal/channel/inbound.go`, `telegram.go` без явного решения пользователя.
+**Следующий шаг (после вашего решения):** выбрать окончательно **C** или пилот **A** (или обосновать **B**), затем открыть фазу **4b** — только выбранный транспорт, без scope creep.
+
+**Ограничение:** не патчить `internal/channel/adapters/telegram`, `internal/channel/inbound.go`, `telegram.go` без явного записанного решения.

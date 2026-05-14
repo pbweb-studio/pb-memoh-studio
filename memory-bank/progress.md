@@ -4,10 +4,11 @@
 |------|--------|
 | 0 Bootstrap | Done |
 | 1 Recon Memoh | Done |
-| 2a Response Queue (Studio DB, без Memoh) | Done |
-| 3 Studio Layer skeleton | Done |
-| 4a Event Mirror ingest (HTTP + DB, без Memoh/outbound TG) | Done |
-| 4b+ Транспорт → ingest / интеграция Memoh | Next |
-| 5 Управляющая группа | Pending |
+| 2a Response Queue | Done |
+| 3 Studio skeleton | Done |
+| 4a Event Mirror ingest | Done |
+| ADR интеграции TG→Studio (перед 4b) | Done |
+| 4b Транспорт → ingest | **Стоп до решения** |
+| 5+ | Pending |
 
-**Последнее:** зеркало Telegram update в Studio DB; опциональный enqueue в очередь по флагу.
+**Последнее:** документированное решение A/B/C; рекомендация C; пилот A без Go-изменений при жёстком запрете на Memoh.

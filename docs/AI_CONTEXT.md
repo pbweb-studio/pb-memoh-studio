@@ -6,50 +6,41 @@
 
 ## Текущая фаза
 
-**Фаза 4a завершена** — Event Mirror в Studio: `POST /events/telegram` (сырой JSON Telegram Update), дедуп по `update_id`, таблицы raw/chats/users/messages/lifecycle/audit, нормализация основных типов update. **Без** правок Memoh, **без** реального Telegram runtime, **без** исходящих сообщений в Telegram. Опциональный `QueueService.enqueue` только при явном флаге окружения (по умолчанию выкл.).
-
-Дальше: **Фаза 4b+** — транспорт событий в ingest (после ADR A/B/C); **Фаза 5** — управляющая группа.
+**Фаза 4a завершена** — Event Mirror в Studio: `POST /events/telegram`, таблицы, нормализация. **ADR перед 4b зафиксирован** (только `docs/` + memory-bank): сравнение A/B/C для доставки Telegram/Memoh → Studio и рекомендация **C** (запасной **A**, **B** крайний случай). **Транспорт 4b не начинать** до явного согласования с пользователем/командой.
 
 ## Текущая цель
 
-Согласовать и реализовать **доставку** апдейтов в Studio ingest (прокси, webhook, или минимальный контракт с Memoh) **без** самовольных правок `telegram.go` / `inbound.go`.
+Утвердить на практике вариант **C** vs запасной **A** (или исключение **B**), затем спланировать 4b без самовольных правок Memoh.
 
 ## Что уже работает
 
-- Фазы 0–3: см. `docs/04_PROJECT_LOG.md`.
-- **Фаза 4a:** [`studio/pb_studio/event_mirror/`](studio/pb_studio/event_mirror/), роутер `api/routes/events.py`, Alembic `001_initial` (DDL очереди) + `002_event_mirror`, тесты `tests/test_event_mirror.py`.
+- Фазы 0–4a: см. `docs/04_PROJECT_LOG.md`.
+- Инжест и зеркало: `studio/pb_studio/event_mirror/`.
+- Решение по интеграции: `docs/06_DECISIONS.md` (раздел **ADR — Telegram / Memoh → Studio Event Mirror**).
 
 ## Что ещё не готово
 
-- Пайплайн Memoh/Telegram → Studio ingest.
-- Управляющая группа, сводки, RAG, SLA, Studio Admin.
+- Реализация транспорта (4b+), вызовы Memoh из Studio по выбранному варианту.
+- Управляющая группа (Фаза 5), сводки, RAG, SLA, Studio Admin.
 
 ## Последний стабильный commit
 
-Сообщение коммита Фазы 4a: `feat(studio): event mirror phase 4a ingest and tables` — полный SHA: `git rev-parse HEAD` на `pb-studio/main`.
+**Код Event Mirror (фаза 4a):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 
-## Что изменилось в последней фазе
-
-- Приём и сохранение зеркала Telegram-формата в Postgres; контракт с Response Queue задокументирован и опционально включён флагом.
-
-## Изменённые файлы (Фаза 4a)
-
-- `studio/pb_studio/event_mirror/**`, `studio/pb_studio/api/**`, `studio/pb_studio/core/config.py`, `studio/pb_studio/core/database.py`, `studio/alembic/versions/**`, `studio/tests/test_event_mirror.py`
-- `docs/03_IMPLEMENTATION_PLAN.md`, `docs/04_PROJECT_LOG.md`, `docs/05_CURRENT_TASK.md`, `docs/06_DECISIONS.md`, `docs/07_RUNBOOK_WINDOWS.md`, `docs/AI_CONTEXT.md`, `memory-bank/activeContext.md`, `memory-bank/progress.md`, `.env.example`
+**Документация ADR (интеграция Telegram/Memoh → Studio, перед 4b):** `ADR_DOC_COMMIT_SHA_PLACEHOLDER`
 
 ## Принятые решения
 
-- Memoh и Telegram adapter **не менялись** в 4a.
-- Исходящий Telegram API **не вызывается** из Event Mirror.
-- Варианты A/B/C — `docs/06_DECISIONS.md`.
+- Memoh и Telegram adapter **не менялись** в этом шаге.
+- Приоритет интеграции для raw `Update`: **C**; пилот **A** при запрете патчей Memoh; **B** — только при сильной необходимости и форке (см. `docs/06_DECISIONS.md`).
 
 ## Что нельзя трогать
 
-- До ADR: не патчить Memoh `telegram.go` / `inbound.go` без записи в `docs/06_DECISIONS.md`.
+- Не начинать 4b без согласования; не патчить Memoh `telegram.go` / `inbound.go` до ADR и явного решения.
 
 ## Следующая задача
 
-- **4b+:** транспорт в ingest + выбор интеграции с Memoh.
+- Утверждение варианта интеграции → **фаза 4b** (транспорт) по выбранному пути.
 
 ## Вопросы к GPT
 

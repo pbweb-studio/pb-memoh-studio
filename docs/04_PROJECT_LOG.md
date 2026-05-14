@@ -35,3 +35,9 @@
 - Добавлены: `POST /events/telegram`, модели `studio_telegram_raw_updates`, `studio_chats`, `studio_telegram_users`, `studio_messages`, `studio_chat_lifecycle_events`, `studio_audit_log`, сервис нормализации, Alembic `002_event_mirror`, переписан `001_initial` на явный DDL очереди; опционально `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES` → `QueueService.enqueue`; опциональный `STUDIO_EVENTS_INGEST_TOKEN`.
 - Тесты: `studio/tests/test_event_mirror.py`.
 - Коммит: сообщение `feat(studio): event mirror phase 4a ingest and tables` (SHA — `git rev-parse HEAD` на `pb-studio/main`).
+
+## 2026-05-14 — ADR: интеграция Telegram/Memoh → Studio Event Mirror (перед 4b)
+
+- Статус: зафиксировано **только в документации**; код Memoh и Telegram adapter **не** менялись; транспорт **4b не** реализован.
+- Добавлено: раздел **ADR** в `docs/06_DECISIONS.md` (таблица A/B/C: файлы, путь в `POST /events/telegram`, риски, откат, тесты; рекомендация **C**); краткая отсылка в `docs/03_IMPLEMENTATION_PLAN.md`; обновлены `docs/AI_CONTEXT.md`, `docs/05_CURRENT_TASK.md`, `memory-bank/*`, `docs/04_PROJECT_LOG.md`.
+- Полный SHA снимка с телом ADR: см. `docs/AI_CONTEXT.md` (40-символьный SHA после фиксирующего коммита на `pb-studio/main`).
