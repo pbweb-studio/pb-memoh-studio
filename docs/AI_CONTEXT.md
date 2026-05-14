@@ -6,7 +6,9 @@
 
 ## Текущая фаза
 
-**После 14a** — подготовлен первый prod-запуск Studio **без фактического деплоя**: `docker-compose.prod.yml`, `.env.prod.example`, `deploy/` (Caddy placeholder, backup), `docs/08_RUNBOOK_PRODUCTION.md`. Memoh и логика приложения не менялись.
+**После 14b** — readiness к первому запуску на VPS/staging **без деплоя**: полный checklist в `docs/08_RUNBOOK_PRODUCTION.md`, `validate_env_prod.py`, `smoke-prod.sh`, restore Postgres + backup KB volume, уточнены `.env.prod.example` и Caddy-комментарии.
+
+**После 14a** — `docker-compose.prod.yml`, `.env.prod.example`, `deploy/` (Caddy placeholder, backup), `docs/08_RUNBOOK_PRODUCTION.md`. Memoh и логика приложения не менялись.
 
 **После 13c** — Studio Admin: **13a** + **13b** + **13c** (фильтры, пагинация, breadcrumbs, offcanvas, форматирование дат).
 
@@ -18,12 +20,13 @@
 
 ## Текущая цель
 
-Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.), **10+**, или **14+** (Caddy/TLS на реальном домене с подтверждением) — по отдельной постановке.
+Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.), **10+**, или **14+** (фактический деплой + Caddy/TLS на домене с подтверждением) — по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–14a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
+- Фазы 0–14b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
+- **14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`.
 - **13a:** каркас Studio Admin, read-only списки; см. `docs/06_DECISIONS.md`.
 - **13b:** детали и HTML-формы в `/admin/*`; см. `docs/06_DECISIONS.md`.
 - **13c:** фильтры, пагинация, breadcrumbs, мобильное меню, форматирование дат; см. `docs/06_DECISIONS.md`.
@@ -80,11 +83,12 @@
 - **Фаза 13a:** Studio Admin skeleton — read-only `/admin/*`; см. `docs/06_DECISIONS.md`.
 - **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
 - **Фаза 13c:** фильтры, пагинация и полировка списков в Studio Admin; см. `docs/06_DECISIONS.md`.
-- **Фаза 14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
+- **Фаза 14b:** deploy readiness — checklist, `validate_env_prod.py`, `smoke-prod.sh`, restore/backup KB; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
+- **Фаза 14a:** prod compose + env example + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 
 ## Следующая задача
 
-- По постановке: **14+** (Caddy/TLS после согласования DNS), **13+**, **6+** или расширение **10+** из плана.
+- По постановке: **14+** (реальный деплой после выбора сервера и домена), **13+**, **6+** или расширение **10+** из плана.
 
 ## Вопросы к GPT
 

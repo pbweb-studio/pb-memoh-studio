@@ -401,6 +401,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 14b — Deploy readiness (чеклист, smoke, валидация env; без деплоя)
+
+**Статус:** расширен [`.env.prod.example`](../.env.prod.example) (маркировка REQUIRED/optional/secret, feature flags); [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md) — полный staging/prod checklist; скрипты [`deploy/scripts/smoke-prod.sh`](../deploy/scripts/smoke-prod.sh), [`validate_env_prod.py`](../deploy/scripts/validate_env_prod.py) + [`validate-env-prod.sh`](../deploy/scripts/validate-env-prod.sh); [`restore-postgres.sh`](../deploy/scripts/restore-postgres.sh), [`backup-kb-volume.sh`](../deploy/scripts/backup-kb-volume.sh); уточнены [`deploy/caddy/Caddyfile.example`](../deploy/caddy/Caddyfile.example) и [`deploy/BACKUP_RESTORE.md`](../deploy/BACKUP_RESTORE.md). **Без** Memoh, логики приложения, реального деплоя.
+
+**Проверки:** те же compose + pytest.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -429,4 +437,4 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
 | 13 | Studio Admin: **13a** — каркас read-only; **13b** — детали + формы; **13c** — фильтры, пагинация, UX-полировка |
-| 14 | Prod: **14a** — `docker-compose.prod.yml`, `.env.prod.example`, Caddy/backup/runbook skeleton (**без** фактического деплоя); далее — Caddy/TLS по согласованию |
+| 14 | Prod: **14a** — compose + `.env.prod.example` + Caddy/backup/runbook skeleton; **14b** — readiness (checklist, smoke, env validation, restore/KB backup scripts); деплой/TLS только после согласования |

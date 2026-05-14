@@ -1,103 +1,154 @@
-# Runbook: первый production-запуск Studio (чеклист)
+# Runbook: staging / первый production-запуск Studio (readiness)
 
-Репозиторий **не выполняет** деплой автоматически. Memoh, DNS, выпуск сертификатов и Caddy на реальном домене — **вне scope** этого шага (только после отдельного согласования).
+Репозиторий **не выполняет** деплой. Memoh, реальные DNS, выпуск сертификатов и Caddy на боевом домене — только после отдельного согласования.
 
 Связанные файлы:
 
 - [`docker-compose.prod.yml`](../docker-compose.prod.yml)
-- [`.env.prod.example`](../.env.prod.example) → скопировать в `.env.prod` (файл в `.gitignore`)
+- [`.env.prod.example`](../.env.prod.example) → скопировать в `.env.prod` (в `.gitignore`)
+- [`deploy/scripts/validate_env_prod.py`](../deploy/scripts/validate_env_prod.py) — проверка обязательных и условных переменных (секреты не печатает)
+- [`deploy/scripts/smoke-prod.sh`](../deploy/scripts/smoke-prod.sh) — smoke после старта API
+- [`deploy/scripts/backup-postgres.sh`](../deploy/scripts/backup-postgres.sh), [`restore-postgres.sh`](../deploy/scripts/restore-postgres.sh), [`backup-kb-volume.sh`](../deploy/scripts/backup-kb-volume.sh)
 - [`deploy/BACKUP_RESTORE.md`](../deploy/BACKUP_RESTORE.md)
 - [`deploy/caddy/Caddyfile.example`](../deploy/caddy/Caddyfile.example)
 
-Локальная разработка на Windows: см. также [`docs/07_RUNBOOK_WINDOWS.md`](07_RUNBOOK_WINDOWS.md).
+Локальная разработка на Windows: [`docs/07_RUNBOOK_WINDOWS.md`](07_RUNBOOK_WINDOWS.md).
 
 ---
 
-## 1. Подготовка сервера
+## A. Полный checklist (VPS → сервисы → smoke)
 
-- [ ] Установлены Docker и Docker Compose plugin.
-- [ ] Клонирован репозиторий (ветка с нужным релизом).
-- [ ] Скопирован шаблон: `cp .env.prod.example .env.prod`.
-- [ ] В `.env.prod` заданы **сильные** `POSTGRES_PASSWORD` и совпадающий пароль в `DATABASE_URL`.
-- [ ] Задан **`STUDIO_ADMIN_TOKEN`** (длинная случайная строка).
-- [ ] При необходимости исходящих сообщений Telegram / KB import: **`TELEGRAM_BOT_TOKEN`**.
+Отмечайте по шагам перед первым приёмом трафика.
 
----
+### 1. Подготовка VPS
 
-## 2. Сборка и миграции
+- [ ] ОС обновлена, SSH по ключу, firewall (минимум: 22 + при необходимости 80/443 для Caddy позже).
+- [ ] Создан непривилегированный пользователь для деплоя (опционально; либо документированный `root` по политике).
+- [ ] Достаточно RAM/диска под Postgres + Redis + образы (ориентир — см. нагрузку staging).
+
+### 2. Docker и Compose
+
+- [ ] Установлен **Docker Engine** и плагин **Compose V2** (`docker compose version`).
+- [ ] Сервис Docker включён в автозагрузку: `systemctl enable --now docker` (systemd).
+
+### 3. Код и переменные окружения
+
+- [ ] Клонирован репозиторий, нужная ветка/тег.
+- [ ] `cp .env.prod.example .env.prod`
+- [ ] Заполнены **[REQUIRED]** поля в `.env.prod` (пароль Postgres, `DATABASE_URL`, `STUDIO_ADMIN_TOKEN`).
+- [ ] `python3 deploy/scripts/validate_env_prod.py .env.prod` → **RESULT: OK** (на Windows без `python3` в PATH: `py -3 deploy/scripts/validate_env_prod.py .env.prod`).
+
+### 4. Сборка образов и pull базовых образов
 
 Из корня репозитория:
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml build
-docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm studio-migrate
+export COMPOSE="docker compose --env-file .env.prod -f docker-compose.prod.yml"
+$COMPOSE pull
+$COMPOSE build studio-api studio-worker studio-beat studio-migrate
 ```
 
-Или одним `up`: сервис `studio-migrate` выполнится как `condition: service_completed_successfully` перед API.
-
-Убедиться, что миграции дошли до head:
+### 5. Миграции Alembic
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml logs studio-migrate
+$COMPOSE run --rm studio-migrate
+# или сразу up -d: migrate выполнится до старта API по depends_on
+$COMPOSE logs studio-migrate
 ```
 
----
+Убедитесь, что контейнер `studio-migrate` завершился успешно (exit 0).
 
-## 3. Запуск stack
+### 6. Запуск stack
 
 ```bash
-docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+$COMPOSE up -d
 ```
 
 Сервисы: `studio-postgres`, `studio-redis`, `studio-api`, `studio-worker`, `studio-beat`.
 
+### 7. Проверка `/health`
+
+```bash
+curl -fsS http://127.0.0.1:8000/health
+```
+
+(Порт/хост — как в `STUDIO_DOCKER_PUBLISH` в compose / `.env.prod`.)
+
+### 8. Вход в `/admin`
+
+- [ ] Открыть в браузере `http(s)://<хост>:<порт>/admin/login` (или через Caddy позже).
+- [ ] Ввести **`STUDIO_ADMIN_TOKEN`** в форму логина (токен не передавать в чатах/скриншотах).
+
+### 9. Control group (ручной smoke)
+
+- [ ] В Telegram настроены управляющая группа и бот (Memoh / внешняя конфигурация — вне этого runbook).
+- [ ] При `STUDIO_CONTROL_COMMANDS_ENABLED=true`: тестовая команда из CG (например `/summary_chats` или help по вашей матрице) и ответ в чате.
+
+### 10. Тест `/kb_ask` (ручной, только если KB+RAG включены)
+
+- [ ] `STUDIO_KB_ENABLED=true`, embeddings/search настроены, `STUDIO_KB_RAG_ENABLED=true`, заданы `STUDIO_KB_CHAT_*`.
+- [ ] Из **control group**: `/kb_ask <короткий вопрос>` — ожидается ответ бота (или диагностируемая ошибка конфигурации в логах, без утечки ключей).
+
+### 11. Тест бэкапа Postgres
+
+```bash
+mkdir -p backups
+./deploy/scripts/backup-postgres.sh ./backups
+ls -la ./backups/pb_studio_pg_*.sql.gz
+```
+
+На **чистом staging** допустимо сразу после бэкапа проверить распаковку дампа в отдельную БД или следовать [`deploy/BACKUP_RESTORE.md`](../deploy/BACKUP_RESTORE.md) (на проде — только в окно обслуживания).
+
+### 12. Бэкап KB storage (если используете загрузки в KB)
+
+```bash
+./deploy/scripts/backup-kb-volume.sh ./backups
+```
+
+### 13. Автоматический smoke (curl)
+
+```bash
+export STUDIO_BASE_URL=http://127.0.0.1:8000
+# опционально из секрет-хранилища, не в истории shell:
+# export STUDIO_ADMIN_TOKEN='...'
+./deploy/scripts/smoke-prod.sh
+```
+
+Скрипт **не печатает** токены. При незаданном `STUDIO_ADMIN_TOKEN` в окружении скрипта проверка Bearer к `/projects` пропускается.
+
 ---
 
-## 4. Feature flags
+## B. Feature flags (включать по одному)
 
-Включайте по одному, после проверки (в `.env.prod` + `docker compose up -d` для пересоздания контейнеров с новым env):
+После изменения `.env.prod`: `docker compose … up -d` (пересоздать контейнеры при смене env).
 
 | Флаг | Назначение |
 |------|------------|
 | `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED` | Исходящие system notifications в control group |
-| `STUDIO_SUMMARY_GENERATION_ENABLED` / `STUDIO_SUMMARY_DELIVERY_ENABLED` | Сводки |
+| `STUDIO_SUMMARY_GENERATION_ENABLED` / `STUDIO_SUMMARY_DELIVERY_ENABLED` | Сводки (доставка → нужен `TELEGRAM_BOT_TOKEN`) |
 | `STUDIO_CONTROL_COMMANDS_ENABLED` | Команды из control group |
 | `STUDIO_SLA_ENABLED` | SLA |
-| `STUDIO_KB_ENABLED` и далее embeddings/RAG | База знаний |
+| `STUDIO_KB_ENABLED` + embeddings + RAG | База знаний и `/kb_ask` |
 | `STUDIO_HISTORY_IMPORT_ENABLED` | Импорт Telegram Desktop JSON |
 
 ---
 
-## 5. Проверки после старта
+## C. Логи и безопасность
 
-- [ ] **`GET /health`** (например `curl -fsS http://127.0.0.1:8000/health` с хоста, если так опубликован порт).
-- [ ] **`/admin/login`** — веб-админка при заданном `STUDIO_ADMIN_TOKEN` (см. фазы 13a–13c).
-- [ ] Логи API/worker без утечек секретов: `docker compose … logs studio-api --tail 200`.
-
----
-
-## 6. Smoke: control group
-
-- [ ] В Telegram задана управляющая группа и бот (Memoh / внешняя конфигурация — не этот runbook).
-- [ ] При включённых командах: простая команда из CG (например help/summary list — по вашей постановке) и ответ в чате.
+- [ ] `docker compose … logs studio-api --tail 200` — без утечек секретов.
+- [ ] `STUDIO_ADMIN_TOKEN` и `TELEGRAM_BOT_TOKEN` не в репозитории и не в публичных логах CI.
 
 ---
 
-## 7. Бэкап
+## D. Reverse proxy (позже)
 
-См. [`deploy/BACKUP_RESTORE.md`](../deploy/BACKUP_RESTORE.md). Регулярно: логический дамп Postgres; отдельно — volume KB при использовании загрузок.
-
----
-
-## 8. Reverse proxy (позже)
-
-Шаблон: [`deploy/caddy/Caddyfile.example`](../deploy/caddy/Caddyfile.example). Замените заглушки домена и upstream; включите TLS после настройки DNS.
+Шаблон: [`deploy/caddy/Caddyfile.example`](../deploy/caddy/Caddyfile.example). Подставить домен, email для ACME, upstream `127.0.0.1:8000` после согласования DNS.
 
 ---
 
-## Проверка compose без секретов
+## E. Проверка compose без `.env.prod`
 
-Допустимые значения по умолчанию встроены в `docker-compose.prod.yml` для команды:
+В `docker-compose.prod.yml` заданы безопасные значения по умолчанию для команды:
 
 ```bash
 docker compose -f docker-compose.prod.yml config

@@ -228,6 +228,12 @@
 - **Без** Memoh, фактического деплоя, реальных доменов/Caddy/TLS; логика приложения не менялась.
 - Проверки: `docker compose -f docker-compose.prod.yml config`, `docker compose -f docker-compose.local.yml config` — ok; полный `pytest tests/` (**289** passed, Docker).
 
+## 2026-05-14 — Фаза 14b (Studio: deploy readiness, без деплоя)
+
+- `.env.prod.example` — REQUIRED/optional/secret, пустые секреты, комментарии к feature flags; `deploy/scripts/validate_env_prod.py`, `validate-env-prod.sh`, `smoke-prod.sh`, `restore-postgres.sh`, `backup-kb-volume.sh`; расширены `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/BACKUP_RESTORE.md`, `deploy/caddy/Caddyfile.example`; `docs/07_RUNBOOK_WINDOWS.md`, `docs/03_IMPLEMENTATION_PLAN.md`, `docs/06_DECISIONS.md`.
+- **Без** Memoh, логики приложения, реального деплоя, реальных доменов.
+- Проверки: `docker compose -f docker-compose.prod.yml config`, `docker compose -f docker-compose.local.yml config` — ok; полный `pytest tests/` (**289** passed, Docker).
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

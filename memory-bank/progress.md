@@ -37,6 +37,7 @@
 | 13b Studio Admin UI details + safe forms | Done |
 | 13c Studio Admin UI polish (filters, pagination, UX) | Done |
 | 14a Prod compose + env example + runbook/backup (no deploy) | Done |
+| 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 14a — `docker-compose.prod.yml`, `.env.prod.example`, `deploy/`, `docs/08_RUNBOOK_PRODUCTION.md`; полный `pytest tests/` **289** passed (Docker).
+**Последнее:** фаза 14b — readiness-скрипты и runbook; полный `pytest tests/` **289** passed (Docker). Деплой на VPS не выполнялся.

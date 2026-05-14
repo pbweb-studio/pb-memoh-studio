@@ -1,41 +1,59 @@
-# Резервное копирование и восстановление Studio (Postgres + KB storage)
+# Резервное копирование и восстановление Studio
+
+Разделены **Postgres** (логический дамп) и **KB storage** (файлы на volume). Memoh в эти процедуры не входит.
 
 ## Postgres
 
 ### Дамп
 
-Скрипт: [`deploy/scripts/backup-postgres.sh`](scripts/backup-postgres.sh) (bash, на сервере с Docker).
+Скрипт: [`deploy/scripts/backup-postgres.sh`](scripts/backup-postgres.sh).
 
-### Восстановление (логический дамп `.sql.gz`)
+```bash
+export COMPOSE="docker compose --env-file .env.prod -f docker-compose.prod.yml"
+mkdir -p backups
+./deploy/scripts/backup-postgres.sh ./backups
+```
 
-1. Остановите сервисы, которые пишут в БД (как минимум `studio-api`, `studio-worker`, `studio-beat`):
+### Восстановление из `.sql.gz`
 
-   ```bash
-   docker compose --env-file .env.prod -f docker-compose.prod.yml stop studio-api studio-worker studio-beat
-   ```
+Скрипт (останавливает API/worker/beat, заливает дамп, поднимает сервисы): [`deploy/scripts/restore-postgres.sh`](scripts/restore-postgres.sh).
 
-2. Распакуйте и восстановите в **пустую** БД (или после `DROP` согласно политике; `--clean` в дампе помогает пересоздать объекты):
+```bash
+./deploy/scripts/restore-postgres.sh ./backups/pb_studio_pg_YYYYMMDDTHHMMSSZ.sql.gz
+```
 
-   ```bash
-   gunzip -c backups/pb_studio_pg_YYYYMMDD.sql.gz | docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T studio-postgres \
-     psql -U pb_studio -d pb_studio
-   ```
+**Важно:** сделайте свежий бэкап текущей БД перед restore. Дамп с `pg_dump --clean` пересоздаёт объекты внутри БД; проверьте версию Postgres.
 
-3. Запустите сервисы обратно:
+### Ручной restore (без скрипта)
 
-   ```bash
-   docker compose --env-file .env.prod -f docker-compose.prod.yml start studio-api studio-worker studio-beat
-   ```
+1. Остановить `studio-api`, `studio-worker`, `studio-beat`.
+2. `gunzip -c backups/….sql.gz | docker compose --env-file .env.prod -f docker-compose.prod.yml exec -T studio-postgres psql -U pb_studio -d pb_studio`
+3. Запустить сервисы обратно.
 
-**Важно:** перед восстановлением на проде сделайте свежий бэкап текущего состояния. Проверьте совместимость версии Postgres с дампом.
+---
 
-## KB storage (файлы загрузок)
+## KB storage (volume загрузок)
 
-Данные лежат в Docker volume **`pb_studio_prod_kb_uploads`** (путь на хосте зависит от драйвера Docker).
+Данные в Docker volume **`pb_studio_prod_kb_uploads`** (полное имя с префиксом проекта: `pb-studio-prod_pb_studio_prod_kb_uploads` при `name: pb-studio-prod` в compose). Путь на хосте зависит от драйвера Docker.
 
-Варианты бэкапа:
+### Бэкап (tar.gz)
 
-- **Остановить запись**, смонтировать volume во временный контейнер и скопировать содержимое (`docker run --rm -v pb_studio_prod_kb_uploads:/kb -v "$PWD/kb-backup":/out alpine tar czf /out/kb.tgz -C /kb .`).
-- Или снимайте снапшоты диска ВМ, если volume на локальном диске.
+```bash
+./deploy/scripts/backup-kb-volume.sh ./backups
+```
 
-После восстановления Postgres файлы в KB не восстанавливаются автоматически — восстанавливайте volume отдельно.
+Переопределение имени volume: `KB_VOLUME_NAME=my_volume ./deploy/scripts/backup-kb-volume.sh ./backups`
+
+### Восстановление KB (концепция)
+
+1. Остановить запись в KB: как минимум `studio-api` и `studio-worker` (или весь stack).
+2. Очистить или заменить содержимое volume: типичный вариант — временный контейнер с монтированием volume и распаковкой `tar xzf` из бэкапа в `/kb` (каталог внутри volume).
+3. Запустить сервисы.
+
+Postgres и файлы KB **независимы**: после restore БД файлы KB нужно восстанавливать отдельно, и наоборот.
+
+---
+
+## Redis
+
+По умолчанию кэш/брокер; персистентные данные приложения — в Postgres. Снапшот Redis volume (`pb_studio_prod_redisdata`) опционален для «теплого» старта очередей; для чистого staging обычно достаточно не бэкапить.

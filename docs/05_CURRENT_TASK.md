@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 14a (production compose + runbook skeleton)
+## После фазы 14b (deploy readiness, без деплоя)
 
-**Статус:** `docker-compose.prod.yml`, `.env.prod.example`, `deploy/` (Caddy placeholder, backup script, BACKUP_RESTORE), `docs/08_RUNBOOK_PRODUCTION.md`; **без** фактического деплоя, без изменений Memoh и логики приложения.
+**Статус:** расширены `.env.prod.example` (REQUIRED/optional/secret, feature flags), [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md) (полный checklist), скрипты `deploy/scripts/` (smoke, validate env, restore Postgres, backup KB volume), обновлены Caddy placeholder и [`deploy/BACKUP_RESTORE.md`](deploy/BACKUP_RESTORE.md). Memoh и логика приложения не менялись; **деплой на VPS не выполнялся**.
 
-**Следующий шаг:** по постановке — **14+** (Caddy/TLS на реальном домене с подтверждением), **6+**, или доработки Studio.
+**Следующий шаг:** по постановке — **14+** (реальный деплой + Caddy/TLS после согласования домена), **6+**, **13+** или доработки Studio.

@@ -292,3 +292,11 @@
 - **Секреты:** оператор копирует `.env.prod.example` → `.env.prod` (не в git); сильные пароли Postgres и **`STUDIO_ADMIN_TOKEN`** обязательны перед реальным prod.
 - **Прокси/TLS:** только шаблон `deploy/caddy/Caddyfile.example`; реальные домены и сертификаты — вне автоматизма репозитория до согласования.
 - **Бэкап:** скрипт дампа через `docker compose exec` + инструкция restore и примечание по volume KB в `deploy/BACKUP_RESTORE.md`.
+
+## Фаза 14b — Deploy readiness (выполнено, без фактического деплоя)
+
+- **`.env.prod.example`:** маркировка `[REQUIRED]` / `[optional]` / `[secret]`; секреты в шаблоне пустые; feature flags с комментариями о зависимостях.
+- **Проверки перед стартом:** `deploy/scripts/validate_env_prod.py` (условные требования при включённых флагах); `deploy/scripts/smoke-prod.sh` после старта (`/health`, `/admin/login`, редирект `/admin/*`, опционально `GET /projects` с Bearer — токены не печатаются).
+- **Бэкап/restore:** `restore-postgres.sh`, `backup-kb-volume.sh`; Postgres и KB volume документированы раздельно в `deploy/BACKUP_RESTORE.md`.
+- **Runbook:** расширен `docs/08_RUNBOOK_PRODUCTION.md` (чеклист VPS → smoke, ручные шаги control group и `/kb_ask` при включённом KB+RAG).
+- **Caddy:** только комментарии-заглушки (домен, email ACME, upstream); реальные домены не добавлялись.
