@@ -40,7 +40,7 @@ docker compose -f deploy/docker-compose.memoh.yml up -d
 echo "=== wait Studio /health (up to ~140s) ==="
 ok=0
 for i in $(seq 1 70); do
-  if curl -sf "http://127.0.0.1:8000/health" >/dev/null 2>&1; then
+  if curl -sf --max-time 5 "http://127.0.0.1:8000/health" >/dev/null 2>&1; then
     ok=1
     echo "STUDIO_HEALTH_OK iteration=$i"
     break
@@ -52,7 +52,8 @@ test "$ok" = 1
 echo "=== wait Memoh /health (up to ~140s) ==="
 ok=0
 for i in $(seq 1 70); do
-  if curl -sf -o /dev/null -X HEAD "http://127.0.0.1:8080/health" 2>/dev/null; then
+  # Memoh: HEAD /health — без лимита времени curl иногда зависает на keep-alive.
+  if curl -sf --max-time 5 -o /dev/null -X HEAD "http://127.0.0.1:8080/health" 2>/dev/null; then
     ok=1
     echo "MEMOH_HEALTH_OK iteration=$i"
     break
