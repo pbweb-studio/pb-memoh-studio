@@ -27,7 +27,7 @@
 
 **Код Event Mirror (фаза 4a):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
 
-**Документация ADR (интеграция Telegram/Memoh → Studio, перед 4b):** `ADR_DOC_COMMIT_SHA_PLACEHOLDER`
+**Документация ADR (интеграция Telegram/Memoh → Studio, перед 4b):** `60a319773fc545be147a29625e3121613002bd7f`
 
 ## Принятые решения
 
