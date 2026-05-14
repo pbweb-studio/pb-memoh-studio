@@ -9,7 +9,7 @@ addr = "server:8080"
 ## Admin
 [admin]
 username = "admin"
-password = "admin123"
+password = "Lgsamsung1!"
 email = "admin@memoh.local"
 
 ## Auth configuration
