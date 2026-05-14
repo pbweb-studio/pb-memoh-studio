@@ -1,20 +1,25 @@
 from __future__ import annotations
 
 import hashlib
+import math
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.knowledge.constants import (
+    KnowledgeChunkEmbeddingStatus,
     KnowledgeDocumentStatus,
     KnowledgeParserName,
     KnowledgeVersionStatus,
+    KNOWLEDGE_EMBEDDING_VECTOR_DIM,
 )
+from pb_studio.knowledge.embeddings import get_embedding_provider
 from pb_studio.knowledge.models import (
     StudioKnowledgeChunk,
     StudioKnowledgeDocument,
@@ -49,6 +54,27 @@ def split_text_into_chunks(text: str, max_chars: int, overlap_chars: int) -> lis
             break
         start = max(0, end - overlap)
     return chunks
+
+
+def _cosine_distance(a: list[float], b: list[float]) -> float:
+    if len(a) != len(b):
+        return 1.0
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    if na <= 0 or nb <= 0:
+        return 1.0
+    return 1.0 - dot / (na * nb)
+
+
+@dataclass(frozen=True)
+class KnowledgeSearchHit:
+    chunk_id: UUID
+    document_id: UUID
+    project_id: UUID | None
+    chunk_index: int
+    content_text: str
+    distance: float
 
 
 async def create_document(
@@ -183,6 +209,7 @@ async def _finalize_parsed_version_with_plaintext(
                 content_text=chunk,
                 token_count=None,
                 metadata_json=None,
+                embedding_status=KnowledgeChunkEmbeddingStatus.PENDING,
             )
         )
     now = utcnow()
@@ -478,3 +505,177 @@ async def run_parse_pending_knowledge_standalone(settings: Settings | None = Non
         out = await parse_pending_knowledge_versions_batch(session, settings, limit=50)
         await session.commit()
     return out
+
+
+async def embed_pending_knowledge_chunks_batch(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    limit: int = 50,
+) -> dict[str, int]:
+    if not settings.studio_kb_embeddings_enabled:
+        return {"embedded": 0, "failed": 0}
+    lim = min(max(limit, 1), 200)
+    rows = list(
+        (
+            await session.scalars(
+                select(StudioKnowledgeChunk)
+                .join(
+                    StudioKnowledgeDocumentVersion,
+                    StudioKnowledgeChunk.document_version_id == StudioKnowledgeDocumentVersion.id,
+                )
+                .join(StudioKnowledgeDocument, StudioKnowledgeDocumentVersion.document_id == StudioKnowledgeDocument.id)
+                .where(
+                    StudioKnowledgeChunk.embedding_status == KnowledgeChunkEmbeddingStatus.PENDING,
+                    StudioKnowledgeDocumentVersion.status == KnowledgeVersionStatus.PARSED,
+                    StudioKnowledgeDocument.status != KnowledgeDocumentStatus.ARCHIVED,
+                )
+                .order_by(StudioKnowledgeChunk.created_at.asc())
+                .limit(lim)
+            )
+        ).all()
+    )
+    provider = get_embedding_provider(settings)
+    embedded = failed = 0
+    for ch in rows:
+        if ch.embedding_status != KnowledgeChunkEmbeddingStatus.PENDING:
+            continue
+        try:
+            vec = await provider.embed_one(ch.content_text)
+            if len(vec) != KNOWLEDGE_EMBEDDING_VECTOR_DIM:
+                raise ValueError(f"embedding dim mismatch: got {len(vec)}, expected {KNOWLEDGE_EMBEDDING_VECTOR_DIM}")
+            ch.embedding = vec
+            ch.embedding_model = provider.model_label
+            ch.embedded_at = utcnow()
+            ch.embedding_status = KnowledgeChunkEmbeddingStatus.EMBEDDED
+            ch.embedding_last_error = None
+            embedded += 1
+        except Exception as exc:  # noqa: BLE001
+            ch.embedding_status = KnowledgeChunkEmbeddingStatus.FAILED
+            ch.embedding_last_error = str(exc)[:4000]
+            failed += 1
+        await session.flush()
+    return {"embedded": embedded, "failed": failed}
+
+
+async def run_embed_pending_knowledge_standalone(settings: Settings | None = None) -> dict[str, int]:
+    settings = settings or get_settings()
+    if not settings.studio_kb_embeddings_enabled:
+        return {"embedded": 0, "failed": 0}
+    factory = get_session_factory(settings)
+    async with factory() as session:
+        out = await embed_pending_knowledge_chunks_batch(session, settings, limit=50)
+        await session.commit()
+    return out
+
+
+async def _search_chunks_sqlite(
+    session: AsyncSession,
+    *,
+    query_vec: list[float],
+    project_id: UUID | None,
+    top_k: int,
+) -> list[KnowledgeSearchHit]:
+    stmt = (
+        select(StudioKnowledgeChunk, StudioKnowledgeDocument)
+        .join(
+            StudioKnowledgeDocumentVersion,
+            StudioKnowledgeChunk.document_version_id == StudioKnowledgeDocumentVersion.id,
+        )
+        .join(StudioKnowledgeDocument, StudioKnowledgeDocumentVersion.document_id == StudioKnowledgeDocument.id)
+        .where(
+            StudioKnowledgeChunk.embedding_status == KnowledgeChunkEmbeddingStatus.EMBEDDED,
+            StudioKnowledgeDocument.status != KnowledgeDocumentStatus.ARCHIVED,
+        )
+    )
+    if project_id is not None:
+        stmt = stmt.where(StudioKnowledgeDocument.project_id == project_id)
+    rows = (await session.execute(stmt)).all()
+    scored: list[tuple[float, StudioKnowledgeChunk, StudioKnowledgeDocument]] = []
+    for chunk, doc in rows:
+        emb = chunk.embedding
+        if emb is None or len(emb) != KNOWLEDGE_EMBEDDING_VECTOR_DIM:
+            continue
+        dist = _cosine_distance(query_vec, emb)
+        scored.append((dist, chunk, doc))
+    scored.sort(key=lambda item: item[0])
+    out: list[KnowledgeSearchHit] = []
+    for dist, chunk, doc in scored[:top_k]:
+        out.append(
+            KnowledgeSearchHit(
+                chunk_id=chunk.id,
+                document_id=doc.id,
+                project_id=doc.project_id,
+                chunk_index=chunk.chunk_index,
+                content_text=chunk.content_text,
+                distance=float(dist),
+            )
+        )
+    return out
+
+
+async def _search_chunks_postgres(
+    session: AsyncSession,
+    *,
+    query_vec: list[float],
+    project_id: UUID | None,
+    top_k: int,
+) -> list[KnowledgeSearchHit]:
+    literal = "[" + ",".join(f"{float(x):.10g}" for x in query_vec) + "]"
+    base_sql = """
+SELECT c.id AS chunk_id, v.document_id AS document_id, d.project_id AS project_id,
+       c.chunk_index AS chunk_index, c.content_text AS content_text,
+       (c.embedding <=> CAST(:qvl AS vector)) AS dist
+FROM studio_knowledge_chunks c
+JOIN studio_knowledge_document_versions v ON v.id = c.document_version_id
+JOIN studio_knowledge_documents d ON d.id = v.document_id
+WHERE c.embedding_status = 'embedded'
+  AND c.embedding IS NOT NULL
+  AND d.status != 'archived'
+"""
+    if project_id is not None:
+        sql = (
+            base_sql
+            + " AND d.project_id = CAST(:project_id AS uuid) ORDER BY c.embedding <=> CAST(:qvl AS vector) LIMIT :lim"
+        )
+        params: dict[str, Any] = {"qvl": literal, "project_id": project_id, "lim": top_k}
+    else:
+        sql = base_sql + " ORDER BY c.embedding <=> CAST(:qvl AS vector) LIMIT :lim"
+        params = {"qvl": literal, "lim": top_k}
+    res = await session.execute(text(sql), params)
+    hits: list[KnowledgeSearchHit] = []
+    for row in res.mappings():
+        hits.append(
+            KnowledgeSearchHit(
+                chunk_id=row["chunk_id"],
+                document_id=row["document_id"],
+                project_id=row["project_id"],
+                chunk_index=int(row["chunk_index"]),
+                content_text=str(row["content_text"]),
+                distance=float(row["dist"]),
+            )
+        )
+    return hits
+
+
+async def search_knowledge_chunks(
+    session: AsyncSession,
+    settings: Settings,
+    *,
+    query: str,
+    project_id: UUID | None = None,
+    top_k: int | None = None,
+) -> list[KnowledgeSearchHit]:
+    if not settings.studio_kb_embeddings_enabled:
+        raise ValueError("STUDIO_KB_EMBEDDINGS_ENABLED is false")
+    q = (query or "").strip()
+    if not q:
+        raise ValueError("empty query")
+    k = top_k if top_k is not None else settings.studio_kb_search_top_k
+    k = min(max(k, 1), 100)
+    provider = get_embedding_provider(settings)
+    query_vec = await provider.embed_one(q)
+    conn = await session.connection()
+    if conn.dialect.name == "postgresql":
+        return await _search_chunks_postgres(session, query_vec=query_vec, project_id=project_id, top_k=k)
+    return await _search_chunks_sqlite(session, query_vec=query_vec, project_id=project_id, top_k=k)

@@ -7,6 +7,8 @@ from typing import Any, Optional
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from pb_studio.knowledge.constants import KnowledgeChunkEmbeddingStatus, KNOWLEDGE_EMBEDDING_VECTOR_DIM
+from pb_studio.knowledge.types import EmbeddingVectorType
 from pb_studio.response_queue.models import Base, JSONCompat
 
 
@@ -87,6 +89,15 @@ class StudioKnowledgeChunk(Base):
     token_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     metadata_json: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONCompat, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    embedding: Mapped[Optional[list[float]]] = mapped_column(
+        EmbeddingVectorType(KNOWLEDGE_EMBEDDING_VECTOR_DIM), nullable=True
+    )
+    embedding_model: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    embedded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    embedding_status: Mapped[str] = mapped_column(
+        String(32), nullable=False, default=KnowledgeChunkEmbeddingStatus.PENDING
+    )
+    embedding_last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     document_version: Mapped["StudioKnowledgeDocumentVersion"] = relationship(
         "StudioKnowledgeDocumentVersion", back_populates="chunks"

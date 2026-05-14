@@ -168,3 +168,8 @@
 - **Без** Memoh, LLM/embeddings/RAG retrieval, Studio Admin UI.
 - Тесты: `studio/tests/test_knowledge_phase10b.py`; полный `pytest tests/` (**201** passed).
 
+## 2026-05-14 — Фаза 10c (Studio: KB embeddings + pgvector search)
+
+- Alembic `014_studio_knowledge_chunk_embeddings` (pgvector `vector(384)` в Postgres; JSON-список в SQLite для тестов); поля `embedding`, `embedding_model`, `embedded_at`, `embedding_status` (pending/embedded/failed), `embedding_last_error`; провайдер `deterministic` без внешнего API; `POST /knowledge/embed-pending`, `POST /knowledge/search`; Celery `embed_pending_knowledge_chunks`; `/kb_search` (+ `--project <slug>`) и `/kb_help`.
+- **Без** Memoh, LLM chat/completion, генерации RAG-ответов, Studio Admin UI.
+- Тесты: `studio/tests/test_knowledge_phase10c.py`; полный `pytest tests/` (**212** passed).

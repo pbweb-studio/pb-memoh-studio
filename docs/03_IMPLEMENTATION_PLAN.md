@@ -305,6 +305,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 10c — KB: embeddings + vector search (без LLM/RAG-ответов)
+
+**Статус:** Alembic `014_studio_knowledge_chunk_embeddings`; `knowledge/types.py` (Vector/JSON), `knowledge/embeddings.py` (deterministic); статусы чанка `embedding_status`; сервис `embed_pending_knowledge_chunks_batch`, `search_knowledge_chunks`; API `POST /knowledge/embed-pending`, `POST /knowledge/search` при `STUDIO_KB_EMBEDDINGS_ENABLED`; Celery `embed_pending_knowledge_chunks`; `/kb_search` с опциональным `--project <slug>`, обновление `/kb_help`. Postgres: расширение `vector` + оператор `<=>`; SQLite-тесты: cosine в Python. **Без** Memoh, LLM chat, генерации RAG-ответов, внешнего embedding API в этой фазе.
+
+**Тесты:** [`studio/tests/test_knowledge_phase10c.py`](studio/tests/test_knowledge_phase10c.py); регрессия 10a/10b.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -329,7 +337,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
-| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline, pending+parse API, Celery `parse_pending_knowledge_documents`, `/kb_parse|status`; **10+** — Docling, embeddings, pgvector |
+| 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline, pending+parse API, Celery `parse_pending_knowledge_documents`, `/kb_parse|status`; **10c** — deterministic embeddings, pgvector search, Celery `embed_pending_knowledge_chunks`, `/kb_search`; **10+** — Docling, внешние embeddings, полный RAG |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |

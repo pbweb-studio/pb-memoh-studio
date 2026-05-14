@@ -220,6 +220,34 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_document_uuid"})
         return ParsedControlCommand(ControlCommandName.KB_STATUS, {"document_id": str(uid)})
 
+    if cmd == "/kb_search":
+        if not rest:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_search needs query (optionally: --project <slug> ...)"},
+            )
+        rlow = rest.lower()
+        m = re.match(r"(?i)--project\s+", rest)
+        if m:
+            after = rest[m.end() :].strip()
+            parts_slug = after.split(maxsplit=1)
+            if len(parts_slug) < 2:
+                return ParsedControlCommand(
+                    ControlCommandName.UNKNOWN,
+                    {"raw": line, "reason": "kb_search --project needs slug and query"},
+                )
+            slug_t = parts_slug[0].strip()
+            if not _SLUG_TOKEN_RE.match(slug_t):
+                return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+            q = parts_slug[1].strip()
+            if not q:
+                return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_search empty query"})
+            return ParsedControlCommand(
+                ControlCommandName.KB_SEARCH,
+                {"project_slug": slug_t.lower(), "query": q},
+            )
+        return ParsedControlCommand(ControlCommandName.KB_SEARCH, {"project_slug": "", "query": rest.strip()})
+
     if cmd == "/kb_add":
         sep = " | "
         if sep not in rest:

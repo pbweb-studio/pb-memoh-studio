@@ -4,7 +4,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from pb_studio.api.deps import DbSession, verify_admin_optional, verify_kb_enabled
+from pb_studio.api.deps import (
+    DbSession,
+    verify_admin_optional,
+    verify_kb_embeddings_enabled,
+    verify_kb_enabled,
+)
 from pb_studio.core.config import get_settings
 from pb_studio.knowledge.models import StudioKnowledgeDocumentVersion
 from pb_studio.knowledge.schemas import (
@@ -12,7 +17,10 @@ from pb_studio.knowledge.schemas import (
     KnowledgeDocumentCreate,
     KnowledgeDocumentOut,
     KnowledgeDocumentPatch,
+    KnowledgeEmbedBatchOut,
     KnowledgeParseBatchOut,
+    KnowledgeSearchBody,
+    KnowledgeSearchHitOut,
     KnowledgeVersionOut,
     KnowledgeVersionTextBody,
 )
@@ -138,6 +146,47 @@ async def post_knowledge_parse_pending(session: DbSession) -> KnowledgeParseBatc
     settings = get_settings()
     out = await kb_service.parse_pending_knowledge_versions_batch(session, settings, limit=50)
     return KnowledgeParseBatchOut.model_validate(out)
+
+
+@router.post(
+    "/embed-pending",
+    response_model=KnowledgeEmbedBatchOut,
+    dependencies=[Depends(verify_kb_embeddings_enabled)],
+)
+async def post_knowledge_embed_pending(session: DbSession) -> KnowledgeEmbedBatchOut:
+    settings = get_settings()
+    out = await kb_service.embed_pending_knowledge_chunks_batch(session, settings, limit=50)
+    return KnowledgeEmbedBatchOut.model_validate(out)
+
+
+@router.post(
+    "/search",
+    response_model=list[KnowledgeSearchHitOut],
+    dependencies=[Depends(verify_kb_embeddings_enabled)],
+)
+async def post_knowledge_search(session: DbSession, body: KnowledgeSearchBody) -> list[KnowledgeSearchHitOut]:
+    settings = get_settings()
+    try:
+        hits = await kb_service.search_knowledge_chunks(
+            session,
+            settings,
+            query=body.query,
+            project_id=body.project_id,
+            top_k=body.top_k,
+        )
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return [
+        KnowledgeSearchHitOut(
+            chunk_id=h.chunk_id,
+            document_id=h.document_id,
+            project_id=h.project_id,
+            chunk_index=h.chunk_index,
+            content_text=h.content_text,
+            distance=h.distance,
+        )
+        for h in hits
+    ]
 
 
 @router.get("/documents/{document_id}/versions", response_model=list[KnowledgeVersionOut])

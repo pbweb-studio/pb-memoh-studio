@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 10b (KB parse pipeline)
+## После фазы 10c (KB embeddings + vector search)
 
-**Статус:** parser abstraction `knowledge/parsers.py`; pending + parse API + Celery `parse_pending_knowledge_documents`; команды `/kb_parse`, `/kb_status`. Memoh не менялся.
+**Статус:** pgvector + deterministic embeddings; `POST /knowledge/embed-pending`, `POST /knowledge/search`; Celery `embed_pending_knowledge_chunks`; `/kb_search`. Memoh не менялся.
 
-**Следующий шаг:** по постановке — **6+** (LLM), **10+** (Docling/embeddings/pgvector), или иной эпик.
+**Следующий шаг:** по постановке — **6+** (LLM), **10+** (Docling, внешние embeddings, полный RAG), или иной эпик.

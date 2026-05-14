@@ -141,6 +141,26 @@ class Settings(BaseSettings):
         default=200,
         description="STUDIO_KB_CHUNK_OVERLAP_CHARS — перекрытие соседних чанков",
     )
+    studio_kb_embeddings_enabled: bool = Field(
+        default=False,
+        description="STUDIO_KB_EMBEDDINGS_ENABLED — эмбеддинги и vector search (без LLM/chat)",
+    )
+    studio_kb_embedding_model: str = Field(
+        default="deterministic",
+        description="STUDIO_KB_EMBEDDING_MODEL — метка модели для записи в БД (фаза 10c: только deterministic)",
+    )
+    studio_kb_embedding_dim: int = Field(
+        default=384,
+        ge=8,
+        le=4096,
+        description="STUDIO_KB_EMBEDDING_DIM — размерность вектора (должна совпадать с миграцией vector)",
+    )
+    studio_kb_search_top_k: int = Field(
+        default=5,
+        ge=1,
+        le=100,
+        description="STUDIO_KB_SEARCH_TOP_K — лимит результатов поиска по умолчанию",
+    )
 
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:

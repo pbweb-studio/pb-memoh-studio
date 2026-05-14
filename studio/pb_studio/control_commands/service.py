@@ -621,6 +621,58 @@ async def _dispatch_kb_control_commands(
             cmd.response_telegram_message_id = mid
             return
 
+        if cmd.command_name == ControlCommandName.KB_SEARCH:
+            if not settings.studio_kb_embeddings_enabled:
+                mid = await reply("Поиск по эмбеддингам выключен (STUDIO_KB_EMBEDDINGS_ENABLED=false).")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            query = str(cmd.args_json.get("query") or "").strip()
+            project_slug = str(cmd.args_json.get("project_slug") or "").strip()
+            project_id = None
+            if project_slug:
+                proj = await studio_projects_service.get_project_by_slug(session, project_slug)
+                if proj is None:
+                    mid = await reply("Проект не найден.")
+                    cmd.status = ControlCommandStatus.PROCESSED
+                    cmd.processed_at = now
+                    cmd.response_telegram_message_id = mid
+                    return
+                project_id = proj.id
+            try:
+                hits = await studio_kb_service.search_knowledge_chunks(
+                    session,
+                    settings,
+                    query=query,
+                    project_id=project_id,
+                    top_k=settings.studio_kb_search_top_k,
+                )
+            except ValueError as exc:
+                mid = await reply(f"Ошибка: {exc}")
+                cmd.status = ControlCommandStatus.PROCESSED
+                cmd.processed_at = now
+                cmd.response_telegram_message_id = mid
+                return
+            lines = [f"KB search: найдено {len(hits)}, query={query!r}"]
+            for h in hits:
+                lines.append(
+                    f"dist={h.distance:.4f} doc={h.document_id} chunk={h.chunk_id} idx={h.chunk_index}\n"
+                    f"{(h.content_text or '')[:400]}"
+                )
+            mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_search",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"query_len": len(query), "has_project": bool(project_slug)},
+            )
+            return
+
         if cmd.command_name == ControlCommandName.KB_ADD:
             title = str(cmd.args_json.get("title") or "")
             text_body = str(cmd.args_json.get("text") or "")

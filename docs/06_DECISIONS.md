@@ -212,3 +212,9 @@
 - Pending-версии (`status=pending`) обрабатываются детерминированным парсером в Studio: `text/plain`, `text/markdown` → чанки; PDF/DOCX и прочие «бинарные» MIME без текстового тела → `failed_unsupported` без падения батча.
 - Повторный `parse` для версии в `parsed` идемпотентен (чанки не дублируются).
 - Celery `parse_pending_knowledge_documents` и админ-`POST /knowledge/parse-pending` не расширяют SLA и не трогают Memoh.
+
+## Фаза 10c — KB embeddings + vector search (выполнено)
+
+- Эмбеддинги чанков только **deterministic** (без внешнего embedding API в этой фазе); запись метки модели в `embedding_model`; поиск — cosine distance через pgvector в Postgres, в SQLite — загрузка embedded-чанков и сортировка в Python.
+- Включение: **`STUDIO_KB_EMBEDDINGS_ENABLED=true`** (и **`STUDIO_KB_ENABLED=true`**); размерность колонки фиксирована миграцией (**384**); env `STUDIO_KB_EMBEDDING_MODEL`, `STUDIO_KB_EMBEDDING_DIM` (должна совпадать с миграцией), `STUDIO_KB_SEARCH_TOP_K`.
+- API embed/search и `/kb_search` не вызывают LLM и не генерируют «ответы RAG»; команды — только control group + ACL.

@@ -37,6 +37,10 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_ENABLED",
         "STUDIO_KB_CHUNK_MAX_CHARS",
         "STUDIO_KB_CHUNK_OVERLAP_CHARS",
+        "STUDIO_KB_EMBEDDINGS_ENABLED",
+        "STUDIO_KB_EMBEDDING_MODEL",
+        "STUDIO_KB_EMBEDDING_DIM",
+        "STUDIO_KB_SEARCH_TOP_K",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

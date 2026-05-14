@@ -76,6 +76,26 @@ class KnowledgeParseBatchOut(BaseModel):
     failed: int
 
 
+class KnowledgeEmbedBatchOut(BaseModel):
+    embedded: int
+    failed: int
+
+
+class KnowledgeSearchBody(BaseModel):
+    query: str = Field(min_length=1, max_length=8000)
+    project_id: UUID | None = None
+    top_k: int | None = Field(default=None, ge=1, le=100)
+
+
+class KnowledgeSearchHitOut(BaseModel):
+    chunk_id: UUID
+    document_id: UUID
+    project_id: UUID | None
+    chunk_index: int
+    content_text: str
+    distance: float
+
+
 class KnowledgeChunkOut(BaseModel):
     id: UUID
     document_version_id: UUID
@@ -84,5 +104,9 @@ class KnowledgeChunkOut(BaseModel):
     token_count: int | None
     metadata_json: dict[str, Any] | None
     created_at: datetime
+    embedding_status: str | None = None
+    embedding_model: str | None = None
+    embedded_at: datetime | None = None
+    embedding_last_error: str | None = None
 
     model_config = {"from_attributes": True}

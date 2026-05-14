@@ -25,6 +25,7 @@
 | 9b Project digest from chat summaries (no LLM for digest text) | Done |
 | 10a Knowledge base documents/versions/chunks (no embeddings) | Done |
 | 10b KB parse pipeline (pending, plain/md, unsupported MIME) | Done |
+| 10c KB embeddings + pgvector search (no LLM/RAG answers) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 10b — parsers + parse API + Celery `parse_pending_knowledge_documents` + `/kb_parse|status`; pytest **201** passed; compose config ok.
+**Последнее:** фаза 10c — pgvector + deterministic provider + search API + `/kb_search`; pytest **212** passed; compose config ok.
