@@ -19,6 +19,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Ревизии Alembic длиннее 32 символов; дефолтная alembic_version — VARCHAR(32).
+    op.execute(sa.text("ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"))
+
     op.add_column(
         "studio_chat_summaries",
         sa.Column(
