@@ -58,6 +58,37 @@ def http_json(
         return e.code, parsed
 
 
+def resolve_chat_model_uuid(
+    base: str, auth: dict[str, str], provider_id: str, chat_model: str
+) -> str:
+    """Memoh stores bots.chat_model_id as model row UUID; duplicate model_id across providers needs UUID."""
+    status, models = http_json(
+        "GET",
+        f"{base}/providers/{provider_id}/models?type=chat",
+        None,
+        auth,
+        timeout=60.0,
+    )
+    if status != 200:
+        raise SystemExit(f"list provider models HTTP {status}: {models}")
+    if not isinstance(models, list):
+        raise SystemExit("unexpected /providers/.../models response")
+    want = chat_model.strip()
+    for m in models:
+        if not isinstance(m, dict):
+            continue
+        mid = str(m.get("model_id", "")).strip()
+        mname = str(m.get("name", "")).strip()
+        if mid == want or mname == want:
+            uuid = str(m.get("id", "")).strip()
+            if uuid:
+                return uuid
+    raise SystemExit(
+        f"no chat model with model_id or name {want!r} under OpenAI provider; "
+        f"provider has {len(models)} chat model(s)"
+    )
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--studio-env", type=Path, required=True)
@@ -177,15 +208,16 @@ def main() -> None:
             raise SystemExit("no bots found")
         bot_id = str(items[0]["id"])
 
+    chat_uuid = resolve_chat_model_uuid(base, auth, provider_id, args.chat_model)
     status, st = http_json(
         "PUT",
         f"{base}/bots/{bot_id}/settings",
-        {"chat_model_id": args.chat_model},
+        {"chat_model_id": chat_uuid},
         auth,
     )
     if status != 200:
         raise SystemExit(f"put bot settings HTTP {status}: {st}")
-    print("OK: bot chat_model_id set to", args.chat_model, "bot_id=", bot_id)
+    print("OK: bot chat model set", args.chat_model, "bot_id=", bot_id)
 
 
 if __name__ == "__main__":
