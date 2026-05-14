@@ -222,6 +222,12 @@
 - **Без** Memoh, бота, LLM/RAG, новых сущностей.
 - Тесты: `studio/tests/test_admin_ui_phase13c.py`; полный `pytest tests/` (**289** passed, Docker).
 
+## 2026-05-14 — Фаза 14a (Studio: production compose + runbook skeleton)
+
+- `docker-compose.prod.yml`; `.env.prod.example`; `.gitignore` — `.env.prod`; `deploy/caddy/Caddyfile.example`, `deploy/scripts/backup-postgres.sh`, `deploy/BACKUP_RESTORE.md`; `docs/08_RUNBOOK_PRODUCTION.md`; ссылка из `docs/07_RUNBOOK_WINDOWS.md`.
+- **Без** Memoh, фактического деплоя, реальных доменов/Caddy/TLS; логика приложения не менялась.
+- Проверки: `docker compose -f docker-compose.prod.yml config`, `docker compose -f docker-compose.local.yml config` — ok; полный `pytest tests/` (**289** passed, Docker).
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

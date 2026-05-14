@@ -1,39 +1,187 @@
-# Продакшен-скелет (Фаза 14). Реальные образы/секреты/Caddyfile — позже.
-# Деплой только с явным подтверждением владельца.
-# Домен: memo.pb-web.ru
+# Studio Layer — production-oriented stack (без Memoh; репозиторий не выполняет деплой).
+#
+# Проверка (подставляются значения по умолчанию из compose; для секретов: --env-file .env.prod):
+#   docker compose -f docker-compose.prod.yml config
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+#
+# См. также: .env.prod.example, docs/08_RUNBOOK_PRODUCTION.md, deploy/caddy/Caddyfile.example
+#
+name: pb-studio-prod
 
-name: pb-memoh-studio-prod
+# Полный runtime-контейнер (api / worker / migrate). Beat — тот же набор (лишние ключи игнорируются приложением).
+x-studio-runtime-env: &studio-runtime-env
+  STUDIO_ENV: ${STUDIO_ENV:-production}
+  DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://pb_studio:pb_studio_dev@studio-postgres:5432/pb_studio}
+  REDIS_URL: ${REDIS_URL:-redis://studio-redis:6379/0}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://studio-redis:6379/1}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-}
+  STUDIO_EVENTS_INGEST_TOKEN: ${STUDIO_EVENTS_INGEST_TOKEN:-}
+  STUDIO_MIRROR_ENQUEUE_USER_MESSAGES: ${STUDIO_MIRROR_ENQUEUE_USER_MESSAGES:-false}
+  STUDIO_ADMIN_TOKEN: ${STUDIO_ADMIN_TOKEN:-}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  STUDIO_SYSTEM_NOTIFICATIONS_ENABLED: ${STUDIO_SYSTEM_NOTIFICATIONS_ENABLED:-false}
+  STUDIO_TELEGRAM_SEND_TIMEOUT_MS: ${STUDIO_TELEGRAM_SEND_TIMEOUT_MS:-3000}
+  STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES: ${STUDIO_SYSTEM_NOTIFICATION_MAX_RETRIES:-3}
+  STUDIO_SUMMARY_GENERATION_ENABLED: ${STUDIO_SUMMARY_GENERATION_ENABLED:-false}
+  STUDIO_SUMMARY_MAX_SOURCE_MESSAGES: ${STUDIO_SUMMARY_MAX_SOURCE_MESSAGES:-200}
+  STUDIO_SUMMARY_MAX_BULLETS: ${STUDIO_SUMMARY_MAX_BULLETS:-20}
+  STUDIO_SUMMARY_DELIVERY_ENABLED: ${STUDIO_SUMMARY_DELIVERY_ENABLED:-false}
+  STUDIO_SUMMARY_DELIVERY_MAX_RETRIES: ${STUDIO_SUMMARY_DELIVERY_MAX_RETRIES:-3}
+  STUDIO_CONTROL_COMMANDS_ENABLED: ${STUDIO_CONTROL_COMMANDS_ENABLED:-false}
+  STUDIO_CONTROL_COMMANDS_MAX_BATCH: ${STUDIO_CONTROL_COMMANDS_MAX_BATCH:-50}
+  STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS: ${STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS:-}
+  STUDIO_SLA_ENABLED: ${STUDIO_SLA_ENABLED:-false}
+  STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES: ${STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES:-60}
+  STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT: ${STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT:-3}
+  STUDIO_SLA_DEFAULT_TIMEZONE: ${STUDIO_SLA_DEFAULT_TIMEZONE:-UTC}
+  STUDIO_SLA_WORKING_HOURS_ENABLED: ${STUDIO_SLA_WORKING_HOURS_ENABLED:-false}
+  STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES: ${STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES:-30}
+  STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS: ${STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS:-10}
+  STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN: ${STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN:-3500}
+  STUDIO_KB_ENABLED: ${STUDIO_KB_ENABLED:-false}
+  STUDIO_KB_CHUNK_MAX_CHARS: ${STUDIO_KB_CHUNK_MAX_CHARS:-2000}
+  STUDIO_KB_CHUNK_OVERLAP_CHARS: ${STUDIO_KB_CHUNK_OVERLAP_CHARS:-200}
+  STUDIO_KB_EMBEDDINGS_ENABLED: ${STUDIO_KB_EMBEDDINGS_ENABLED:-false}
+  STUDIO_KB_EMBEDDING_MODEL: ${STUDIO_KB_EMBEDDING_MODEL:-deterministic}
+  STUDIO_KB_EMBEDDING_DIM: ${STUDIO_KB_EMBEDDING_DIM:-384}
+  STUDIO_KB_SEARCH_TOP_K: ${STUDIO_KB_SEARCH_TOP_K:-5}
+  STUDIO_KB_EMBEDDING_PROVIDER: ${STUDIO_KB_EMBEDDING_PROVIDER:-deterministic}
+  STUDIO_KB_EMBEDDING_API_BASE_URL: ${STUDIO_KB_EMBEDDING_API_BASE_URL:-}
+  STUDIO_KB_EMBEDDING_API_KEY: ${STUDIO_KB_EMBEDDING_API_KEY:-}
+  STUDIO_KB_EMBEDDING_TIMEOUT_MS: ${STUDIO_KB_EMBEDDING_TIMEOUT_MS:-10000}
+  STUDIO_KB_EMBEDDING_BATCH_SIZE: ${STUDIO_KB_EMBEDDING_BATCH_SIZE:-32}
+  STUDIO_KB_RAG_ENABLED: ${STUDIO_KB_RAG_ENABLED:-false}
+  STUDIO_KB_CHAT_PROVIDER: ${STUDIO_KB_CHAT_PROVIDER:-openai_compatible}
+  STUDIO_KB_CHAT_API_BASE_URL: ${STUDIO_KB_CHAT_API_BASE_URL:-}
+  STUDIO_KB_CHAT_API_KEY: ${STUDIO_KB_CHAT_API_KEY:-}
+  STUDIO_KB_CHAT_MODEL: ${STUDIO_KB_CHAT_MODEL:-}
+  STUDIO_KB_CHAT_TIMEOUT_MS: ${STUDIO_KB_CHAT_TIMEOUT_MS:-20000}
+  STUDIO_KB_RAG_TOP_K: ${STUDIO_KB_RAG_TOP_K:-5}
+  STUDIO_KB_RAG_MAX_CONTEXT_CHARS: ${STUDIO_KB_RAG_MAX_CONTEXT_CHARS:-8000}
+  STUDIO_KB_DOCLING_ENABLED: ${STUDIO_KB_DOCLING_ENABLED:-false}
+  STUDIO_KB_UPLOAD_MAX_BYTES: ${STUDIO_KB_UPLOAD_MAX_BYTES:-10485760}
+  STUDIO_KB_ALLOWED_EXTENSIONS: ${STUDIO_KB_ALLOWED_EXTENSIONS:-txt,md,pdf,docx}
+  STUDIO_KB_STORAGE_DIR: ${STUDIO_KB_STORAGE_DIR:-/app/storage/kb}
+  STUDIO_KB_TELEGRAM_IMPORT_ENABLED: ${STUDIO_KB_TELEGRAM_IMPORT_ENABLED:-false}
+  STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS: ${STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS:-10000}
+  STUDIO_KB_TELEGRAM_MAX_FILE_BYTES: ${STUDIO_KB_TELEGRAM_MAX_FILE_BYTES:-0}
+  STUDIO_HISTORY_IMPORT_ENABLED: ${STUDIO_HISTORY_IMPORT_ENABLED:-false}
+  STUDIO_HISTORY_IMPORT_MAX_BYTES: ${STUDIO_HISTORY_IMPORT_MAX_BYTES:-52428800}
 
 services:
-  caddy:
-    image: caddy:2-alpine
-    container_name: pb-memoh-caddy
-    ports:
-      - "80:80"
-      - "443:443"
+  studio-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: pb-studio-prod-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pb_studio}
+      POSTGRES_USER: ${POSTGRES_USER:-pb_studio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pb_studio_dev}
     volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - memoh-placeholder
-      - studio-api-placeholder
+      - pb_studio_prod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-pb_studio} -d ${POSTGRES_DB:-pb_studio}",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
-  memoh-placeholder:
-    image: alpine:3.20
-    container_name: pb-memoh-core-placeholder
-    command: ["sleep", "infinity"]
+  studio-redis:
+    image: redis:7-alpine
+    container_name: pb-studio-prod-redis
+    volumes:
+      - pb_studio_prod_redisdata:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  studio-migrate:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-prod-migrate
+    environment:
+      <<: *studio-runtime-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      studio-postgres:
+        condition: service_healthy
     restart: "no"
 
-  studio-api-placeholder:
-    image: alpine:3.20
-    container_name: pb-studio-api-placeholder
-    command: ["sleep", "infinity"]
-    restart: "no"
+  studio-api:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-prod-api
+    environment:
+      <<: *studio-runtime-env
+    volumes:
+      - pb_studio_prod_kb_uploads:/app/storage/kb
+    ports:
+      - "${STUDIO_DOCKER_PUBLISH:-127.0.0.1:8000}:8000"
+    depends_on:
+      studio-migrate:
+        condition: service_completed_successfully
+      studio-postgres:
+        condition: service_healthy
+      studio-redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/health\", timeout=5).read()"',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
 
-  # studio-worker, studio-beat, postgres, redis — добавить при готовности образов и сетей
+  studio-worker:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-prod-worker
+    environment:
+      <<: *studio-runtime-env
+    volumes:
+      - pb_studio_prod_kb_uploads:/app/storage/kb
+    command: >
+      celery -A pb_studio.celery_app:celery_app worker
+      --loglevel=info --queues=studio
+    depends_on:
+      studio-migrate:
+        condition: service_completed_successfully
+      studio-postgres:
+        condition: service_healthy
+      studio-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  studio-beat:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-prod-beat
+    environment:
+      <<: *studio-runtime-env
+    command: >
+      celery -A pb_studio.celery_app:celery_app beat --loglevel=info
+    depends_on:
+      studio-redis:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
-  caddy_data:
-  caddy_config:
+  pb_studio_prod_pgdata:
+  pb_studio_prod_redisdata:
+  pb_studio_prod_kb_uploads:

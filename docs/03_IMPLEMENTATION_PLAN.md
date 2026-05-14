@@ -393,6 +393,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 14a — Production compose + базовый deploy/runbook (без фактического деплоя)
+
+**Статус:** [`docker-compose.prod.yml`](docker-compose.prod.yml) — Postgres (pgvector), Redis, `studio-migrate`, `studio-api` (healthcheck `GET /health`), `studio-worker`, `studio-beat`; отдельные prod volumes; порт API по умолчанию `127.0.0.1:8000`. Шаблон переменных [`.env.prod.example`](.env.prod.example); скелет Caddy [`deploy/caddy/Caddyfile.example`](deploy/caddy/Caddyfile.example); бэкап Postgres [`deploy/scripts/backup-postgres.sh`](deploy/scripts/backup-postgres.sh) + [`deploy/BACKUP_RESTORE.md`](deploy/BACKUP_RESTORE.md); чеклист первого деплоя [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md). **Без** изменений Memoh, логики приложения, реальных доменов/TLS/DNS; фактический деплой не выполняется из репозитория.
+
+**Проверки:** `docker compose -f docker-compose.prod.yml config`; `docker compose -f docker-compose.local.yml config`; `docker run … pytest tests/`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -421,4 +429,4 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
 | 13 | Studio Admin: **13a** — каркас read-only; **13b** — детали + формы; **13c** — фильтры, пагинация, UX-полировка |
-| 14 | Prod compose, Caddy, runbook, backup (деплой только с подтверждением) |
+| 14 | Prod: **14a** — `docker-compose.prod.yml`, `.env.prod.example`, Caddy/backup/runbook skeleton (**без** фактического деплоя); далее — Caddy/TLS по согласованию |

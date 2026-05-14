@@ -136,6 +136,28 @@ curl -X POST "http://127.0.0.1:8000/summaries/generate-pending" -H "Authorizatio
 
 - Одна сводка по id: `POST /summaries/{uuid}/generate` с тем же Bearer. **Не** отправляет текст в Telegram.
 
+## Production (фаза 14a)
+
+Фактический деплой из репозитория **не выполняется**. Артефакты для первого prod-запуска Studio:
+
+- [`docker-compose.prod.yml`](../docker-compose.prod.yml) — Postgres, Redis, migrate, api, worker, beat; healthcheck API на `/health`.
+- [`.env.prod.example`](../.env.prod.example) — скопировать в `.env.prod` на сервере (файл `.env.prod` в `.gitignore`).
+- Чеклист первого деплоя, миграции, флаги, smoke: [`docs/08_RUNBOOK_PRODUCTION.md`](08_RUNBOOK_PRODUCTION.md).
+- Бэкап/restore Postgres и заметка по KB volume: [`deploy/BACKUP_RESTORE.md`](../deploy/BACKUP_RESTORE.md).
+- Скелет Caddy (заглушки, без реальных доменов): [`deploy/caddy/Caddyfile.example`](../deploy/caddy/Caddyfile.example).
+
+Проверка YAML без секретов (в `docker-compose.prod.yml` есть значения по умолчанию для `config`):
+
+```powershell
+docker compose -f docker-compose.prod.yml config
+```
+
+С подстановкой секретов с сервера:
+
+```powershell
+docker compose --env-file .env.prod -f docker-compose.prod.yml config
+```
+
 ## Полезные пути
 
 - Документация: `docs/`.

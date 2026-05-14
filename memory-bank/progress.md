@@ -36,6 +36,7 @@
 | 13a Studio Admin UI skeleton (read-only /admin) | Done |
 | 13b Studio Admin UI details + safe forms | Done |
 | 13c Studio Admin UI polish (filters, pagination, UX) | Done |
+| 14a Prod compose + env example + runbook/backup (no deploy) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 13c — фильтры и `page`/`limit` на списках админки, partials, `test_admin_ui_phase13c.py`; полный `pytest tests/` **289** passed (Docker).
+**Последнее:** фаза 14a — `docker-compose.prod.yml`, `.env.prod.example`, `deploy/`, `docs/08_RUNBOOK_PRODUCTION.md`; полный `pytest tests/` **289** passed (Docker).

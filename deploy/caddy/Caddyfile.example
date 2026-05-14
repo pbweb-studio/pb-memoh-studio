@@ -1,0 +1,29 @@
+# Caddy — пример reverse proxy для Studio API (только шаблон).
+#
+# НЕ включать реальные домены и TLS до отдельного согласования (DNS, сертификаты).
+#
+# Что заменить при деплое:
+#   1) YOUR_DOMAIN.example → ваш домен (например studio.example.com).
+#   2) studio-api-upstream → если Caddy на том же хосте, что Docker: 127.0.0.1:8000
+#      (порт должен совпадать с STUDIO_DOCKER_PUBLISH в docker-compose.prod.yml).
+#   3) Раскомментируйте tls / автоматический HTTPS после настройки DNS.
+#
+# Документация: https://caddyserver.com/docs/caddyfile
+
+# Заглушка: явный HTTP на порту 2019 только для примера структуры (не используйте как есть).
+# {
+#   email you@example.com
+# }
+
+# YOUR_DOMAIN.example {
+#   # tls internal   # или автоматический Let's Encrypt после DNS
+#   encode gzip zstd
+#   reverse_proxy 127.0.0.1:8000
+#   # Опционально: ограничение доступа к /admin по IP (модули Caddy)
+# }
+
+# Пример отдельного файла для только API без домена (локальный тест):
+# :8443 {
+#   tls internal
+#   reverse_proxy 127.0.0.1:8000
+# }

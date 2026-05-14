@@ -6,7 +6,9 @@
 
 ## Текущая фаза
 
-**После 13c** — Studio Admin: **13a** (read-only) + **13b** (детали и формы) + **13c** (фильтры, пагинация `page`/`limit`, breadcrumbs, offcanvas-меню на мобильных, форматирование дат, компактные badges); только UI поверх тех же данных и POST из **13b**.
+**После 14a** — подготовлен первый prod-запуск Studio **без фактического деплоя**: `docker-compose.prod.yml`, `.env.prod.example`, `deploy/` (Caddy placeholder, backup), `docs/08_RUNBOOK_PRODUCTION.md`. Memoh и логика приложения не менялись.
+
+**После 13c** — Studio Admin: **13a** + **13b** + **13c** (фильтры, пагинация, breadcrumbs, offcanvas, форматирование дат).
 
 **Фаза 12a (Studio: Telegram Desktop JSON → Event Mirror)** — `POST /history-import/telegram-json`, `GET /history-import/jobs*`, таблица `studio_history_import_jobs`; `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; запись в `studio_chats` / `studio_messages` (без Memoh/Bot API).
 
@@ -16,13 +18,15 @@
 
 ## Текущая цель
 
-Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.) или **10+** — по отдельной постановке.
+Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.), **10+**, или **14+** (Caddy/TLS на реальном домене с подтверждением) — по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–13c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **13c:** фильтры и пагинация списков в `/admin/*`, UX-полировка; см. `docs/06_DECISIONS.md`.
+- Фазы 0–14a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **13a:** каркас Studio Admin, read-only списки; см. `docs/06_DECISIONS.md`.
+- **13b:** детали и HTML-формы в `/admin/*`; см. `docs/06_DECISIONS.md`.
+- **13c:** фильтры, пагинация, breadcrumbs, мобильное меню, форматирование дат; см. `docs/06_DECISIONS.md`.
 - **12a:** импорт экспорта Telegram Desktop JSON в Event Mirror (`/history-import/*`), jobs в БД.
 - **11b:** те же правила — в KB RAG (`rag.py`, `/knowledge/ask`, `/kb_ask`): `applied_rule_ids`, опциональный `chat_id` в ask body.
 - **11a:** правила ассистента в БД + audit, API `/assistant-rules*`, команды `/rule_*`.
@@ -76,10 +80,11 @@
 - **Фаза 13a:** Studio Admin skeleton — read-only `/admin/*`; см. `docs/06_DECISIONS.md`.
 - **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
 - **Фаза 13c:** фильтры, пагинация и полировка списков в Studio Admin; см. `docs/06_DECISIONS.md`.
+- **Фаза 14a:** prod compose + `.env.prod.example` + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 
 ## Следующая задача
 
-- По постановке: **13+** (дальнейший admin UX), **6+** или расширение **10+** из плана.
+- По постановке: **14+** (Caddy/TLS после согласования DNS), **13+**, **6+** или расширение **10+** из плана.
 
 ## Вопросы к GPT
 

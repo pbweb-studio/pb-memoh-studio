@@ -286,3 +286,9 @@
 - Layout: breadcrumbs, активный пункт sidebar, offcanvas-меню на `md` ниже, `h4` заголовки, `app.css` для компактных badges.
 - **Без** новых сущностей и без изменений Memoh / бота / LLM-RAG.
 
+## Фаза 14a — Production compose + базовый deploy/runbook (выполнено, без фактического деплоя)
+
+- **`docker-compose.prod.yml`**: отдельные prod volumes; Postgres/Redis без публикуемых портов по умолчанию; `studio-api` с healthcheck на `GET /health`; полный набор `STUDIO_*` / `TELEGRAM_BOT_TOKEN` через подстановку из env-файла или значения по умолчанию для проверки `compose config`.
+- **Секреты:** оператор копирует `.env.prod.example` → `.env.prod` (не в git); сильные пароли Postgres и **`STUDIO_ADMIN_TOKEN`** обязательны перед реальным prod.
+- **Прокси/TLS:** только шаблон `deploy/caddy/Caddyfile.example`; реальные домены и сертификаты — вне автоматизма репозитория до согласования.
+- **Бэкап:** скрипт дампа через `docker compose exec` + инструкция restore и примечание по volume KB в `deploy/BACKUP_RESTORE.md`.

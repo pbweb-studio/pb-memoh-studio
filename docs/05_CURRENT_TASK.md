@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 13c (Studio Admin UI: polish + usability)
+## После фазы 14a (production compose + runbook skeleton)
 
-**Статус:** списки в админке с фильтрами и пагинацией (`limit`/`page`), breadcrumbs, компактные badges, форматирование дат; **без** новых бизнес-фич.
+**Статус:** `docker-compose.prod.yml`, `.env.prod.example`, `deploy/` (Caddy placeholder, backup script, BACKUP_RESTORE), `docs/08_RUNBOOK_PRODUCTION.md`; **без** фактического деплоя, без изменений Memoh и логики приложения.
 
-**Следующий шаг:** по постановке — **13+**, **6+**, **14**, или доработки импорта / RAG.
+**Следующий шаг:** по постановке — **14+** (Caddy/TLS на реальном домене с подтверждением), **6+**, или доработки Studio.
