@@ -41,3 +41,5 @@
 # }
 
 # Опционально позже: rate limit, IP allowlist для /admin, отдельный listener — см. документацию Caddy.
+#
+# Готовый двухсайтовый edge для VPS pb-web.ru (Studio + Memoh): см. Caddyfile.pb-web.ru в этой папке.

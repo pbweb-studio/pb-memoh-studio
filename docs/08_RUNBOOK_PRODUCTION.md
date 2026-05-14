@@ -181,3 +181,25 @@ docker compose -f docker-compose.prod.yml config
 
 Одноразовый перенос токена админки на хост (если использовался): **`/root/.studio_admin_token_once`** — после копирования в менеджер секретов **удалить** (`rm` на сервере).
 
+---
+
+## G. Memoh Web UI: memo.pb-web.ru
+
+| Параметр | Значение |
+|-----------|----------|
+| Публичный URL Memoh (веб-админка) | `https://memo.pb-web.ru` |
+| Upstream на том же VPS | `127.0.0.1:8082` (`deploy/docker-compose.memoh.yml`, сервис `web`) |
+| Файл Caddy (репозиторий) | [`deploy/caddy/Caddyfile.pb-web.ru`](../deploy/caddy/Caddyfile.pb-web.ru) — блоки `jar.pb-web.ru` и `memo.pb-web.ru` |
+
+**DNS:** A/AAAA для `memo.pb-web.ru` на IP сервера (как у `jar.pb-web.ru`).
+
+**Применить на сервере** (после `git pull` в каталог репо):
+
+```bash
+sudo cp /opt/pb-studio/pb-memoh-studio/deploy/caddy/Caddyfile.pb-web.ru /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo caddy reload --config /etc/caddy/Caddyfile
+```
+
+**Вход в Memoh:** логин и пароль из секции `[admin]` в `$MEMOH_ROOT/config.toml` (на стенде часто `/opt/pb-studio/memoh/config.toml`). Это **не** `STUDIO_ADMIN_TOKEN` (это админка Studio на `jar.pb-web.ru`).
+
