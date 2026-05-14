@@ -48,6 +48,21 @@ docker run --rm -v "${PWD}/studio:/app" -w /app python:3.12-slim bash -c "pip in
 
 Штатный запуск Memoh — по документации upstream (`docker-compose.yml` в корне или `docker/`). На Фазе 0 слой студии не подключается к Memoh автоматически.
 
+### Event Mirror из Memoh (фаза 4b, вариант C)
+
+По умолчанию зеркало **выключено** (`MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED=false`). Чтобы Memoh дублировал сырой Telegram `Update` в Studio, задайте в окружении агента:
+
+- `STUDIO_EVENTS_URL` — полный URL ingest (например `http://127.0.0.1:8000/events/telegram` при поднятом `studio-api`);
+- `MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED=true`;
+- `MEMOH_TELEGRAM_EVENT_MIRROR_TIMEOUT_MS` (по умолчанию 1000);
+- `MEMOH_STUDIO_EVENTS_TOKEN` или общий `STUDIO_EVENTS_INGEST_TOKEN` для заголовка `Authorization: Bearer …`.
+
+Переменные перечислены в корневом `.env.example`. Тесты Go-пакета адаптера:
+
+```powershell
+go test ./internal/channel/adapters/telegram/... -count=1
+```
+
 ## Полезные пути
 
 - Документация: `docs/`.

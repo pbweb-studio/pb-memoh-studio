@@ -33,7 +33,9 @@
 
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
-**Статус:** зафиксировано в документации только; **код Memoh и Telegram adapter не менялись**. Реализация транспорта (4b+) — после явного выбора варианта ниже (или пилота по «запасному» пути).
+**Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).
+
+**Статус транспорта 4b:** **вариант C утверждён и реализован** — минимальный hook в [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go) + одна вставка в [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) после дедупа `update_id`. Второй бот, внешний gateway и смена владельца getUpdates/webhook **не** используются; при недоступности Studio Memoh только логирует и продолжает работу.
 
 Инжест Studio уже есть (**фаза 4a**): `POST /events/telegram`, идемпотентность по `update_id`, нормализация в Postgres. Ниже — как **сырой** Telegram `Update` может попадать в этот endpoint и как Memoh остаётся в контуре.
 

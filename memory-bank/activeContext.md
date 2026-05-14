@@ -1,7 +1,9 @@
 # Active context
 
-**Сейчас:** **стоп перед 4b.** Зафиксирован ADR в `docs/06_DECISIONS.md` (Telegram/Memoh → Studio Event Mirror: A/B/C, рекомендация **C**). Код Memoh и adapter **не** трогали; транспорт не кодим.
+**Сейчас:** фаза **4b** выполнена по **варианту C** — асинхронное зеркалирование сырого Telegram `Update` из [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) в Studio (`STUDIO_EVENTS_URL`), модуль [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go), тесты `studio_event_mirror_test.go`. По умолчанию выключено (`MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED=false`).
 
 **Ветка:** `pb-studio/main`.
 
-**Блокеры:** нет; нужно только **явное** подтверждение варианта (C по умолчанию из ADR, или A/B по согласованию) перед началом 4b.
+**Блокеры:** нет.
+
+**Следующий безопасный шаг:** e2e-проверка с реальным или тестовым ботом при поднятом `studio-api` и заполненных env; затем планирование фазы 5+.

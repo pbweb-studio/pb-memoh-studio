@@ -108,11 +108,19 @@ sequenceDiagram
 
 ---
 
-## Перед фазой 4b — ADR: Telegram / Memoh → Studio Event Mirror
+## Фаза 4b — Memoh → Studio Event Mirror (вариант **C**, минимальный hook)
 
-**Статус:** только документация; код не менялся. Полное сравнение A/B/C (файлы, путь update → `POST /events/telegram`, риски, откат, тестирование) и **рекомендация (C, запасной A, B крайний случай)** — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md) в разделе **ADR — Telegram / Memoh → Studio Event Mirror**.
+**Статус:** реализовано в Memoh (тонкий слой без второго бота, без смены webhook/getUpdates, без бизнес-логики).
 
-После утверждения варианта пользователем/командой можно планировать реализацию транспорта (4b+): hook в Memoh, отдельный gateway, или патч adapter — в зависимости от выбора.
+| Что | Где |
+|-----|-----|
+| Точка зеркала | После дедупа `update_id` в [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) — копия `Update` уходит в `mirrorTelegramUpdateToStudioAsync` **до** веток callback/message. |
+| HTTP POST + env | [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go): `STUDIO_EVENTS_URL` (полный URL, например `http://127.0.0.1:8000/events/telegram`), Bearer из `MEMOH_STUDIO_EVENTS_TOKEN` или `STUDIO_EVENTS_INGEST_TOKEN`, `MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED`, `MEMOH_TELEGRAM_EVENT_MIRROR_TIMEOUT_MS`, горутина + `recover`, короткий timeout. |
+| Response Queue | Memoh **не** включает очередь; в Studio по-прежнему только `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES=true`. |
+
+**Тесты:** `internal/channel/adapters/telegram/studio_event_mirror_test.go` (`go test ./internal/channel/adapters/telegram/...`).
+
+ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для транспорта raw Update утверждён и реализован **вариант C**.
 
 ---
 

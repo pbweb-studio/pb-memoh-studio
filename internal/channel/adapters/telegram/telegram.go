@@ -382,6 +382,8 @@ func (a *TelegramAdapter) Connect(ctx context.Context, cfg channel.ChannelConfig
 					}
 					continue
 				}
+				u := update
+				a.mirrorTelegramUpdateToStudioAsync(cfg.ID, u)
 				if update.CallbackQuery != nil {
 					if msg, ok := a.buildTelegramCallbackInboundMessage(cfg, update); ok {
 						_, _ = bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, "OK"))

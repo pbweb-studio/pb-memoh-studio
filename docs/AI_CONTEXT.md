@@ -6,41 +6,54 @@
 
 ## Текущая фаза
 
-**Фаза 4a завершена** — Event Mirror в Studio: `POST /events/telegram`, таблицы, нормализация. **ADR перед 4b зафиксирован** (только `docs/` + memory-bank): сравнение A/B/C для доставки Telegram/Memoh → Studio и рекомендация **C** (запасной **A**, **B** крайний случай). **Транспорт 4b не начинать** до явного согласования с пользователем/командой.
+**Фаза 4b (транспорт Memoh → Studio Event Mirror) — вариант C реализован.** Memoh по-прежнему получает Telegram `Update` как раньше; после дедупа `update_id` необязательно зеркалирует **сырой** JSON в `POST` на URL из `STUDIO_EVENTS_URL` (асинхронно, с коротким timeout). **Фаза 4a** (ingest в Studio) без изменений по смыслу.
 
 ## Текущая цель
 
-Утвердить на практике вариант **C** vs запасной **A** (или исключение **B**), затем спланировать 4b без самовольных правок Memoh.
+Следующие шаги продукта: e2e-проверка Memoh + Studio с включённым зеркалом, затем фазы 5+ (управляющая группа, сводки, RAG и т.д.) по плану.
 
 ## Что уже работает
 
 - Фазы 0–4a: см. `docs/04_PROJECT_LOG.md`.
-- Инжест и зеркало: `studio/pb_studio/event_mirror/`.
-- Решение по интеграции: `docs/06_DECISIONS.md` (раздел **ADR — Telegram / Memoh → Studio Event Mirror**).
+- **4b:** зеркало в [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go), вызов в [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go).
+- Инжест и нормализация в Studio: `studio/pb_studio/event_mirror/`.
+- Решение по интеграции: `docs/06_DECISIONS.md` (ADR A/B/C; для raw Update утверждён и закодирован **C**).
 
 ## Что ещё не готово
 
-- Реализация транспорта (4b+), вызовы Memoh из Studio по выбранному варианту.
+- Полный e2e «Telegram → Memoh → Studio БД» в прод-окружении (ручная проверка/наблюдаемость по желанию).
 - Управляющая группа (Фаза 5), сводки, RAG, SLA, Studio Admin.
 
-## Последний стабильный commit
+## Последний стабильный commit (HEAD код + доки 4b)
 
-**Код Event Mirror (фаза 4a):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
+**Полный SHA текущего `HEAD` (фаза 4b, вариант C):** `66a660e7c30866a0e1ecbc88fdb029ef574ba3fb`
 
-**Документация ADR (интеграция Telegram/Memoh → Studio, перед 4b):** `60a319773fc545be147a29625e3121613002bd7f`
+**Код Event Mirror Studio (фаза 4a, исторический якорь):** `eb0bdcd94699215118cd9aee41b5827453c21b7f`
+
+**Документация ADR (только текст, перед кодом 4b):** `60a319773fc545be147a29625e3121613002bd7f` — если отличается от HEAD с реализацией 4b, это **отдельный** коммит (тело ADR без Go-изменений).
+
+## Файлы Memoh, изменённые в фазе 4b (вариант C)
+
+1. [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) — после успешного прохождения дедупа: `mirrorTelegramUpdateToStudioAsync(cfg.ID, u)`.
+2. [`internal/channel/adapters/telegram/studio_event_mirror.go`](internal/channel/adapters/telegram/studio_event_mirror.go) — новый модуль: POST, env, timeout, Bearer, `recover` в горутине.
+3. [`internal/channel/adapters/telegram/studio_event_mirror_test.go`](internal/channel/adapters/telegram/studio_event_mirror_test.go) — тесты зеркала.
+
+`inbound.go`, `dispatcher`, цикл polling/webhook **не** переписывались сверх минимальной вставки в адаптере.
 
 ## Принятые решения
 
-- Memoh и Telegram adapter **не менялись** в этом шаге.
-- Приоритет интеграции для raw `Update`: **C**; пилот **A** при запрете патчей Memoh; **B** — только при сильной необходимости и форке (см. `docs/06_DECISIONS.md`).
+- Один бот; второй Telegram-бот не вводится; Memoh не переводится на внешний gateway; схема владения getUpdates/webhook **не** менялась.
+- Бизнес-логика и нормализация — в Studio; в Memoh только транспорт JSON.
+- Response Queue в Studio **не** включается из Memoh; только существующий флаг `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES` на стороне Studio.
+- Зеркало выключается `MEMOH_TELEGRAM_EVENT_MIRROR_ENABLED=false` (по умолчанию).
 
-## Что нельзя трогать
+## Что нельзя трогать без нового ADR
 
-- Не начинать 4b без согласования; не патчить Memoh `telegram.go` / `inbound.go` до ADR и явного решения.
+- Не включать второй потребитель того же бота в обход согласованной схемы; не дублировать системные Telegram-уведомления из этого hook.
 
 ## Следующая задача
 
-- Утверждение варианта интеграции → **фаза 4b** (транспорт) по выбранному пути.
+- Проверка в связке: Memoh + `studio-api`, ingest в `studio_telegram_raw_updates`, мониторинг логов `studio event mirror` при сбоях Studio.
 
 ## Вопросы к GPT
 

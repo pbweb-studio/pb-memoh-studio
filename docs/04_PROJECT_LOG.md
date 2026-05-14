@@ -41,3 +41,11 @@
 - Статус: зафиксировано **только в документации**; код Memoh и Telegram adapter **не** менялись; транспорт **4b не** реализован.
 - Добавлено: раздел **ADR** в `docs/06_DECISIONS.md` (таблица A/B/C: файлы, путь в `POST /events/telegram`, риски, откат, тесты; рекомендация **C**); краткая отсылка в `docs/03_IMPLEMENTATION_PLAN.md`; обновлены `docs/AI_CONTEXT.md`, `docs/05_CURRENT_TASK.md`, `memory-bank/*`, `docs/04_PROJECT_LOG.md`.
 - Полный SHA снимка с телом ADR: см. `docs/AI_CONTEXT.md` (40-символьный SHA после фиксирующего коммита на `pb-studio/main`).
+
+## 2026-05-14 — Фаза 4b (Memoh → Studio Event Mirror, вариант C)
+
+- Статус: завершена (минимальный транспорт); второй бот и внешний gateway **не** добавлялись; getUpdates/webhook **не** перенастраивались.
+- Memoh: после дедупа `update_id` в `internal/channel/adapters/telegram/telegram.go` вызывается `mirrorTelegramUpdateToStudioAsync`; реализация в `internal/channel/adapters/telegram/studio_event_mirror.go`; тесты `studio_event_mirror_test.go`.
+- Env: см. корневой `.env.example` (`STUDIO_EVENTS_URL`, `STUDIO_EVENTS_INGEST_TOKEN`, `MEMOH_STUDIO_EVENTS_TOKEN`, `MEMOH_TELEGRAM_EVENT_MIRROR_*`).
+- Response Queue: только прежний флаг Studio `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES`; Memoh его не трогает.
+- Полный SHA коммита фазы 4b: `66a660e7c30866a0e1ecbc88fdb029ef574ba3fb`.
