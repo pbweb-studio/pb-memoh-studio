@@ -94,7 +94,7 @@ sleep 12
 
 echo "=== sync Memoh admin DB password from config.toml ==="
 if ! python3 -c "import bcrypt" 2>/dev/null; then
-  apt-get update -qq && apt-get install -y -qq python3-bcrypt >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get install -y python3-bcrypt >/dev/null
 fi
 python3 deploy/scripts/memoh_sync_admin_db_password.py
 
