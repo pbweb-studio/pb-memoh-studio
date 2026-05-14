@@ -19,4 +19,4 @@
 
 - Статус: завершена (безопасная часть); Memoh / Telegram не менялись.
 - Добавлены `studio/pb_studio/response_queue` (SQLAlchemy модели, `QueueService`, Pydantic-контракт, pytest), `studio/migrations/001_response_queue.sql`, обновлены `docs/*`, memory-bank.
-- Коммит: `PHASE2A_COMMIT_HASH`.
+- Коммит: `c4e382c22553f3b7b4fc5b2d46fec50240c3ea82`.

@@ -24,7 +24,7 @@
 
 ## Последний стабильный commit
 
-**Фаза 2a (очередь Studio):** `PHASE2A_COMMIT_HASH` — сообщение `feat(studio): response queue core phase 2a`.
+**Фаза 2a (очередь Studio):** `c4e382c22553f3b7b4fc5b2d46fec50240c3ea82` — сообщение `feat(studio): response queue core phase 2a`.
 
 ## Что изменилось в последней фазе
 
