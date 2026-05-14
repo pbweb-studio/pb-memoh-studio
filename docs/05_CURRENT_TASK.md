@@ -1,9 +1,7 @@
 # Текущая задача
 
-## После фазы 8a (SLA-инфраструктура по чатам без LLM)
+## После фазы 8b (рабочие часы и mute для SLA)
 
-**Статус:** политики и инциденты в БД; детектор по зеркалу `studio_messages` (только `client_chat` / `project_chat`); first response по активной policy или `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`; разрешение инцидента при ответе бота или смене «хвоста» входящих; уведомления только в control group при `STUDIO_SLA_ENABLED` и наличии CG; Celery `detect_sla_incidents`; админ REST `/sla/*`. Memoh не менялся.
+**Статус:** политики расширены полями timezone / рабочие дни и часы / holidays / mute; глобально `STUDIO_SLA_WORKING_HOURS_ENABLED` + `STUDIO_SLA_DEFAULT_TIMEZONE`; `calculate_due_at` для due; детектор учитывает mute только для **новых** инцидентов; API PATCH и mute/unmute. Memoh не менялся.
 
-**Следующий шаг:** полная **фаза 8** по плану (рабочие часы, антиспам, mute и т.д.) или **6+** / **7** — только по отдельной постановке.
-
-**Ограничение:** внешний LLM/RAG, проекты, Studio Admin UI — вне scope до отдельной фазы.
+**Следующий шаг:** оставшаяся **фаза 8** (антиспам и т.д. по плану) или **6+** / **7** — по отдельной постановке.

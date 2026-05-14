@@ -128,3 +128,10 @@
 - **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/проектов/Studio Admin UI; не отправка в client/project/internal/service чаты.
 - Тесты: `studio/tests/test_sla_phase8a.py`; полный `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` после коммита 8a (см. отчёт / CI).
+
+## 2026-05-14 — Фаза 8b (Studio: SLA рабочие часы и mute)
+
+- Alembic `009_studio_sla_working_hours` (поля policy: timezone, working_days/hours, holidays, mute); `sla/calendar.py` (`calculate_due_at`, блокировка mute); детектор и API `PATCH /sla/policies/{id}`, mute/unmute; env `STUDIO_SLA_DEFAULT_TIMEZONE`, `STUDIO_SLA_WORKING_HOURS_ENABLED`.
+- **Без** Memoh, LLM/RAG/проектов/Studio Admin UI.
+- Тесты: `tests/test_sla_calendar.py`, `tests/test_sla_phase8b.py`; `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` после коммита 8b (см. отчёт / CI).

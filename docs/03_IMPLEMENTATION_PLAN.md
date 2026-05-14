@@ -250,6 +250,21 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 8b — рабочие часы и mute для SLA (Studio DB, без LLM)
+
+**Статус:** расширение `studio_sla_policies` (Alembic `009_studio_sla_working_hours`): `timezone` (IANA), `working_days_json`, `working_hours_start` / `working_hours_end`, `holidays_json`, `is_muted`, `muted_until`, `mute_reason`; утилита `sla/calendar.py` — `calculate_due_at(message_time, policy, settings)` при `STUDIO_SLA_WORKING_HOURS_ENABLED=false` эквивалентна 8a; при `true` — дедлайн только в рабочих минутах, старт с ближайшего окна если сообщение вне графика/выходной/праздник; детектор использует `calculate_due_at`; новые инциденты не создаются при `is_muted` или `muted_until > now`; открытые инциденты не трогаются; API `PATCH /sla/policies/{id}`, `POST .../mute`, `POST .../unmute`; env `STUDIO_SLA_DEFAULT_TIMEZONE`, `STUDIO_SLA_WORKING_HOURS_ENABLED`. **Без** Memoh, LLM/RAG/проектов/Studio Admin.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `sla/calendar.py` | `calculate_due_at`, `policy_blocks_new_incidents` |
+| `sla/detector.py` | интеграция календаря и mute |
+| `sla/service.py` | mute/unmute/patch policy |
+| `api/routes/sla.py` | новые эндпоинты |
+
+**Тесты:** `studio/tests/test_sla_calendar.py`, `studio/tests/test_sla_phase8b.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -268,9 +283,10 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7a | Команды `/summary_*` из control group по зеркалу: `studio_control_commands`, scan `studio_messages`, product + доставка 6d, Celery + админ API (**без** Memoh, второго бота, polling/webhook Studio) |
 | 7b | UX: `/summary_chats`, `/summary_all_today/yesterday`, ACL по Telegram user id (`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`), агрегаты и обрезка ответов (**без** Memoh/LLM/второго бота) |
 | 8a | SLA: политики + инциденты по зеркалу, детектор first response, уведомления только в control group, Celery + админ API (**без** LLM/Memoh/проектов) |
+| 8b | SLA: рабочие часы / timezone / holidays / mute на policy, `calculate_due_at`, PATCH/mute/unmute (**без** LLM/проектов) |
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
-| 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a:** инфра first response + инциденты + control group notify (см. секцию 8a выше) |
+| 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8b:** инфра + календарь/mute (см. секции выше) |
 | 9 | Проекты: bind/list/digest |
 | 10 | База знаний: Docling, embeddings, pgvector |
 | 11 | Правила: save/list/disable/audit |

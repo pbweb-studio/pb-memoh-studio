@@ -36,6 +36,14 @@ class SlaPolicyOut(BaseModel):
     first_response_minutes: int
     followup_minutes: int | None
     is_active: bool
+    policy_tz: str = "UTC"
+    working_days_json: list[Any] | None = None
+    working_hours_start: str | None = None
+    working_hours_end: str | None = None
+    holidays_json: list[Any] | None = None
+    is_muted: bool = False
+    muted_until: datetime | None = None
+    mute_reason: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -45,6 +53,27 @@ class SlaPolicyCreate(BaseModel):
     first_response_minutes: int = Field(ge=1, le=10_080)
     followup_minutes: int | None = Field(default=None, ge=1, le=10_080)
     is_active: bool = True
+    policy_tz: str | None = Field(default=None, max_length=64)
+    working_days_json: list[int] | None = None
+    working_hours_start: str | None = Field(default=None, max_length=8)
+    working_hours_end: str | None = Field(default=None, max_length=8)
+    holidays_json: list[str] | None = None
+
+
+class SlaPolicyPatch(BaseModel):
+    first_response_minutes: int | None = Field(default=None, ge=1, le=10_080)
+    followup_minutes: int | None = Field(default=None, ge=1, le=10_080)
+    is_active: bool | None = None
+    policy_tz: str | None = Field(default=None, max_length=64)
+    working_days_json: list[int] | None = None
+    working_hours_start: str | None = Field(default=None, max_length=8)
+    working_hours_end: str | None = Field(default=None, max_length=8)
+    holidays_json: list[str] | None = None
+
+
+class SlaPolicyMuteBody(BaseModel):
+    muted_until: datetime | None = None
+    mute_reason: str | None = Field(default=None, max_length=2000)
 
 
 class SlaDetectResponse(BaseModel):

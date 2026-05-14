@@ -6,13 +6,23 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from pb_studio.api.deps import DbSession, SettingsDep, verify_admin_optional
 from pb_studio.sla.detector import run_sla_detection_cycle
-from pb_studio.sla.schemas import SlaDetectResponse, SlaIncidentOut, SlaPolicyCreate, SlaPolicyOut
+from pb_studio.sla.schemas import (
+    SlaDetectResponse,
+    SlaIncidentOut,
+    SlaPolicyCreate,
+    SlaPolicyMuteBody,
+    SlaPolicyOut,
+    SlaPolicyPatch,
+)
 from pb_studio.sla.service import (
     acknowledge_incident,
     create_sla_policy,
     list_sla_incidents,
     list_sla_policies,
+    mute_sla_policy,
+    patch_sla_policy_fields,
     resolve_incident,
+    unmute_sla_policy,
 )
 
 router = APIRouter(prefix="/sla", tags=["sla"])
@@ -72,5 +82,44 @@ async def post_sla_policy(session: DbSession, body: SlaPolicyCreate) -> SlaPolic
         first_response_minutes=body.first_response_minutes,
         followup_minutes=body.followup_minutes,
         is_active=body.is_active,
+        policy_tz=body.policy_tz,
+        working_days_json=body.working_days_json,
+        working_hours_start=body.working_hours_start,
+        working_hours_end=body.working_hours_end,
+        holidays_json=body.holidays_json,
     )
+    return SlaPolicyOut.model_validate(row)
+
+
+@router.patch("/policies/{policy_id}", response_model=SlaPolicyOut, dependencies=[Depends(verify_admin_optional)])
+async def patch_sla_policy_route(session: DbSession, policy_id: UUID, body: SlaPolicyPatch) -> SlaPolicyOut:
+    updates = body.model_dump(exclude_unset=True)
+    row = await patch_sla_policy_fields(session, policy_id, updates)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="policy not found")
+    return SlaPolicyOut.model_validate(row)
+
+
+@router.post("/policies/{policy_id}/mute", response_model=SlaPolicyOut, dependencies=[Depends(verify_admin_optional)])
+async def post_sla_policy_mute(session: DbSession, policy_id: UUID, body: SlaPolicyMuteBody) -> SlaPolicyOut:
+    row = await mute_sla_policy(
+        session,
+        policy_id,
+        muted_until=body.muted_until,
+        mute_reason=body.mute_reason,
+    )
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="policy not found")
+    return SlaPolicyOut.model_validate(row)
+
+
+@router.post(
+    "/policies/{policy_id}/unmute",
+    response_model=SlaPolicyOut,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_sla_policy_unmute(session: DbSession, policy_id: UUID) -> SlaPolicyOut:
+    row = await unmute_sla_policy(session, policy_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="policy not found")
     return SlaPolicyOut.model_validate(row)

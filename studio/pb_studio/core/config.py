@@ -108,6 +108,14 @@ class Settings(BaseSettings):
         default=3,
         description="STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT — лимит sendMessage в control group на инцидент",
     )
+    studio_sla_default_timezone: str = Field(
+        default="UTC",
+        description="STUDIO_SLA_DEFAULT_TIMEZONE — IANA tz при отсутствии policy или для календаря без policy",
+    )
+    studio_sla_working_hours_enabled: bool = Field(
+        default=False,
+        description="STUDIO_SLA_WORKING_HOURS_ENABLED — учитывать рабочие часы/holidays при расчёте due_at",
+    )
 
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:

@@ -16,6 +16,7 @@ from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import StudioChat, StudioMessage
 from pb_studio.sla.constants import SlaIncidentStatus, SlaSeverity
+from pb_studio.sla.calendar import calculate_due_at, policy_blocks_new_incidents
 from pb_studio.sla.models import StudioSlaIncident, StudioSlaPolicy
 
 logger = logging.getLogger(__name__)
@@ -309,9 +310,7 @@ async def run_sla_detection_cycle(
         if tail is None:
             continue
 
-        due_at = _as_utc(tail.date) + timedelta(minutes=minutes)
-        if _as_utc(now) < due_at:
-            continue
+        due_at = calculate_due_at(_as_utc(tail.date), policy_row, settings)
 
         existing = await session.scalar(
             select(StudioSlaIncident).where(
@@ -329,6 +328,12 @@ async def run_sla_detection_cycle(
                 source_chat=chat,
                 now=now,
             )
+            continue
+
+        if policy_blocks_new_incidents(policy_row, now):
+            continue
+
+        if _as_utc(now) < due_at:
             continue
 
         severity = SlaSeverity.BREACHED.value

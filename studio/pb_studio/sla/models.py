@@ -34,6 +34,14 @@ class StudioSlaPolicy(Base):
     first_response_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     followup_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    policy_tz: Mapped[str] = mapped_column("timezone", String(64), nullable=False, default="UTC")
+    working_days_json: Mapped[Optional[list[Any]]] = mapped_column(JSONCompat, nullable=True)
+    working_hours_start: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    working_hours_end: Mapped[Optional[str]] = mapped_column(String(8), nullable=True)
+    holidays_json: Mapped[Optional[list[Any]]] = mapped_column(JSONCompat, nullable=True)
+    is_muted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    muted_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    mute_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow

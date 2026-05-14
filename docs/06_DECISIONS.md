@@ -102,6 +102,12 @@
 - **Флаги / API:** `STUDIO_SLA_ENABLED`, `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`, `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`; Celery `detect_sla_incidents`; админ `GET /sla/incidents`, `POST /sla/detect`, ack/resolve, `GET/POST /sla/policies` при `STUDIO_ADMIN_TOKEN`.
 - **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG, проектная привязка, Studio Admin UI, отправка уведомлений в client/project/internal/service чаты.
 
+## Фаза 8b — рабочие часы и mute для SLA (Studio DB, без LLM)
+
+- **Календарь:** колонка `timezone` (IANA) на policy; `working_days_json` (ISO 1–7, по умолчанию пн–пт), `working_hours_start` / `working_hours_end` (`HH:MM`), `holidays_json` (`YYYY-MM-DD` и/или `MM-DD`); глобальный флаг `STUDIO_SLA_WORKING_HOURS_ENABLED` — при `false` дедлайн как в 8a; при `true` — `calculate_due_at` считает только рабочие минуты, старт SLA с ближайшего рабочего окна вне графика; `STUDIO_SLA_DEFAULT_TIMEZONE` при отсутствии policy или для дефолтного TZ.
+- **Mute:** `is_muted` или `muted_until` в будущем блокирует **только создание** новых инцидентов; открытые инциденты и уведомления по ним не ломаются; `POST /sla/policies/{id}/mute|unmute`, `PATCH /sla/policies/{id}`.
+- **Не делается:** Memoh, LLM/RAG, проекты, Studio Admin UI.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

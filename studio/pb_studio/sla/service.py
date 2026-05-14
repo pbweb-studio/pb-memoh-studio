@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
@@ -13,6 +14,10 @@ from pb_studio.sla.models import StudioSlaIncident, StudioSlaPolicy
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+async def get_sla_policy(session: AsyncSession, policy_id: UUID) -> StudioSlaPolicy | None:
+    return await session.get(StudioSlaPolicy, policy_id)
 
 
 async def list_sla_incidents(
@@ -42,6 +47,11 @@ async def create_sla_policy(
     first_response_minutes: int,
     followup_minutes: int | None,
     is_active: bool,
+    policy_tz: str | None = None,
+    working_days_json: list[int] | None = None,
+    working_hours_start: str | None = None,
+    working_hours_end: str | None = None,
+    holidays_json: list[str] | None = None,
 ) -> StudioSlaPolicy:
     if is_active:
         existing = (
@@ -61,6 +71,11 @@ async def create_sla_policy(
         first_response_minutes=max(1, int(first_response_minutes)),
         followup_minutes=followup_minutes,
         is_active=is_active,
+        policy_tz=(policy_tz or "UTC").strip() or "UTC",
+        working_days_json=working_days_json,
+        working_hours_start=working_hours_start,
+        working_hours_end=working_hours_end,
+        holidays_json=holidays_json,
     )
     session.add(pol)
     await session.flush()
@@ -72,6 +87,85 @@ async def create_sla_policy(
         payload={"chat_role": chat_role, "is_active": is_active},
     )
     return pol
+
+
+async def patch_sla_policy_fields(
+    session: AsyncSession,
+    policy_id: UUID,
+    updates: dict[str, Any],
+) -> StudioSlaPolicy | None:
+    row = await session.get(StudioSlaPolicy, policy_id)
+    if row is None:
+        return None
+    if "first_response_minutes" in updates:
+        v = updates["first_response_minutes"]
+        if v is not None:
+            row.first_response_minutes = max(1, int(v))
+    if "followup_minutes" in updates:
+        row.followup_minutes = updates["followup_minutes"]
+    if "is_active" in updates:
+        row.is_active = bool(updates["is_active"])
+    if "policy_tz" in updates and updates["policy_tz"] is not None:
+        row.policy_tz = str(updates["policy_tz"]).strip() or "UTC"
+    if "working_days_json" in updates:
+        row.working_days_json = updates["working_days_json"]
+    if "working_hours_start" in updates:
+        row.working_hours_start = updates["working_hours_start"]
+    if "working_hours_end" in updates:
+        row.working_hours_end = updates["working_hours_end"]
+    if "holidays_json" in updates:
+        row.holidays_json = updates["holidays_json"]
+    row.updated_at = utcnow()
+    await _audit(
+        session,
+        action="sla.policy_patched",
+        entity_type="studio_sla_policy",
+        entity_id=str(row.id),
+        payload={k: v for k, v in updates.items() if v is not None or k.endswith("_json")},
+    )
+    return row
+
+
+async def mute_sla_policy(
+    session: AsyncSession,
+    policy_id: UUID,
+    *,
+    muted_until: datetime | None,
+    mute_reason: str | None,
+) -> StudioSlaPolicy | None:
+    row = await session.get(StudioSlaPolicy, policy_id)
+    if row is None:
+        return None
+    row.is_muted = True
+    row.muted_until = muted_until
+    row.mute_reason = mute_reason
+    row.updated_at = utcnow()
+    await _audit(
+        session,
+        action="sla.policy_muted",
+        entity_type="studio_sla_policy",
+        entity_id=str(row.id),
+        payload={"muted_until": muted_until.isoformat() if muted_until is not None else None},
+    )
+    return row
+
+
+async def unmute_sla_policy(session: AsyncSession, policy_id: UUID) -> StudioSlaPolicy | None:
+    row = await session.get(StudioSlaPolicy, policy_id)
+    if row is None:
+        return None
+    row.is_muted = False
+    row.muted_until = None
+    row.mute_reason = None
+    row.updated_at = utcnow()
+    await _audit(
+        session,
+        action="sla.policy_unmuted",
+        entity_type="studio_sla_policy",
+        entity_id=str(row.id),
+        payload=None,
+    )
+    return row
 
 
 async def acknowledge_incident(session: AsyncSession, incident_id: UUID) -> StudioSlaIncident | None:

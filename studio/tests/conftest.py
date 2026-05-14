@@ -29,6 +29,8 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_SLA_ENABLED",
         "STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES",
         "STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT",
+        "STUDIO_SLA_DEFAULT_TIMEZONE",
+        "STUDIO_SLA_WORKING_HOURS_ENABLED",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

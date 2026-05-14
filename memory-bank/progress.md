@@ -19,6 +19,7 @@
 | 7a Control group summary commands via Event Mirror | Done |
 | 7b UX summary commands + ACL in control group | Done |
 | 8a SLA infra (policies + incidents, mirror, no LLM) | Done |
+| 8b SLA working hours + mute on policies | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 8a — таблицы SLA, detector, API, Celery; pytest **130** passed (Docker); compose config ok.
+**Последнее:** фаза 8b — calendar.py, migration 009, detector+API; pytest **144** passed (Docker); compose config ok.
