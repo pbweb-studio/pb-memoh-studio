@@ -129,6 +129,19 @@ class Settings(BaseSettings):
         description="STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN — безопасная обрезка текста digest/single",
     )
 
+    studio_kb_enabled: bool = Field(
+        default=False,
+        description="STUDIO_KB_ENABLED — API и команды /kb_* (без embeddings/LLM)",
+    )
+    studio_kb_chunk_max_chars: int = Field(
+        default=2000,
+        description="STUDIO_KB_CHUNK_MAX_CHARS — макс. длина чанка текста",
+    )
+    studio_kb_chunk_overlap_chars: int = Field(
+        default=200,
+        description="STUDIO_KB_CHUNK_OVERLAP_CHARS — перекрытие соседних чанков",
+    )
+
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:
         raw = (self.studio_control_commands_allowed_user_ids or "").strip()

@@ -170,14 +170,63 @@ def _parse_project_digest_command_line(line: str) -> ParsedControlCommand:
     return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "unknown_project_digest_command"})
 
 
+def _parse_kb_command_line(line: str) -> ParsedControlCommand:
+    parts = line.split(maxsplit=1)
+    if not parts:
+        return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
+    cmd = parts[0].strip().lower()
+    rest = parts[1].strip() if len(parts) > 1 else ""
+
+    if cmd == "/kb_help":
+        if rest:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_help takes no arguments"})
+        return ParsedControlCommand(ControlCommandName.KB_HELP, {})
+
+    if cmd == "/kb_list":
+        if rest:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_list takes no arguments"})
+        return ParsedControlCommand(ControlCommandName.KB_LIST, {})
+
+    if cmd == "/kb_get":
+        if not rest:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_get needs document_uuid"},
+            )
+        uid = _parse_uuid(rest)
+        if uid is None:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_document_uuid"})
+        return ParsedControlCommand(ControlCommandName.KB_GET, {"document_id": str(uid)})
+
+    if cmd == "/kb_add":
+        sep = " | "
+        if sep not in rest:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "kb_add needs: title | text (разделитель « пробел | пробел »)"},
+            )
+        title, text = rest.split(sep, 1)
+        title = title.strip()
+        text = text.strip()
+        if not title:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_add empty title"})
+        if not text:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "kb_add empty text"})
+        return ParsedControlCommand(ControlCommandName.KB_ADD, {"title": title, "text": text})
+
+    return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "unknown_kb_command"})
+
+
 def parse_control_group_command_line(text: str | None) -> ParsedControlCommand | None:
     """
     Разобрать строку сообщения из control group.
-    Возвращает None, если это не команда /summary_* или /project* (включая /project_digest_*).
+    Возвращает None, если это не команда /summary_* или /project* или /kb_*.
     """
     if not text or not isinstance(text, str):
         return None
     line = text.strip()
+    if line.startswith("/kb"):
+        return _parse_kb_command_line(line)
     if line.startswith("/project_digest"):
         return _parse_project_digest_command_line(line)
     if line.startswith("/project"):

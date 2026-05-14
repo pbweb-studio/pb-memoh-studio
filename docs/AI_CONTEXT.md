@@ -6,25 +6,25 @@
 
 ## Текущая фаза
 
-**Фаза 9b (Studio: project digest из chat summaries)** — таблица `studio_project_digests` (Alembic `012_studio_project_digests`); пакет `pb_studio/project_digests`; агрегация по активным привязанным чатам и готовым/сгенерированным `studio_chat_summaries` без LLM для текста дайджеста; админ-API `/projects/{id}/digests*`, `/project-digests/*` под `STUDIO_ADMIN_TOKEN`; команды `/project_digest_*` из active control group (тот же Event Mirror + `studio_control_commands`, ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`); Celery `generate_daily_project_digests`, `deliver_pending_project_digests`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG для дайджеста, Studio Admin UI; не шлём в client/project/internal/service чаты.
+**Фаза 10a (Studio: knowledge base без embeddings)** — таблицы `studio_knowledge_documents`, `studio_knowledge_document_versions`, `studio_knowledge_chunks` (Alembic `013_studio_knowledge_base`); пакет `pb_studio/knowledge`; админ-API `/knowledge/*` при `STUDIO_KB_ENABLED` и `STUDIO_ADMIN_TOKEN`; команды `/kb_help`, `/kb_list`, `/kb_get`, `/kb_add` из active control group (Event Mirror + ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`); детерминированный splitter `STUDIO_KB_CHUNK_*`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/embeddings/RAG retrieval/Docling, Studio Admin UI; не шлём в client/project/internal/service чаты.
 
-Фазы **9a**, **8a–8c**, **7b**–**4b** — см. журнал.
+Фазы **9b**, **9a**, **8a–8c**, **7b**–**4b** — см. журнал.
 
 ## Текущая цель
 
-**6+** (LLM/продуктовая доставка сводок) или **RAG/база знаний** (фазы 10+) — только по отдельной постановке.
+**6+** (LLM/продуктовая доставка сводок) или **10+** (Docling, embeddings, pgvector, поиск) — только по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–9b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **9a:** проекты в БД, привязка чатов, HTTP API, команды `/project_*` из control group.
-- **9b:** project digest (шаблонный текст), API и доставка/команды только в control group.
+- Фазы 0–10a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **10a:** KB в БД, версии из текста, чанки, HTTP API, команды `/kb_*` из control group.
+- **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**179** кейсов после фазы 9b, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**192** кейса после фазы 10a, локально/Docker).
 
 ## Что ещё не готово
 
-- Внешний LLM, RAG/pgvector, Studio Admin; прочие сценарии 6+.
+- Внешний LLM, embeddings, RAG retrieval, Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -49,10 +49,11 @@
 - **Фазы 8a–8c:** SLA first response по зеркалу; календарь и mute на policy; уведомления SLA только в control group; см. `docs/06_DECISIONS.md` (фазы 8a–8c).
 - **Фаза 9a:** проекты и bind чатов только в Studio DB; команды `/project_*` — те же правила доставки и ACL, что `/summary_*`; см. `docs/06_DECISIONS.md`.
 - **Фаза 9b:** project digest из summaries, только Studio DB + шаблон; доставка и команды — только control group; см. `docs/06_DECISIONS.md`.
+- **Фаза 10a:** KB — только Studio DB + детерминированные чанки; API при флаге `STUDIO_KB_ENABLED`; команды `/kb_*` — только control group; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 
-- По постановке: **6+** или **RAG/база знаний** из плана.
+- По постановке: **6+** или **10+** (Docling/embeddings/RAG) из плана.
 
 ## Вопросы к GPT
 

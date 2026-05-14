@@ -192,7 +192,7 @@
 - Проекты и связи чат↔проект живут только в **Studio DB** (`studio_projects`, `studio_project_chats`); источник команд — **Event Mirror** (`studio_messages` в active control group), без polling/webhook из Studio.
 - Один бот; команды `/project_*` обрабатываются тем же циклом, что `/summary_*`; ответы — **только** `sendMessage` в активную control group; ACL — `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (как в 7b).
 - `project_bind` может выставить `chat_role=project_chat` только для `unknown` / `client_chat`; **нельзя** менять роль active control group и нельзя привязать чат с ролью `control_group`; internal/service — запрещены к bind.
-- Админ-HTTP: `/projects` под тем же **`STUDIO_ADMIN_TOKEN`**, что и `/control-group`, `/summaries`, `/sla` (если токен задан — Bearer обязателен).
+- Админ-HTTP: `/projects` под тем же **`STUDIO_ADMIN_TOKEN`**, что и `/control-group`, `/summaries`, `/sla`, `/knowledge` (если токен задан — Bearer обязателен).
 
 ## Фаза 9b — project digest (выполнено)
 
@@ -200,3 +200,9 @@
 - Один бот; команды `/project_digest_*` и доставка готового дайджеста — **только** active control group (`sendMessage`); ACL — `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`; классификация ошибок Telegram и redact токена — как в **6d**.
 - Админ-HTTP: `GET /projects/{id}/digests`, `POST .../digests/today|yesterday|period`, `GET /project-digests/{id}`, `POST .../deliver-control-group`, `POST /project-digests/deliver-pending` под **`STUDIO_ADMIN_TOKEN`**.
 - Повтор за тот же период не создаёт дубликат строки digest (unique по проекту, типу и границам периода).
+
+## Фаза 10a — knowledge base в Studio (выполнено)
+
+- Документы, версии и чанки живут только в **Studio DB**; разбиение текста — детерминированный splitter по `STUDIO_KB_CHUNK_*`, без embeddings и без внешних LLM.
+- API `/knowledge/*` включён только при **`STUDIO_KB_ENABLED=true`** и (если задан) **`STUDIO_ADMIN_TOKEN`**; команды `/kb_*` — тот же Event Mirror + ACL, ответы только в active control group.
+- Повтор `POST .../versions/text` с тем же содержимым не создаёт вторую версию (unique `document_id` + `content_hash`).

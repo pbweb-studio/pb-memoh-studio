@@ -35,6 +35,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 9b (project digest)** те же `STUDIO_ADMIN_TOKEN` и `STUDIO_CONTROL_COMMANDS_*`; эндпоинты `GET /projects/{id}/digests`, `POST /projects/{id}/digests/today`, `.../yesterday`, `.../period`, `GET /project-digests/{id}`, `POST /project-digests/{id}/deliver-control-group`, `POST /project-digests/deliver-pending`; команды `/project_digest_today|yesterday|period|latest`; Celery: `generate_daily_project_digests`, `deliver_pending_project_digests` (штатные env сводок/доставки 6b–6d).
 
+Для **фазы 10a (knowledge base)** в **`studio-api`** и **`studio-worker`**: `STUDIO_KB_ENABLED`, `STUDIO_KB_CHUNK_MAX_CHARS`, `STUDIO_KB_CHUNK_OVERLAP_CHARS` (см. `.env.example`). Эндпоинты `GET/POST/PATCH /knowledge/documents`, archive, `POST .../versions/text`, списки версий и чанков — под `STUDIO_ADMIN_TOKEN` и при `STUDIO_KB_ENABLED=true`; команды `/kb_*` используют те же `STUDIO_CONTROL_COMMANDS_*`, что `/summary_*`.
+
 Проверка API:
 
 ```powershell

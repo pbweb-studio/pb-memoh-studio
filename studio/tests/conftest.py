@@ -7,6 +7,7 @@ import pb_studio.control_commands.models  # noqa: F401 — phase 7a control comm
 import pb_studio.sla.models  # noqa: F401 — phase 8a SLA
 import pb_studio.projects.models  # noqa: F401 — phase 9a projects
 import pb_studio.project_digests.models  # noqa: F401 — phase 9b project digests
+import pb_studio.knowledge.models  # noqa: F401 — phase 10a knowledge base
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -33,6 +34,9 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT",
         "STUDIO_SLA_DEFAULT_TIMEZONE",
         "STUDIO_SLA_WORKING_HOURS_ENABLED",
+        "STUDIO_KB_ENABLED",
+        "STUDIO_KB_CHUNK_MAX_CHARS",
+        "STUDIO_KB_CHUNK_OVERLAP_CHARS",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

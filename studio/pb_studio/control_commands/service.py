@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, not_, or_, select
+from sqlalchemy import and_, func, not_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,7 @@ from pb_studio.control_group.constants import ChatRole
 from pb_studio.control_group.service import get_control_group_chat
 from pb_studio.control_group.telegram_outbound import redact_secrets, telegram_send_message
 from pb_studio.control_commands.constants import (
+    KB_HELP_TEXT,
     PROJECT_HELP_TEXT,
     SUMMARY_AGG_SNIPPET_CHARS,
     SUMMARY_CHATS_MAX_LINES,
@@ -26,6 +27,9 @@ from pb_studio.control_commands.parser import parse_control_group_command_line, 
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
+from pb_studio.knowledge import service as studio_kb_service
+from pb_studio.knowledge.constants import KnowledgeVersionStatus
+from pb_studio.knowledge.models import StudioKnowledgeDocumentVersion
 from pb_studio.project_digests import service as project_digests_svc
 from pb_studio.project_digests.constants import ProjectDigestType
 from pb_studio.project_digests.delivery import mark_digest_delivered_from_control_command_reply
@@ -225,6 +229,7 @@ async def scan_mirror_for_control_commands(
                 StudioMessage.text.startswith("/summary_all_yesterday"),
                 StudioMessage.text.startswith("/summary"),
                 StudioMessage.text.startswith("/project"),
+                StudioMessage.text.startswith("/kb"),
             ),
             not_(dup_exists),
         )
@@ -311,6 +316,9 @@ async def _process_one_command(
 
     try:
         raw_cmd = (cmd.command_text or "").strip()
+        if raw_cmd.startswith("/kb"):
+            await _dispatch_kb_control_commands(session, cmd, settings, reply, now)
+            return
         if raw_cmd.startswith("/project_digest"):
             await _dispatch_project_digest_control_commands(session, cmd, settings, reply, now)
             return
@@ -319,7 +327,9 @@ async def _process_one_command(
             return
 
         if cmd.command_name == ControlCommandName.SUMMARY_HELP or (
-            cmd.command_name == ControlCommandName.UNKNOWN and not raw_cmd.startswith("/project")
+            cmd.command_name == ControlCommandName.UNKNOWN
+            and not raw_cmd.startswith("/project")
+            and not raw_cmd.startswith("/kb")
         ):
             text_out = SUMMARY_HELP_TEXT
             if cmd.command_name == ControlCommandName.UNKNOWN:
@@ -471,6 +481,146 @@ async def _process_one_command(
         cmd.processed_at = now
         try:
             await reply(f"Команда не выполнена: {redact_secrets(str(exc)[:500], token)}")
+        except Exception:  # noqa: BLE001
+            pass
+
+
+async def _kb_resolve_active_version(
+    session: AsyncSession, doc_id: UUID, doc_metadata: dict[str, Any] | None
+) -> StudioKnowledgeDocumentVersion | None:
+    meta = doc_metadata or {}
+    aid = meta.get("active_version_id")
+    if aid:
+        try:
+            vid = UUID(str(aid))
+        except ValueError:
+            vid = None
+        if vid is not None:
+            v = await session.get(StudioKnowledgeDocumentVersion, vid)
+            if v is not None and v.document_id == doc_id and v.status == KnowledgeVersionStatus.PARSED:
+                return v
+    versions = await studio_kb_service.list_versions(session, doc_id)
+    parsed = [x for x in versions if x.status == KnowledgeVersionStatus.PARSED]
+    if not parsed:
+        return None
+    return max(parsed, key=lambda x: x.version_number)
+
+
+async def _dispatch_kb_control_commands(
+    session: AsyncSession,
+    cmd: StudioControlCommand,
+    settings: Settings,
+    reply,
+    now: datetime,
+) -> None:
+    token = (settings.telegram_bot_token or "").strip()
+    try:
+        if not settings.studio_kb_enabled:
+            mid = await reply("База знаний выключена (STUDIO_KB_ENABLED=false).")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.UNKNOWN:
+            reason = str(cmd.args_json.get("reason") or "")
+            text_out = KB_HELP_TEXT
+            if reason:
+                text_out = f"Ошибка: {reason}\n\n" + text_out
+            mid = await reply(text_out)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.KB_HELP:
+            mid = await reply(KB_HELP_TEXT)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_help",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.KB_LIST:
+            rows = await studio_kb_service.list_documents(session, limit=40)
+            lines = ["Документы KB:"]
+            for d in rows:
+                lines.append(f"- {d.title} | id={d.id} | status={d.status}")
+            if not rows:
+                lines.append("(пусто)")
+            mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.KB_GET:
+            did = UUID(str(cmd.args_json.get("document_id") or ""))
+            doc = await studio_kb_service.get_document(session, did)
+            if doc is None:
+                mid = await reply("Документ не найден.")
+            else:
+                av = await _kb_resolve_active_version(session, doc.id, doc.metadata_json)
+                chs = await studio_kb_service.list_chunks(session, av.id) if av is not None else []
+                chunk_n = len(chs)
+                snip = (chs[0].content_text or "")[:600] if chs else ""
+                mid = await reply(
+                    _safe_truncate(
+                        f"Документ: {doc.title}\n"
+                        f"id={doc.id}\nstatus={doc.status}\nproject_id={doc.project_id}\n"
+                        f"active_version={av.id if av else '—'} chunks={chunk_n}\n---\n{snip}"
+                    )
+                )
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.KB_ADD:
+            title = str(cmd.args_json.get("title") or "")
+            text_body = str(cmd.args_json.get("text") or "")
+            doc = await studio_kb_service.create_document(session, title=title, source_type="manual")
+            ver, created = await studio_kb_service.create_document_version_from_text(
+                session, doc.id, text_body, settings
+            )
+            mid = await reply(
+                f"Документ KB создан.\ndocument_id={doc.id}\nversion_id={ver.id} "
+                f"version_number={ver.version_number} new={'да' if created else 'нет (тот же hash)'}"
+            )
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.kb_add",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={"document_id": str(doc.id), "version_id": str(ver.id)},
+            )
+            return
+
+        cmd.status = ControlCommandStatus.IGNORED
+        cmd.processed_at = now
+        cmd.last_error = "unsupported kb command"
+    except ValueError as exc:
+        mid = await reply(f"Ошибка: {exc}")
+        cmd.status = ControlCommandStatus.PROCESSED
+        cmd.processed_at = now
+        cmd.response_telegram_message_id = mid
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("kb control command failed id=%s", cmd.id)
+        safe_err = redact_secrets(str(exc), token)[:4000]
+        cmd.status = ControlCommandStatus.FAILED
+        cmd.last_error = safe_err
+        cmd.processed_at = now
+        try:
+            await reply(f"KB: не выполнено: {redact_secrets(str(exc)[:500], token)}")
         except Exception:  # noqa: BLE001
             pass
 

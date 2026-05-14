@@ -289,6 +289,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 10a — база знаний в Studio (модели + API + чанки, без embeddings/LLM)
+
+**Статус:** таблицы `studio_knowledge_documents`, `studio_knowledge_document_versions`, `studio_knowledge_chunks` (Alembic `013_studio_knowledge_base`); пакет [`studio/pb_studio/knowledge/`](studio/pb_studio/knowledge/); детерминированный splitter (`STUDIO_KB_CHUNK_MAX_CHARS`, `STUDIO_KB_CHUNK_OVERLAP_CHARS`); админ-API `GET/POST/PATCH /knowledge/documents`, archive, `POST .../versions/text`, `GET .../versions`, `GET /knowledge/versions/{id}/chunks` под `STUDIO_ADMIN_TOKEN` и флагом `STUDIO_KB_ENABLED`; команды `/kb_help`, `/kb_list`, `/kb_get`, `/kb_add` из active control group (тот же ACL, что `/summary_*`); уникальность версии по `(document_id, content_hash)` — повтор текста не плодит версию. **Без** Memoh, второго бота, polling/webhook Studio, LLM/embeddings/RAG retrieval/Docling, Studio Admin UI; не шлём в client/project/internal/service чаты.
+
+**Тесты:** [`studio/tests/test_knowledge_phase10a.py`](studio/tests/test_knowledge_phase10a.py); регрессия control commands / projects.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -313,7 +321,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
-| 10 | База знаний: Docling, embeddings, pgvector |
+| 10 | База знаний: **10a** — документы/версии/чанки, API `/knowledge`, команды `/kb_*` (без embeddings/LLM); **10+** — Docling, embeddings, pgvector — по постановке |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |

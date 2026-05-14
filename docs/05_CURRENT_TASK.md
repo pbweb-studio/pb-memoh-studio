@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 9b (project digest)
+## После фазы 10a (knowledge base)
 
-**Статус:** `studio_project_digests` (Alembic `012`); `pb_studio/project_digests`; API дайджестов + команды `/project_digest_*` из control group; Celery `generate_daily_project_digests` / `deliver_pending_project_digests`. Memoh не менялся.
+**Статус:** `studio_knowledge_*` (Alembic `013`); `pb_studio/knowledge`; API `/knowledge/*`; команды `/kb_*` из control group при `STUDIO_KB_ENABLED`. Memoh не менялся.
 
-**Следующий шаг:** по постановке — **6+** (LLM/доставка сводок в продукт), **RAG/база знаний** (фазы 10+) или иной эпик.
+**Следующий шаг:** по постановке — **6+** (LLM), **10+** (Docling/embeddings/pgvector), или иной эпик.

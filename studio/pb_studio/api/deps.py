@@ -54,6 +54,14 @@ async def verify_admin_optional(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
 
+async def verify_kb_enabled(settings: Settings = Depends(get_settings)) -> None:
+    if not settings.studio_kb_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STUDIO_KB_ENABLED is false",
+        )
+
+
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 QueueServiceDep = Annotated[QueueService, Depends(get_queue_service)]

@@ -29,6 +29,10 @@ class ControlCommandName:
     PROJECT_DIGEST_YESTERDAY = "project_digest_yesterday"
     PROJECT_DIGEST_PERIOD = "project_digest_period"
     PROJECT_DIGEST_LATEST = "project_digest_latest"
+    KB_HELP = "kb_help"
+    KB_LIST = "kb_list"
+    KB_GET = "kb_get"
+    KB_ADD = "kb_add"
 
 
 # Лимиты UX для Telegram sendMessage (оставляем запас под «обрезано»)
@@ -48,6 +52,7 @@ SUMMARY_HELP_TEXT = """Команды сводок (Studio, только из у
 /summary_latest <studio_chat_uuid> — последняя generated-сводка по чату
 
 Проекты: /project_help
+База знаний: /kb_help
 """
 
 
@@ -64,4 +69,15 @@ PROJECT_HELP_TEXT = """Команды проектов (Studio, только и�
 /project_digest_yesterday <project_slug>
 /project_digest_period <project_slug> <YYYY-MM-DD> <YYYY-MM-DD>
 /project_digest_latest <project_slug>
+
+База знаний: /kb_help
+"""
+
+KB_HELP_TEXT = """Команды базы знаний (Studio, только из управляющей группы; без RAG/LLM):
+/kb_help — этот текст
+/kb_list — список документов KB
+/kb_get <document_uuid> — карточка документа и активная версия
+/kb_add <title> | <text> — новый документ (manual) и первая версия из текста (разбиение на чанки в Studio)
+
+Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.
 """

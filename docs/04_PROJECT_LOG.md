@@ -155,3 +155,9 @@
 - Таблица `studio_project_digests` (Alembic `012_studio_project_digests`); пакет `pb_studio/project_digests`; генерация без LLM из привязанных чатов и `studio_chat_summaries`; API `/projects/{id}/digests*`, `/project-digests/*` под `STUDIO_ADMIN_TOKEN`; команды `/project_digest_today|yesterday|period|latest` + `/project_help`; Celery `generate_daily_project_digests`, `deliver_pending_project_digests`.
 - **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG, Studio Admin UI; исходящие ответы и доставка дайджеста — только active control group (`sendMessage`); не шлём в client/project/internal/service чаты.
 - Тесты: `studio/tests/test_project_digests_phase9b.py`; полный `pytest tests/` (**179** passed локально и в Docker); `docker compose -f docker-compose.local.yml config`.
+
+## 2026-05-14 — Фаза 10a (Studio: knowledge base без embeddings)
+
+- Таблицы `studio_knowledge_documents`, `studio_knowledge_document_versions`, `studio_knowledge_chunks` (Alembic `013_studio_knowledge_base`); пакет `pb_studio/knowledge`; API `/knowledge/*` при `STUDIO_KB_ENABLED` и `STUDIO_ADMIN_TOKEN`; команды `/kb_*` из control group; env `STUDIO_KB_CHUNK_*` и флаг в `docker-compose.local.yml`.
+- **Без** Memoh, LLM/embeddings/RAG retrieval/Docling, Studio Admin UI, второго бота, polling/webhook Studio.
+- Тесты: `studio/tests/test_knowledge_phase10a.py`; полный `pytest tests/` (**192** passed); `docker compose -f docker-compose.local.yml config`.
