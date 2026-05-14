@@ -89,6 +89,7 @@ class OpenaiCompatibleEmbeddingProvider:
         self._base = (settings.studio_kb_embedding_api_base_url or "").strip()
         self._api_key = (settings.studio_kb_embedding_api_key or "").strip()
         self._timeout = max(settings.studio_kb_embedding_timeout_ms, 500) / 1000.0
+        self._dim = int(settings.studio_kb_embedding_dim or KNOWLEDGE_EMBEDDING_VECTOR_DIM)
 
     async def embed_one(self, text: str) -> list[float]:
         vecs = await self.embed_texts([text])
@@ -103,6 +104,9 @@ class OpenaiCompatibleEmbeddingProvider:
             )
         url = _embeddings_post_url(self._base)
         payload: dict[str, Any] = {"model": self.model_label, "input": texts}
+        ml = (self.model_label or "").lower()
+        if "text-embedding-3" in ml and self._dim > 0:
+            payload["dimensions"] = self._dim
         headers = {
             "Authorization": f"Bearer {self._api_key}",
             "Content-Type": "application/json",

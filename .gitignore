@@ -64,6 +64,7 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.prod
+.vps-env-patch.local.json
 mise.local.toml
 
 # IDE
