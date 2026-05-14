@@ -247,10 +247,17 @@
 - Команды: **`/kb_import_last <title>`**, **`/kb_import_last --project <slug> <title>`** (последний document от отправителя **перед** message_id команды), **`/kb_import_file <telegram_file_id> <title>`**; ACL — **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`**; ответы только `sendMessage` в control group; ошибки сети/API не валят батч обработки команд (`process_pending` изолирует сбои).
 - Импорт в KB — тот же **`ingest_new_document_from_upload`** что HTTP **10f** (расширения `STUDIO_KB_ALLOWED_EXTENSIONS`, Docling как в 10f); токен бота и API-ключи не попадают в `last_error` пользовательских команд (redaction).
 
+## Фаза 11b — Assistant rules в KB RAG (выполнено)
+
+- Выборка: **`list_active_rules_for_kb_rag`** — статус **`active`**, объединение **global** + **project** (если в ask передан `project_id`) + **chat** (если передан `chat_id` в API или для `/kb_ask` — `control_group_chat_id` строки `studio_chats` активной control group).
+- Промпт: блок бизнес-инструкций Studio в **user** message **перед** «Фрагменты базы знаний»; system prompt RAG дополнен одной фразой, что инструкции не заменяют факты из фрагментов.
+- Ответ **`POST /knowledge/ask`**: поле **`applied_rule_ids`** (UUID применённых правил); при пустом retrieval (без вызова chat completion) — `[]`.
+- **Не** затрагивается Memoh, сводки, SLA, project digest, Studio Admin UI.
+
 ## Фаза 11a — Assistant rules: хранение и аудит без LLM (выполнено)
 
 - Правила (`studio_assistant_rules`): scope **`global`** (без FK), **`project`** (`project_id` обязателен), **`chat`** (`chat_id` обязателен, `project_id` null); статусы **`active`** / **`disabled`**; источники **`manual`** / **`control_group`**; опционально `created_by_telegram_user_id`, `created_from_message_id`, `metadata_json`.
 - Аудит (`studio_assistant_rule_audit`): действия **`created`**, **`updated`**, **`disabled`**; `payload_json` без секретов; `rule_id` **SET NULL** при удалении правила (в 11a удаления нет — только disable).
-- API только под **`STUDIO_ADMIN_TOKEN`** (как `/projects`, `/knowledge` при заданном токене); **без** вызова Memoh, **без** chat completion и **без** изменения RAG **10e**.
+- API только под **`STUDIO_ADMIN_TOKEN`** (как `/projects`, `/knowledge` при заданном токене); **без** вызова Memoh и **без** chat completion в самой фазе 11a; применение к KB RAG — **фаза 11b**.
 - Команды **`/rule_*`**: только active control group, тот же ACL **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`**, ответы только `sendMessage` в CG.
 

@@ -198,8 +198,14 @@
 - **Без** Memoh, второго бота, polling/webhook Studio, отдельного admin API для импорта; RAG 10e не менялся.
 - Тесты: `studio/tests/test_knowledge_phase10g.py`; полный `pytest tests/` (**249** passed); `docker compose -f docker-compose.local.yml config`.
 
+## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
+
+- `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.
+- **Только** Studio KB RAG (OpenAI-compatible chat completion 10e); **без** Memoh, сводок, SLA, project digest, Studio Admin UI.
+- Тесты: блок в `studio/tests/test_knowledge_phase10e.py` (фаза 11b); полный `pytest tests/` (**261** passed).
+
 ## 2026-05-14 — Фаза 11a (Studio: assistant rules — storage, API, control commands)
 
 - Таблицы `studio_assistant_rules`, `studio_assistant_rule_audit`; миграция `015_studio_assistant_rules`; пакет `pb_studio/assistant_rules/`; API `/assistant-rules` (листинг, создание, `GET/{id}`, `PATCH`, `POST …/disable`, `GET /assistant-rules/audit`) под `STUDIO_ADMIN_TOKEN`; команды `/rule_*` в control group (скан `/rule`); аудит `created` / `updated` / `disabled`.
-- **Без** Memoh, без применения правил к LLM/RAG prompt, без Studio Admin UI.
+- **Без** Memoh, без Studio Admin UI; применение правил к KB RAG — **фаза 11b** (см. запись 11b выше).
 - Тесты: `studio/tests/test_assistant_rules_phase11a.py`; полный `pytest tests/` (**256** passed).

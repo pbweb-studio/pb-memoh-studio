@@ -1064,7 +1064,13 @@ async def _dispatch_kb_control_commands(
                     return
                 project_id = proj.id
             try:
-                result = await ask_knowledge_base(session, settings, question=question, project_id=project_id)
+                result = await ask_knowledge_base(
+                    session,
+                    settings,
+                    question=question,
+                    project_id=project_id,
+                    chat_id=cmd.control_group_chat_id,
+                )
             except ValueError as exc:
                 mid = await reply(f"Ошибка: {_redact_kb_error_message(str(exc), settings, token)}")
                 cmd.status = ControlCommandStatus.PROCESSED
@@ -1088,7 +1094,12 @@ async def _dispatch_kb_control_commands(
                 action="control_commands.kb_ask",
                 command_id=cmd.id,
                 command_name=cmd.command_name,
-                payload={"question_len": len(question), "has_project": bool(project_slug), "sources": len(result.sources)},
+                payload={
+                    "question_len": len(question),
+                    "has_project": bool(project_slug),
+                    "sources": len(result.sources),
+                    "applied_rule_ids": len(result.applied_rule_ids),
+                },
             )
             return
 

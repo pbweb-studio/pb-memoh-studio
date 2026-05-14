@@ -23,7 +23,7 @@ class AssistantRuleAuditAction:
     DISABLED = "disabled"
 
 
-RULE_HELP_TEXT = """Правила поведения ассистента (Studio DB, фаза 11a — без применения к LLM):
+RULE_HELP_TEXT = """Правила поведения ассистента (Studio DB; фаза 11a — CRUD; фаза 11b — применение к KB RAG при /kb_ask и POST /knowledge/ask):
 
 /rule_help — этот текст
 /rule_list — активные и недавно отключённые правила (кратко)

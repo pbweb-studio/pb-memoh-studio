@@ -347,9 +347,17 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ## Фаза 11a — Assistant rules: storage + API + control commands (без LLM)
 
-**Статус:** таблицы `studio_assistant_rules`, `studio_assistant_rule_audit` (Alembic `015_studio_assistant_rules`); пакет [`studio/pb_studio/assistant_rules/`](studio/pb_studio/assistant_rules/); API `GET/POST/PATCH /assistant-rules`, `POST …/disable`, `GET /assistant-rules/audit` под **`STUDIO_ADMIN_TOKEN`**; scope `global` / `project` / `chat` с FK на `studio_projects` / `studio_chats`; команды `/rule_add`, `/rule_add_project`, `/rule_add_chat`, `/rule_list`, `/rule_disable`, `/rule_help` в active control group + ACL. **Без** Memoh, без prompt injection в RAG/LLM, без вызова chat completion.
+**Статус:** таблицы `studio_assistant_rules`, `studio_assistant_rule_audit` (Alembic `015_studio_assistant_rules`); пакет [`studio/pb_studio/assistant_rules/`](studio/pb_studio/assistant_rules/); API `GET/POST/PATCH /assistant-rules`, `POST …/disable`, `GET /assistant-rules/audit` под **`STUDIO_ADMIN_TOKEN`**; scope `global` / `project` / `chat` с FK на `studio_projects` / `studio_chats`; команды `/rule_add`, `/rule_add_project`, `/rule_add_chat`, `/rule_list`, `/rule_disable`, `/rule_help` в active control group + ACL. **Без** Memoh; применение к KB RAG — **фаза 11b**.
 
 **Тесты:** [`studio/tests/test_assistant_rules_phase11a.py`](studio/tests/test_assistant_rules_phase11a.py).
+
+---
+
+## Фаза 11b — Assistant rules в KB RAG (без Memoh)
+
+**Статус:** `list_active_rules_for_kb_rag` в [`assistant_rules/service.py`](studio/pb_studio/assistant_rules/service.py); [`knowledge/rag.py`](studio/pb_studio/knowledge/rag.py) — инструкции Studio в user message перед контекстом; ответ `POST /knowledge/ask` с **`applied_rule_ids`**; в теле ask опциональный **`chat_id`**; команда **`/kb_ask`** передаёт **`control_group_chat_id`** для chat-scope правил. **Без** Memoh, сводок, SLA, project digest, Studio Admin UI.
+
+**Тесты:** блок в [`studio/tests/test_knowledge_phase10e.py`](studio/tests/test_knowledge_phase10e.py) (секция phase 11b).
 
 ---
 
@@ -378,7 +386,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
 | 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10f** — HTTP upload + Docling (pdf/docx); **10g** — импорт document из Telegram (control group); **10+** — расширенный RAG/Docling pipeline |
-| 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*` из control group (**без** применения к LLM/Memoh) |
+| 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории Telegram Desktop JSON |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |
 | 14 | Prod compose, Caddy, runbook, backup (деплой только с подтверждением) |

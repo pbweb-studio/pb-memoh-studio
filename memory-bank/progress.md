@@ -31,6 +31,7 @@
 | 10f KB HTTP upload + optional Docling (pdf/docx) | Done |
 | 10g KB Telegram document import (control group) | Done |
 | 11a Assistant rules storage + API + /rule_* (no LLM apply) | Done |
+| 11b Assistant rules in KB RAG prompt + applied_rule_ids | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 11a — `studio_assistant_rules`, `studio_assistant_rule_audit`, `/assistant-rules` API, команды `/rule_*`; pytest **256** passed.
+**Последнее:** фаза 11b — правила в `rag.py` + `applied_rule_ids` + `chat_id` в ask; pytest **261** passed.

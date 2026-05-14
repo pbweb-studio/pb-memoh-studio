@@ -13,6 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+import pb_studio.assistant_rules.models  # noqa: F401
 import pb_studio.control_commands.models  # noqa: F401
 import pb_studio.control_group.models  # noqa: F401
 import pb_studio.event_mirror.models  # noqa: F401
@@ -22,10 +23,13 @@ import pb_studio.projects.models  # noqa: F401
 import pb_studio.summaries.models  # noqa: F401
 from pb_studio.api.deps import get_db
 from pb_studio.api.main import app
+from pb_studio.assistant_rules.constants import AssistantRuleScope
+from pb_studio.assistant_rules.service import create_rule, disable_rule
 from pb_studio.control_commands.constants import ControlCommandName, ControlCommandStatus
 from pb_studio.control_commands.models import StudioControlCommand
 from pb_studio.control_commands.service import run_control_commands_cycle
 from pb_studio.core.config import get_settings
+from pb_studio.event_mirror.models import StudioChat
 from pb_studio.knowledge.constants import KNOWLEDGE_RAG_NOT_FOUND_ANSWER
 from pb_studio.response_queue.models import Base
 from pb_studio.response_queue.service import QueueService
@@ -118,6 +122,7 @@ async def test_knowledge_ask_returns_answer_and_sources(k10e_client, monkeypatch
     body = r.json()
     assert body["answer"] == "Ответ из тестового chat completion."
     assert len(body["sources"]) >= 1
+    assert body.get("applied_rule_ids") == []
 
 
 @pytest.mark.asyncio
@@ -149,6 +154,7 @@ async def test_knowledge_ask_filters_by_empty_project(k10e_client, monkeypatch):
     body = r.json()
     assert body["sources"] == []
     assert body["answer"] == KNOWLEDGE_RAG_NOT_FOUND_ANSWER
+    assert body.get("applied_rule_ids") == []
 
 
 @pytest.mark.asyncio
@@ -338,3 +344,192 @@ async def test_kb_ask_no_real_httpx_when_chat_mocked(k10e_client, monkeypatch):
     await run_control_commands_cycle(
         session, get_settings(), send_message=AsyncMock(return_value=(True, 200, "", 1))
     )
+
+
+# --- Phase 11b: assistant rules in KB RAG prompt (no Memoh) ---
+
+
+@pytest.mark.asyncio
+async def test_rag_global_rule_in_user_prompt_before_context(k10e_client, monkeypatch):
+    _env10e(monkeypatch)
+    client, session = k10e_client
+    h = {"Authorization": "Bearer adm10e"}
+    await create_rule(session, scope=AssistantRuleScope.GLOBAL, rule_text="RULE_GLOBAL_11B_UNIQUE")
+    await session.commit()
+
+    captured: dict[str, str] = {}
+
+    async def fake_chat(settings, *, system_prompt: str, user_prompt: str) -> str:
+        captured["user"] = user_prompt
+        assert "phase10e_unique_snippet" in user_prompt
+        assert len(system_prompt) > 20
+        return "ok"
+
+    monkeypatch.setattr("pb_studio.knowledge.rag._openai_compatible_chat", fake_chat)
+
+    d = await client.post("/knowledge/documents", headers=h, json={"title": "RAG11b", "status": "draft"})
+    doc_id = d.json()["id"]
+    await client.post(
+        f"/knowledge/documents/{doc_id}/versions/text",
+        headers=h,
+        json={"text": "phase10e_unique_snippet для RAG теста", "defer_parse": False},
+    )
+    await client.post("/knowledge/embed-pending", headers=h)
+    r = await client.post("/knowledge/ask", headers=h, json={"question": "что такое phase10e_unique_snippet?"})
+    assert r.status_code == 200
+    up = captured["user"]
+    assert "RULE_GLOBAL_11B_UNIQUE" in up
+    assert up.index("Инструкции Studio") < up.index("Фрагменты базы знаний")
+
+
+@pytest.mark.asyncio
+async def test_rag_disabled_rule_not_in_prompt(k10e_client, monkeypatch):
+    _env10e(monkeypatch)
+    client, session = k10e_client
+    h = {"Authorization": "Bearer adm10e"}
+    row = await create_rule(session, scope=AssistantRuleScope.GLOBAL, rule_text="RULE_DISABLED_11B_SHOULD_NOT_APPEAR")
+    await disable_rule(session, row.id, reason="test")
+    await session.commit()
+
+    captured: dict[str, str] = {}
+
+    async def fake_chat(settings, *, system_prompt: str, user_prompt: str) -> str:
+        captured["user"] = user_prompt
+        return "ok"
+
+    monkeypatch.setattr("pb_studio.knowledge.rag._openai_compatible_chat", fake_chat)
+
+    d = await client.post("/knowledge/documents", headers=h, json={"title": "RAG11b2", "status": "draft"})
+    doc_id = d.json()["id"]
+    await client.post(
+        f"/knowledge/documents/{doc_id}/versions/text",
+        headers=h,
+        json={"text": "phase10e_unique_snippet для RAG теста", "defer_parse": False},
+    )
+    await client.post("/knowledge/embed-pending", headers=h)
+    r = await client.post("/knowledge/ask", headers=h, json={"question": "что такое phase10e_unique_snippet?"})
+    assert r.status_code == 200
+    assert "RULE_DISABLED_11B_SHOULD_NOT_APPEAR" not in captured["user"]
+
+
+@pytest.mark.asyncio
+async def test_rag_project_rule_only_when_project_filter_matches(k10e_client, monkeypatch):
+    _env10e(monkeypatch)
+    client, session = k10e_client
+    h = {"Authorization": "Bearer adm10e"}
+    p = await client.post("/projects", headers=h, json={"slug": "proj11b_rag", "name": "P11b"})
+    pid = UUID(p.json()["id"])
+    await create_rule(
+        session,
+        scope=AssistantRuleScope.PROJECT,
+        rule_text="ONLY_FOR_PROJ11B_RAG",
+        project_id=pid,
+    )
+    await session.commit()
+
+    captured: list[str] = []
+
+    async def fake_chat(settings, *, system_prompt: str, user_prompt: str) -> str:
+        captured.append(user_prompt)
+        return "ok"
+
+    monkeypatch.setattr("pb_studio.knowledge.rag._openai_compatible_chat", fake_chat)
+
+    d = await client.post(
+        "/knowledge/documents",
+        headers=h,
+        json={"title": "RAG11b3", "status": "draft", "project_id": str(pid)},
+    )
+    doc_id = d.json()["id"]
+    await client.post(
+        f"/knowledge/documents/{doc_id}/versions/text",
+        headers=h,
+        json={"text": "phase10e_unique_snippet для RAG теста", "defer_parse": False},
+    )
+    await client.post("/knowledge/embed-pending", headers=h)
+    r1 = await client.post("/knowledge/ask", headers=h, json={"question": "что такое phase10e_unique_snippet?"})
+    assert r1.status_code == 200
+    assert "ONLY_FOR_PROJ11B_RAG" not in captured[-1]
+
+    r2 = await client.post(
+        "/knowledge/ask",
+        headers=h,
+        json={"question": "что такое phase10e_unique_snippet?", "project_id": str(pid)},
+    )
+    assert r2.status_code == 200
+    assert "ONLY_FOR_PROJ11B_RAG" in captured[-1]
+
+
+@pytest.mark.asyncio
+async def test_knowledge_ask_returns_applied_rule_ids(k10e_client, monkeypatch):
+    _env10e(monkeypatch)
+    client, session = k10e_client
+    h = {"Authorization": "Bearer adm10e"}
+    row = await create_rule(session, scope=AssistantRuleScope.GLOBAL, rule_text="meta_rule_11b")
+    await session.commit()
+
+    async def fake_chat(settings, *, system_prompt: str, user_prompt: str) -> str:
+        return "with ids"
+
+    monkeypatch.setattr("pb_studio.knowledge.rag._openai_compatible_chat", fake_chat)
+
+    d = await client.post("/knowledge/documents", headers=h, json={"title": "RAG11b4", "status": "draft"})
+    doc_id = d.json()["id"]
+    await client.post(
+        f"/knowledge/documents/{doc_id}/versions/text",
+        headers=h,
+        json={"text": "phase10e_unique_snippet для RAG теста", "defer_parse": False},
+    )
+    await client.post("/knowledge/embed-pending", headers=h)
+    r = await client.post("/knowledge/ask", headers=h, json={"question": "что такое phase10e_unique_snippet?"})
+    assert r.status_code == 200
+    ids = r.json()["applied_rule_ids"]
+    assert len(ids) == 1
+    assert ids[0] == str(row.id)
+
+
+@pytest.mark.asyncio
+async def test_kb_ask_uses_control_group_chat_id_for_chat_scoped_rules(k10e_client, monkeypatch):
+    _env10e(monkeypatch)
+    monkeypatch.setenv("STUDIO_CONTROL_COMMANDS_ENABLED", "true")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "TOK11b")
+    get_settings.cache_clear()
+
+    client, session = k10e_client
+    h = {"Authorization": "Bearer adm10e"}
+    cg_tid = -305001
+    await client.post("/events/telegram", json=_msg(305001, cg_tid, text="x"))
+    await client.post("/control-group/set", headers=h, json={"telegram_chat_id": cg_tid})
+    st_chat = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == cg_tid))
+    assert st_chat is not None
+    await create_rule(
+        session,
+        scope=AssistantRuleScope.CHAT,
+        rule_text="CHAT_RULE_FOR_CG_11B",
+        chat_id=st_chat.id,
+    )
+    await session.commit()
+
+    captured: dict[str, str] = {}
+
+    async def fake_chat(settings, *, system_prompt: str, user_prompt: str) -> str:
+        captured["user"] = user_prompt
+        return "stub"
+
+    monkeypatch.setattr("pb_studio.knowledge.rag._openai_compatible_chat", fake_chat)
+
+    d = await client.post("/knowledge/documents", headers=h, json={"title": "H11b", "status": "draft"})
+    await client.post(
+        f"/knowledge/documents/{d.json()['id']}/versions/text",
+        headers=h,
+        json={"text": "kb_ask_chat_rule_token_11b", "defer_parse": False},
+    )
+    await client.post("/knowledge/embed-pending", headers=h)
+    await client.post(
+        "/events/telegram",
+        json=_msg(305002, cg_tid, text="/kb_ask kb_ask_chat_rule_token_11b", message_id=2),
+    )
+    await run_control_commands_cycle(
+        session, get_settings(), send_message=AsyncMock(return_value=(True, 200, "", 1))
+    )
+    assert "CHAT_RULE_FOR_CG_11B" in captured.get("user", "")

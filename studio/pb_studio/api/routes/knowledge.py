@@ -271,11 +271,13 @@ async def post_knowledge_ask(session: DbSession, body: KnowledgeAskBody) -> Know
             settings,
             question=body.question,
             project_id=body.project_id,
+            chat_id=body.chat_id,
         )
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return KnowledgeAskOut(
         answer=result.answer,
+        applied_rule_ids=list(result.applied_rule_ids),
         sources=[
             KnowledgeSearchHitOut(
                 chunk_id=h.chunk_id,

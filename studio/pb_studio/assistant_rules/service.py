@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from pb_studio.assistant_rules.constants import (
@@ -199,6 +199,51 @@ async def disable_rule(
         payload={"disable_reason_len": len(row.disable_reason or "")},
     )
     return row
+
+
+_SCOPE_ORDER = {
+    AssistantRuleScope.GLOBAL: 0,
+    AssistantRuleScope.PROJECT: 1,
+    AssistantRuleScope.CHAT: 2,
+}
+
+
+async def list_active_rules_for_kb_rag(
+    session: AsyncSession,
+    *,
+    project_id: UUID | None,
+    chat_id: UUID | None,
+) -> list[StudioAssistantRule]:
+    """
+    Активные правила для KB RAG: global; + project при заданном project_id;
+    + chat при заданном chat_id. Без Memoh — только выборка для Studio RAG.
+    """
+    clauses = [
+        and_(
+            StudioAssistantRule.status == AssistantRuleStatus.ACTIVE,
+            StudioAssistantRule.scope == AssistantRuleScope.GLOBAL,
+        )
+    ]
+    if project_id is not None:
+        clauses.append(
+            and_(
+                StudioAssistantRule.status == AssistantRuleStatus.ACTIVE,
+                StudioAssistantRule.scope == AssistantRuleScope.PROJECT,
+                StudioAssistantRule.project_id == project_id,
+            )
+        )
+    if chat_id is not None:
+        clauses.append(
+            and_(
+                StudioAssistantRule.status == AssistantRuleStatus.ACTIVE,
+                StudioAssistantRule.scope == AssistantRuleScope.CHAT,
+                StudioAssistantRule.chat_id == chat_id,
+            )
+        )
+    q = select(StudioAssistantRule).where(or_(*clauses))
+    rows = list((await session.scalars(q)).all())
+    rows.sort(key=lambda r: (_SCOPE_ORDER.get(r.scope, 99), r.created_at))
+    return rows
 
 
 async def list_audit(

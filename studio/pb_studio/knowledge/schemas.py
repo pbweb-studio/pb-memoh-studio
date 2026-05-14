@@ -104,11 +104,13 @@ class KnowledgeSearchHitOut(BaseModel):
 class KnowledgeAskBody(BaseModel):
     question: str = Field(min_length=1, max_length=8000)
     project_id: UUID | None = None
+    chat_id: UUID | None = None
 
 
 class KnowledgeAskOut(BaseModel):
     answer: str
     sources: list[KnowledgeSearchHitOut]
+    applied_rule_ids: list[UUID] = Field(default_factory=list)
 
 
 class KnowledgeChunkOut(BaseModel):

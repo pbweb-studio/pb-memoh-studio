@@ -1,1 +1,1 @@
-"""Studio assistant rules (phase 11a): storage + API + control commands; no LLM apply."""
+"""Studio assistant rules: storage + API + control commands; KB RAG apply (phase 11b) without Memoh."""

@@ -1,15 +1,16 @@
-"""RAG question answering over KB chunks (phase 10e). Chat completion only — no Memoh."""
+"""RAG question answering over KB chunks (phase 10e + 11b rules). Chat completion only — no Memoh."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from uuid import UUID
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pb_studio.assistant_rules.service import list_active_rules_for_kb_rag
 from pb_studio.core.config import Settings
 from pb_studio.knowledge.constants import (
     KNOWLEDGE_RAG_NOT_FOUND_ANSWER,
@@ -42,6 +43,15 @@ def _build_context_from_hits(hits: list[KnowledgeSearchHit], max_chars: int) -> 
         parts.append(block)
         used += len(block) + sep
     return "\n\n".join(parts)
+
+
+def _format_studio_rules_block(rule_texts: list[tuple[UUID, str]]) -> str:
+    if not rule_texts:
+        return ""
+    lines = ["Инструкции Studio (бизнес-правила, применяются к ответу по базе знаний):"]
+    for idx, (_rid, text) in enumerate(rule_texts, start=1):
+        lines.append(f"{idx}. {text.strip()}")
+    return "\n".join(lines) + "\n\n"
 
 
 async def _openai_compatible_chat(
@@ -111,6 +121,7 @@ async def _openai_compatible_chat(
 class KnowledgeRagResult:
     answer: str
     sources: list[KnowledgeSearchHit]
+    applied_rule_ids: tuple[UUID, ...] = field(default_factory=tuple)
 
 
 async def ask_knowledge_base(
@@ -119,6 +130,7 @@ async def ask_knowledge_base(
     *,
     question: str,
     project_id: UUID | None = None,
+    chat_id: UUID | None = None,
 ) -> KnowledgeRagResult:
     """
     Retrieval по KB + один вызов chat completion.
@@ -136,15 +148,21 @@ async def ask_knowledge_base(
         top_k=settings.studio_kb_rag_top_k,
     )
     if not hits:
-        return KnowledgeRagResult(answer=KNOWLEDGE_RAG_NOT_FOUND_ANSWER, sources=[])
+        return KnowledgeRagResult(answer=KNOWLEDGE_RAG_NOT_FOUND_ANSWER, sources=[], applied_rule_ids=())
+
+    active_rules = await list_active_rules_for_kb_rag(session, project_id=project_id, chat_id=chat_id)
+    rule_pairs: list[tuple[UUID, str]] = [(r.id, r.rule_text) for r in active_rules]
+    applied_ids = tuple(r.id for r in active_rules)
 
     context = _build_context_from_hits(hits, settings.studio_kb_rag_max_context_chars)
     system_prompt = (
         "Ты отвечаешь только на основе фрагментов базы знаний в сообщении пользователя. "
         "Если в фрагментах нет достаточной информации для ответа на вопрос, ответь ровно одной фразой: "
-        f"«{KNOWLEDGE_RAG_NOT_FOUND_ANSWER}». Не выдумывай факты вне этих фрагментов. Отвечай кратко по-русски."
+        f"«{KNOWLEDGE_RAG_NOT_FOUND_ANSWER}». Не выдумывай факты вне этих фрагментов. Отвечай кратко по-русски. "
+        "Дополнительные инструкции Studio (если есть) относятся к стилю и ограничениям ответа, но не заменяют факты из фрагментов."
     )
-    user_prompt = f"Фрагменты базы знаний:\n\n{context}\n\nВопрос: {q}"
+    rules_block = _format_studio_rules_block(rule_pairs)
+    user_prompt = f"{rules_block}Фрагменты базы знаний:\n\n{context}\n\nВопрос: {q}"
 
     secret = (settings.studio_kb_chat_api_key or "").strip() or None
     try:
@@ -152,4 +170,4 @@ async def ask_knowledge_base(
     except Exception as exc:  # noqa: BLE001
         raise ValueError(redact_embedding_error(str(exc), secret)) from exc
 
-    return KnowledgeRagResult(answer=answer, sources=hits)
+    return KnowledgeRagResult(answer=answer, sources=hits, applied_rule_ids=applied_ids)
