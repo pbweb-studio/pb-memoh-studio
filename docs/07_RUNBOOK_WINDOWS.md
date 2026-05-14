@@ -19,6 +19,18 @@
 docker compose -f docker-compose.local.yml up -d
 ```
 
+Переменные `POSTGRES_*` и `REDIS_URL` должны совпадать с `.env.local` / `.env.example`.
+
+## Тесты Python-пакета Studio
+
+Локально без установленного Python 3.12 — прогон тестов Studio в Docker:
+
+```powershell
+docker run --rm -v "${PWD}/studio:/app" -w /app python:3.12-slim bash -c "pip install -q -e '.[dev]' && pytest tests/ -v"
+```
+
+(Из корня репозитория `pb-memoh-studio`; на Windows путь к `studio` подставьте свой.)
+
 Локальный Redis студии по умолчанию слушает **6380** на хосте (см. `STUDIO_REDIS_PORT` в `docker-compose.local.yml`), чтобы не конфликтовать с другим Redis. Пример `REDIS_URL`: `redis://127.0.0.1:6380/0`.
 
 ## Memoh

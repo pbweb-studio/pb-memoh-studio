@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pb-studio"
+version = "0.1.0"
+description = "Studio layer for pb-memoh-studio (queue, API, workers)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "SQLAlchemy>=2.0.36,<3",
+  "pydantic>=2.9,<3",
+]
+
+[project.optional-dependencies]
+api = ["fastapi>=0.115,<1", "uvicorn[standard]>=0.32,<1"]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.24,<1",
+  "aiosqlite>=0.20,<1",
+  "httpx>=0.27,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pb_studio"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

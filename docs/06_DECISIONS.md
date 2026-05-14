@@ -26,7 +26,13 @@
 
 ## Развилки (TBD)
 
-- Точка встраивания Event Mirror и Response Queue относительно кода Memoh — после Фазы 1 (разведка).
+- Точка **первого** контакта Studio→Memoh для turn (HTTP vs patch) — после готовности Event Mirror + воркера; варианты ниже.
+
+## Фаза 2a — Response Queue в Studio (безопасная часть, выполнено)
+
+- Реализация: [`studio/pb_studio/response_queue/`](studio/pb_studio/response_queue/), DDL-скелет [`studio/migrations/001_response_queue.sql`](studio/migrations/001_response_queue.sql), тесты [`studio/tests/test_response_queue.py`](studio/tests/test_response_queue.py).
+- **Не делалось намеренно:** правки Memoh, Telegram adapter, реальный Telegram runtime, Celery wiring, FastAPI-роуты продукта (часть Фазы 3).
+- **Рекомендация по интеграции (без изменения текста вариантов A/B/C):** по-прежнему склоняемся к **варианту C** (очередь и статусы в Studio + минимальный контракт в Memoh), пока не доказано, что gateway (A) дешевле по сопровождению. Окончательный выбор — после прототипа Event Mirror + одного E2E без продакшена.
 
 ## Фаза 1 — Response Queue / интеграция (зафиксированные варианты)
 
@@ -55,7 +61,7 @@
 ### Рекомендация для Фазы 2 (черновик)
 
 1. Параллельно поднять **Event Mirror** (Фаза 4) — не блокируется от очереди.
-2. Прототип очереди в **Studio** (Celery, per-chat) + документировать необходимый **контракт** к Memoh.
+2. Очередь **2a** уже в коде Studio (`QueueService`); следующий шаг — **Celery/HTTP** (Фаза 3) и контракт `TurnProcessor` → Memoh.
 3. Перед первым PR в Memoh — выбрать **B** vs **C** vs **A** по трудозатратам и допустимости форка; зафиксировать в новой записи в этом файле.
 
 ### Про «глазик» 👀

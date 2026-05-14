@@ -14,3 +14,9 @@
 - Задокументированы: Telegram adapter (`internal/channel/adapters/telegram/telegram.go`), inbound через `internal/channel/inbound.go` (очередь + воркеры) → `internal/channel/inbound/channel.go` (`HandleInbound`, `RouteDispatcher`, `sendModeConfirmation` / 👀), MCP (`internal/mcp`, `internal/workspace`, `internal/agent/tools`).
 - Варианты Response Queue: [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md). Детали трассировки: [`docs/03_IMPLEMENTATION_PLAN.md`](docs/03_IMPLEMENTATION_PLAN.md).
 - Коммит: `4a42646617a7f632b9fc8d5c84e57dd45026052d`.
+
+## 2026-05-14 — Фаза 2a (Response Queue в Studio)
+
+- Статус: завершена (безопасная часть); Memoh / Telegram не менялись.
+- Добавлены `studio/pb_studio/response_queue` (SQLAlchemy модели, `QueueService`, Pydantic-контракт, pytest), `studio/migrations/001_response_queue.sql`, обновлены `docs/*`, memory-bank.
+- Коммит: `PHASE2A_COMMIT_HASH`.

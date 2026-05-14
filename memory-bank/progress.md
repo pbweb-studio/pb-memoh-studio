@@ -4,7 +4,8 @@
 |------|--------|
 | 0 Bootstrap | Done |
 | 1 Recon Memoh | Done |
-| 2 Response Queue | Next |
-| 3–14 | Pending |
+| 2a Response Queue (Studio DB, без Memoh) | Done |
+| 2b/3 Studio API + Celery + интеграция turn | Next |
+| 4+ | Pending |
 
-**Последнее:** задокументированы Telegram adapter, inbound pipeline, RouteDispatcher/inject/queue, MCP-слой, причина реакции 👀; добавлены варианты A/B/C для очереди в `docs/06_DECISIONS.md`.
+**Последнее:** реализованы модели `studio_response_turns` / `studio_inbound_messages`, `QueueService` (debounce, per-chat ordering, dedupe, dispatch с SKIP LOCKED), контракт `TurnProcessor`, 10 тестов.

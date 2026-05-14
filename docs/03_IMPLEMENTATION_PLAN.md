@@ -59,18 +59,29 @@ sequenceDiagram
 
 ---
 
-## Фаза 2 — Response Queue (план после разведки)
+## Фаза 2 — Response Queue (Studio, без Memoh)
 
-**Цель продукта (Studio):** очередь per-chat с debounce 2–4s, склейка turn, статусы `answered` / `ignored_by_policy` / `failed_with_error` / `cancelled_by_newer_request`, наблюдаемость в Studio DB — **вне** замены логики Memoh на «ещё один диспетчер».
+### Статус: безопасная часть 2a (выполнено)
 
-**Минимальная гипотеза интеграции:**
+Реализация **только** в [`studio/pb_studio/response_queue/`](studio/pb_studio/response_queue/): модели SQLAlchemy, сервис `QueueService`, Pydantic-контракт `InboundEnqueue` / `TurnProcessor`, SQL-скелет [`studio/migrations/001_response_queue.sql`](studio/migrations/001_response_queue.sql). **Без** правок Memoh, **без** Telegram runtime, **без** Event Mirror.
 
-1. **Event Mirror (Фаза 4)** — сохранять все raw updates и тексты в Postgres Studio (истина для очереди и SLA).
-2. **Очередь Celery (Studio)** — один воркер (или Redis stream consumer) на `chat_id`, debounce, merge, затем **один** сценарий доставки в Memoh:
-   - либо вызов **существующего** HTTP, если появится/будет использован endpoint уровня «доставить user message» (сейчас ближайший аналог — локальный канал [`internal/handlers/local_channel.go`](internal/handlers/local_channel.go) `POST .../local/messages` с auth channel identity — **не** прямой заменитель Telegram);
-   - либо **ограниченный patch** в `internal/channel` (сериализация очереди по `route_id` / убрать гонку между worker pool и dispatcher) — см. варианты в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md).
+| Компонент | Назначение |
+|-----------|------------|
+| `statuses.TurnStatus` | `pending`, `debounced`, `processing`, `answered`, `ignored_by_policy`, `failed_with_error`, `cancelled_by_newer_request` |
+| `models.ResponseTurn` | Один turn (склейка текста, глобальный `sequence_number` для fair dispatch между чатами, per-chat FIFO через блокировки и проверку «ниже по seq») |
+| `models.InboundMessage` | Строка входа + **`dedupe_key`** UNIQUE |
+| `service.QueueService` | `enqueue`, `flush_due_turns`, `dispatch_next` (FOR UPDATE SKIP LOCKED), `cancel_pending_turn`; debounce **2–4 с** (по умолчанию 2.5 с) |
+| `schemas` | Контракт входа и `TurnProcessor` для воркера (позже вызов Memoh) |
 
-Тесты Memoh для диспетчера: [`internal/channel/inbound/dispatcher_test.go`](internal/channel/inbound/dispatcher_test.go).
+Тесты: `studio/tests/test_response_queue.py` (10 сценариев). Локально без Python: `docker run --rm -v .../studio:/app -w /app python:3.12-slim bash -c "pip install -e '.[dev]' && pytest tests/"`.
+
+### Не сделано в 2a (следующие подфазы)
+
+- Celery beat / Redis consumer, HTTP FastAPI-оболочка Studio (часть Фазы 3 может объединить).
+- Подключение к Memoh (варианты A/B/C — только после явного решения в `docs/06_DECISIONS.md`).
+- Event Mirror (Фаза 4).
+
+**Интеграция с Memoh (после 2a):** Event Mirror как источник строк для `enqueue`; Celery/воркер вызывает `TurnProcessor` → Memoh по варианту A/B/C из [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md). Тесты Memoh для своего dispatcher: [`internal/channel/inbound/dispatcher_test.go`](internal/channel/inbound/dispatcher_test.go).
 
 ---
 
@@ -80,7 +91,7 @@ sequenceDiagram
 |------|------------|
 | 0 | Bootstrap: Memoh + каркас `studio/`, docs, memory-bank, rules, compose studio-infra |
 | 1 | Техническая разведка Memoh (Telegram, MCP, «глазик») — этот документ (секция выше) |
-| 2 | Response Queue + debounce + статусы + тесты (на базе вариантов в `06_DECISIONS`) |
+| 2 | Response Queue Studio: модели + `QueueService` + тесты (2a); интеграция Memoh / Celery / HTTP — дальше |
 | 3 | Studio skeleton: FastAPI, Postgres, Redis, Celery, Alembic, `/health`, compose |
 | 4 | Event Mirror: raw updates, chats/messages, lifecycle |
 | 5 | Управляющая группа, роли, уведомления только туда |
