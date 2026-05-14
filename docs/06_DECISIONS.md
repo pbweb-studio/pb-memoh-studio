@@ -94,6 +94,14 @@
 - **API:** `GET /control-commands` — опциональные query `status`, `command_name`; `POST /control-commands/process-pending` без изменения контракта (в счётчиках process может быть `access_denied`).
 - **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG/SLA/проекты/Studio Admin UI, проектные команды.
 
+## Фаза 8a — SLA-инфраструктура по чатам (Studio, Event Mirror, без LLM)
+
+- **Источник:** только `studio_messages` и роли чатов в Studio DB; учитываются **только** `client_chat` и `project_chat`.
+- **Логика:** последнее пользовательское входящее (`from.is_bot` false) без последующего сообщения от бота в том же чате; просрочка `first_response_minutes` (активная `studio_sla_policies` по `chat_role` или `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`) → инцидент `open`, `severity` breached; partial unique на `(chat_id, trigger_message_id)` при `status=open`; ответ бота после триггера → `resolved`; смена «хвоста» без ответа → superseded / `resolved`.
+- **Уведомления:** только активная control group (`sendMessage`); без CG — только БД; лимит `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`, опционально `followup_minutes` в policy; ошибки Telegram не прерывают детектор; `last_error` через `redact_secrets`.
+- **Флаги / API:** `STUDIO_SLA_ENABLED`, `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`, `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`; Celery `detect_sla_incidents`; админ `GET /sla/incidents`, `POST /sla/detect`, ack/resolve, `GET/POST /sla/policies` при `STUDIO_ADMIN_TOKEN`.
+- **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG, проектная привязка, Studio Admin UI, отправка уведомлений в client/project/internal/service чаты.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

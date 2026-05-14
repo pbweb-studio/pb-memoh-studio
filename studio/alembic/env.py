@@ -12,6 +12,7 @@ import pb_studio.control_group.models  # noqa: F401 — регистрация �
 import pb_studio.event_mirror.models  # noqa: F401 — регистрация моделей для autogenerate
 import pb_studio.summaries.models  # noqa: F401 — phase 6a summaries
 import pb_studio.control_commands.models  # noqa: F401 — phase 7a control commands
+import pb_studio.sla.models  # noqa: F401 — phase 8a SLA
 
 config = context.config
 

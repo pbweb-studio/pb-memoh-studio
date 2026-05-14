@@ -29,6 +29,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фаз 7a–7b** добавлены: `STUDIO_CONTROL_COMMANDS_ENABLED`, `STUDIO_CONTROL_COMMANDS_MAX_BATCH` (скан команд из зеркала в control group; по умолчанию выключено); `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` — CSV/пробелы Telegram user id; **пусто** = все участники control group могут вызывать команды; иначе только перечисленные id. Эндпоинты `GET /control-commands` (фильтры `status`, `command_name`) и `POST /control-commands/process-pending` — под тем же `STUDIO_ADMIN_TOKEN`, если он задан.
 
+Для **фазы 8a (SLA)** добавлены: `STUDIO_SLA_ENABLED` (по умолчанию `false`), `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`, `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`; детектор и Celery-задача `detect_sla_incidents`; админ-эндпоинты `GET /sla/incidents`, `POST /sla/detect`, `POST /sla/incidents/{id}/ack`, `POST /sla/incidents/{id}/resolve`, `GET /sla/policies`, `POST /sla/policies` — под `STUDIO_ADMIN_TOKEN`, если задан. Уведомления SLA — только в активную control group (тот же `TELEGRAM_BOT_TOKEN`).
+
 Проверка API:
 
 ```powershell

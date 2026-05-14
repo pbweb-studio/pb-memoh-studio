@@ -121,3 +121,10 @@
 - **Без** Memoh, LLM/RAG/SLA/проектов/Studio Admin UI, второго бота, polling/webhook Studio.
 - Тесты: `studio/tests/test_control_commands_phase7a.py`; `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` на ветке после коммита 7b (см. отчёт / CI).
+
+## 2026-05-14 — Фаза 8a (Studio: SLA-инфра по чатам без LLM)
+
+- Таблицы `studio_sla_policies`, `studio_sla_incidents` (Alembic `008_studio_sla`); `pb_studio/sla/` (detector, service, schemas); детектор по `studio_messages` для `client_chat` / `project_chat`; уведомления только в активную control group; Celery `detect_sla_incidents`; админ API `GET/POST /sla/*`; env `STUDIO_SLA_*` в `.env.example` и `docker-compose.local.yml` (studio-api, studio-worker).
+- **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/проектов/Studio Admin UI; не отправка в client/project/internal/service чаты.
+- Тесты: `studio/tests/test_sla_phase8a.py`; полный `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` после коммита 8a (см. отчёт / CI).

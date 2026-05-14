@@ -8,6 +8,7 @@ from pb_studio.control_commands.service import run_control_commands_standalone
 from pb_studio.control_group.system_notification_delivery import run_deliver_pending_standalone
 from pb_studio.summaries.generator import run_generate_pending_standalone
 from pb_studio.summaries.planner import run_plan_daily_standalone
+from pb_studio.sla.detector import run_sla_detection_standalone
 from pb_studio.summaries.summary_delivery import run_deliver_summaries_standalone
 
 
@@ -45,3 +46,9 @@ def deliver_pending_chat_summaries() -> dict[str, int]:
 def process_control_group_summary_commands() -> dict[str, Any]:
     """Phase 7a: Event Mirror → команды /summary_* в control group; идемпотентно по уникальным ключам."""
     return asyncio.run(run_control_commands_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.detect_sla_incidents")
+def detect_sla_incidents() -> dict[str, int]:
+    """Phase 8a: SLA по studio_messages (client/project), без LLM; уведомления только в control group."""
+    return asyncio.run(run_sla_detection_standalone())

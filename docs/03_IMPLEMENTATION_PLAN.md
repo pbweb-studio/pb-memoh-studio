@@ -234,6 +234,22 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 8a — SLA-инфраструктура по чатам (Studio DB, Event Mirror, без LLM)
+
+**Статус:** таблицы `studio_sla_policies`, `studio_sla_incidents` (Alembic `008_studio_sla`); пакет `pb_studio/sla/` (модели, детектор, сервис, схемы); детектор по `studio_messages` только для `client_chat` / `project_chat`: последнее входящее пользовательское сообщение без последующего ответа бота и просрочка `first_response_minutes` → инцидент `open` / `breached`; без дубликата `(chat_id, trigger_message_id)` при `open`; ответ бота после триггера → `resolved`; уведомления только в активную control group (`sendMessage`, лимит `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`, опционально `followup_minutes` из policy); ошибки Telegram не прерывают цикл; `last_error` через `redact_secrets`. Флаги `STUDIO_SLA_ENABLED`, `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`, `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`; Celery `detect_sla_incidents`; админ `GET/POST /sla/...`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/проектов/Studio Admin UI.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `sla/models.py` | `StudioSlaPolicy`, `StudioSlaIncident` |
+| `sla/detector.py` | `run_sla_detection_cycle`, разрешение по ответу бота / superseded tail |
+| `sla/service.py` | список инцидентов, policies, ack/resolve |
+| `api/routes/sla.py` | REST под `STUDIO_ADMIN_TOKEN` |
+| `worker/tasks.py` | `detect_sla_incidents` |
+
+**Тесты:** `studio/tests/test_sla_phase8a.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -251,9 +267,10 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 6d | Доставка готовых сводок в control group: `sendMessage`, поля `delivery_*`, Celery `deliver_pending_chat_summaries` (**без** Memoh, **без** LLM; тот же `TELEGRAM_BOT_TOKEN`) |
 | 7a | Команды `/summary_*` из control group по зеркалу: `studio_control_commands`, scan `studio_messages`, product + доставка 6d, Celery + админ API (**без** Memoh, второго бота, polling/webhook Studio) |
 | 7b | UX: `/summary_chats`, `/summary_all_today/yesterday`, ACL по Telegram user id (`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`), агрегаты и обрезка ответов (**без** Memoh/LLM/второго бота) |
+| 8a | SLA: политики + инциденты по зеркалу, детектор first response, уведомления только в control group, Celery + админ API (**без** LLM/Memoh/проектов) |
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
-| 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |
+| 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a:** инфра first response + инциденты + control group notify (см. секцию 8a выше) |
 | 9 | Проекты: bind/list/digest |
 | 10 | База знаний: Docling, embeddings, pgvector |
 | 11 | Правила: save/list/disable/audit |

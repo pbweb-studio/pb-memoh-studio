@@ -96,6 +96,19 @@ class Settings(BaseSettings):
         description="STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS — CSV / пробелы: Telegram user id; пусто = все участники control group",
     )
 
+    studio_sla_enabled: bool = Field(
+        default=False,
+        description="STUDIO_SLA_ENABLED — детектор SLA по зеркалу studio_messages",
+    )
+    studio_sla_default_first_response_minutes: int = Field(
+        default=60,
+        description="STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES — если нет активной policy для chat_role",
+    )
+    studio_sla_max_notifications_per_incident: int = Field(
+        default=3,
+        description="STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT — лимит sendMessage в control group на инцидент",
+    )
+
     @property
     def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:
         raw = (self.studio_control_commands_allowed_user_ids or "").strip()

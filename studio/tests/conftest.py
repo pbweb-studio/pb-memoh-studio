@@ -4,6 +4,7 @@ import pb_studio.control_group.models  # noqa: F401 — регистрация �
 import pb_studio.event_mirror.models  # noqa: F401 — регистрация таблиц на Base.metadata
 import pb_studio.summaries.models  # noqa: F401 — phase 6a summaries
 import pb_studio.control_commands.models  # noqa: F401 — phase 7a control commands
+import pb_studio.sla.models  # noqa: F401 — phase 8a SLA
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -25,6 +26,9 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_CONTROL_COMMANDS_ENABLED",
         "STUDIO_CONTROL_COMMANDS_MAX_BATCH",
         "STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS",
+        "STUDIO_SLA_ENABLED",
+        "STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES",
+        "STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

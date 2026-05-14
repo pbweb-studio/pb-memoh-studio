@@ -1,9 +1,9 @@
 # Active context
 
-**Сейчас:** фаза **7b** в Studio — UX команд сводок в control group и ACL: `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`, обновлённый help; env `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (пусто = все участники); статус `failed_access_denied` + короткий отказ + аудит; фильтр `command_name` на `GET /control-commands`; обрезка длинных ответов. База 7a: `studio_control_commands`, scan зеркала, `summaries/product.py`, Celery `process_control_group_summary_commands`. Ответы только в активную control group (`sendMessage`); Memoh не менялся; второго бота и polling/webhook Studio нет.
+**Сейчас:** фаза **8a** в Studio — SLA по зеркалу `studio_messages`: `studio_sla_policies`, `studio_sla_incidents`, детектор first response для `client_chat` / `project_chat`, разрешение при ответе бота, уведомления только в активную control group; Celery `detect_sla_incidents`; админ `/sla/*`; env `STUDIO_SLA_*` в compose. Поверх 7a–7b: control commands, сводки 6a–6d. Memoh не менялся; второго бота и polling/webhook Studio нет.
 
 **Ветка:** `pb-studio/main`.
 
-**Memoh:** не менялся в 7a–7b.
+**Memoh:** не менялся в 8a.
 
-**Следующий шаг:** полная **фаза 7** по плану или **6+** только по отдельной постановке.
+**Следующий шаг:** полная **фаза 8** по плану или **6+** / **7** только по отдельной постановке.

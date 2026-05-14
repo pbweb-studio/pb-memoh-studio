@@ -18,6 +18,7 @@
 | 6d Summary delivery to control group (sendMessage, no Memoh/LLM) | Done |
 | 7a Control group summary commands via Event Mirror | Done |
 | 7b UX summary commands + ACL in control group | Done |
+| 8a SLA infra (policies + incidents, mirror, no LLM) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 7b — расширение control_commands, ACL env, агрегаты и обрезка, фильтр API; pytest **116** passed (Docker); compose config ok.
+**Последнее:** фаза 8a — таблицы SLA, detector, API, Celery; pytest **130** passed (Docker); compose config ok.

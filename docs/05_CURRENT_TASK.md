@@ -1,9 +1,9 @@
 # Текущая задача
 
-## После фазы 7b (UX команд сводок и ACL в control group)
+## После фазы 8a (SLA-инфраструктура по чатам без LLM)
 
-**Статус:** команды `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`; обновлён `/summary_help`; список чатов без активной control group с обрезкой; агрегированные сводки по всем чатам с обрезкой ответа; ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (пусто = все); статус `failed_access_denied` + отказ в Telegram + аудит; фильтр `command_name` на `GET /control-commands`; `redact_secrets` для `last_error` при ошибках. Memoh не менялся.
+**Статус:** политики и инциденты в БД; детектор по зеркалу `studio_messages` (только `client_chat` / `project_chat`); first response по активной policy или `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`; разрешение инцидента при ответе бота или смене «хвоста» входящих; уведомления только в control group при `STUDIO_SLA_ENABLED` и наличии CG; Celery `detect_sla_incidents`; админ REST `/sla/*`. Memoh не менялся.
 
-**Следующий шаг:** по плану — полная **фаза 7** (права/сценарии шире) или **6+** только после отдельной постановки.
+**Следующий шаг:** полная **фаза 8** по плану (рабочие часы, антиспам, mute и т.д.) или **6+** / **7** — только по отдельной постановке.
 
-**Ограничение:** не подключать внешний LLM и RAG без постановки; Memoh не менять без ADR; SLA / проекты / Studio Admin UI — вне scope до отдельной фазы.
+**Ограничение:** внешний LLM/RAG, проекты, Studio Admin UI — вне scope до отдельной фазы.

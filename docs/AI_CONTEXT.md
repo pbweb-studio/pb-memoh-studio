@@ -6,23 +6,23 @@
 
 ## Текущая фаза
 
-**Фаза 7b (UX команд сводок + ACL в control group)** — поверх 7a: `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`, обновлённый help; список чатов и агрегаты с обрезкой под лимит Telegram; ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (пусто = все); статус `failed_access_denied` + отказ в control group + аудит; `GET /control-commands?command_name=`; `redact_secrets` для `last_error`. **Без** Memoh, **без** второго бота и polling/webhook Studio, **без** LLM/RAG. Memoh **не** менялся.
+**Фаза 8a (SLA-инфра по чатам без LLM)** — таблицы `studio_sla_policies`, `studio_sla_incidents` (Alembic `008_studio_sla`); детектор по `studio_messages` для `client_chat` / `project_chat` (последнее пользовательское входящее без ответа бота + просрочка first response); уведомления только в активную control group при включённом флаге; Celery `detect_sla_incidents`; админ API `GET/POST /sla/*`; env `STUDIO_SLA_*`. **Без** Memoh, **без** второго бота и polling/webhook Studio, **без** LLM/RAG. Memoh **не** менялся.
 
-Фазы **6d**, **6c**, **6b**, **6a**, **5b**, **4b** — как ранее.
+Фазы **7b**, **7a**, **6d**–**4b** — как ранее в журнале.
 
 ## Текущая цель
 
-Фаза **6+** (LLM и/или расширенная продуктовая доставка) или полная **фаза 7** по плану — **не** начинать до отдельной постановки.
+Полная **фаза 8** (рабочие часы, антиспам, mute и т.д.) или **6+** / **7** — только по отдельной постановке.
 
 ## Что уже работает
 
-- Фазы 0–7b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **7a–7b:** команды сводок из control group по зеркалу (в т.ч. список чатов и all-day агрегаты), ACL по Telegram user id, админ API + Celery.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**116** кейсов после фазы 7b, Docker).
+- Фазы 0–8a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **8a:** SLA first-response по зеркалу, инциденты в БД, policies, ack/resolve, доставка уведомлений только в control group.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**130** кейсов после фазы 8a, Docker).
 
 ## Что ещё не готово
 
-- Внешний LLM, RAG, SLA, проекты, Studio Admin; прочие сценарии 6+.
+- Внешний LLM, RAG, расширенный SLA (фаза 8 целиком), проекты, Studio Admin; прочие сценарии 6+.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -44,10 +44,11 @@
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
 - Сводки 6a–6d: Studio DB + шаблон + продуктовый API + доставка в control group — см. `docs/06_DECISIONS.md` (фазы 6a–6d).
 - Фазы **7a–7b:** команды `/summary_*` только из зеркала control group → ответы только в control group; ACL по `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`; см. `docs/06_DECISIONS.md` (фазы 7a, 7b).
+- **Фаза 8a:** SLA first response по зеркалу; уведомления SLA только в control group; см. `docs/06_DECISIONS.md` (фаза 8a).
 
 ## Следующая задача
 
-- По постановке: фаза **7** (полный scope плана) или **6+** / другая фаза из плана.
+- По постановке: расширение **фазы 8** или **6+** / **7** из плана.
 
 ## Вопросы к GPT
 
