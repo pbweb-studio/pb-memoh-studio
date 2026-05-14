@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0", description="STUDIO_API_HOST")
     api_port: int = Field(default=8000, description="STUDIO_API_PORT")
 
+    studio_events_ingest_token: str | None = Field(
+        default=None,
+        description="STUDIO_EVENTS_INGEST_TOKEN — если задан, POST /events/telegram требует Authorization: Bearer …",
+    )
+    studio_mirror_enqueue_user_messages: bool = Field(
+        default=False,
+        description="STUDIO_MIRROR_ENQUEUE_USER_MESSAGES — enqueue в Response Queue только для user text/caption",
+    )
+
     @property
     def celery_backend_effective(self) -> str:
         return self.celery_result_backend or self.celery_broker_url

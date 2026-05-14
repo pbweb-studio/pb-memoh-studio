@@ -30,7 +30,12 @@ celery -A pb_studio.celery_app:celery_app worker --loglevel=info --queues=studio
 celery -A pb_studio.celery_app:celery_app beat --loglevel=info
 ```
 
-## Response Queue (внутренний сервис Studio)
+## Event Mirror (Фаза 4a)
+
+- Ingest: `POST /events/telegram` — тело = JSON одного Telegram `Update` (как в Bot API). Обязателен числовой `update_id`.
+- Опционально: `STUDIO_EVENTS_INGEST_TOKEN` — тогда нужен заголовок `Authorization: Bearer <token>`.
+- Опционально: `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES=true` — писать пользовательские text/caption в Response Queue (`QueueService`); по умолчанию `false`.
+- Миграции из каталога `studio/`: `alembic upgrade head`.
 
 - Модели: `pb_studio.response_queue.models`
 - Логика: `pb_studio.response_queue.service.QueueService`

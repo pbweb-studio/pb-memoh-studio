@@ -28,3 +28,10 @@
 - Event Mirror, RAG, SLA, проекты, Studio Admin — **вне** scope Фазы 3.
 - Response Queue (`QueueService`) — только как внутренний модуль; интеграция с Event Mirror — Фаза 4.
 - Коммит: сообщение `feat(studio): phase 3 studio-api skeleton, compose, celery, alembic` (SHA — `git rev-parse HEAD` на `pb-studio/main`).
+
+## 2026-05-14 — Фаза 4a (Event Mirror в Studio, без Memoh)
+
+- Статус: завершена; Memoh / Telegram adapter / реальный Telegram runtime **не** менялись; **нет** исходящих запросов к Telegram API.
+- Добавлены: `POST /events/telegram`, модели `studio_telegram_raw_updates`, `studio_chats`, `studio_telegram_users`, `studio_messages`, `studio_chat_lifecycle_events`, `studio_audit_log`, сервис нормализации, Alembic `002_event_mirror`, переписан `001_initial` на явный DDL очереди; опционально `STUDIO_MIRROR_ENQUEUE_USER_MESSAGES` → `QueueService.enqueue`; опциональный `STUDIO_EVENTS_INGEST_TOKEN`.
+- Тесты: `studio/tests/test_event_mirror.py`.
+- Коммит: сообщение `feat(studio): event mirror phase 4a ingest and tables` (SHA — `git rev-parse HEAD` на `pb-studio/main`).

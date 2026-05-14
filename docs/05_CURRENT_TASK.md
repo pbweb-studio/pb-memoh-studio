@@ -1,9 +1,9 @@
 # Текущая задача
 
-## Фаза 4 — Event Mirror
+## Фаза 4b+ — транспорт Event Mirror и интеграция с Memoh
 
-**Цель:** зеркалирование релевантных событий из Memoh (или согласованной границы) в Studio: модель событий, транспорт, идемпотентность и связь с внутренними сервисами Studio (в т.ч. Response Queue **по отдельному плану**, без дублирования логики Memoh).
+**Цель:** подать события в уже работающий ingest Studio (`POST /events/telegram` или внутренний вызов) из согласованной границы (webhook/proxy к Memoh, sidecar, и т.д.) **без** правок Memoh до выбора A/B/C в `docs/06_DECISIONS.md`.
 
-**Зависимости:** работающий каркас Фазы 3 (API, Postgres, Redis, Celery); **не** подключать Telegram runtime до явного решения в `docs/06_DECISIONS.md`.
+**Зависимости:** Фаза 4a (таблицы + HTTP ingest); вариант интеграции зафиксировать в ADR.
 
-**Ограничение:** любые правки Memoh (`internal/channel/adapters/telegram`, `internal/channel/inbound.go`, `internal/channel/inbound/channel.go` и т.д.) — только после явного ADR и выбора варианта A/B/C.
+**Ограничение:** не патчить `internal/channel/adapters/telegram`, `internal/channel/inbound.go`, `telegram.go` без явного решения пользователя.

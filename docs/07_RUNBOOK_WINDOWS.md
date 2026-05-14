@@ -27,6 +27,7 @@ docker compose -f docker-compose.local.yml up -d --build
 
 ```powershell
 curl http://127.0.0.1:8000/health
+curl -X POST http://127.0.0.1:8000/events/telegram -H "Content-Type: application/json" -d "{\"update_id\": 1, \"message\": {\"message_id\": 1, \"date\": 1700000000, \"chat\": {\"id\": -100, \"type\": \"supergroup\", \"title\": \"T\"}, \"from\": {\"id\": 42, \"is_bot\": false, \"first_name\": \"U\"}, \"text\": \"hi\"}}"
 ```
 
 (При занятом порту 8000 задайте `STUDIO_API_PORT` в `.env.local` или в окружении перед `docker compose`.)

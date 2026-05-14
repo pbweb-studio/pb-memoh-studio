@@ -7,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.response_queue.models import Base
 
+import pb_studio.event_mirror.models  # noqa: F401 — регистрация таблиц Event Mirror на том же Base
+
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
