@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}KB {{ doc.title }} — Studio Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
+  <li class="breadcrumb-item"><a href="/admin/knowledge/documents">Документы</a></li>
+  <li class="breadcrumb-item active">{{ doc.id }}</li>
+</ol></nav>
+<h1 class="h3 mb-3">{{ doc.title }}</h1>
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Документ</span>
+        <span class="badge {% if doc.status == 'active' %}bg-success{% elif doc.status == 'archived' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ doc.status }}</span>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th class="w-30">id</th><td><code class="small">{{ doc.id }}</code></td></tr>
+            <tr><th>project</th><td>
+              {% if doc.project_id %}
+              <a href="/admin/projects/{{ doc.project_id }}"><code>{{ doc.project_id }}</code></a>
+              {% else %}—{% endif %}
+            </td></tr>
+            <tr><th>source_type</th><td>{{ doc.source_type }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ doc.created_at }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if kb_upload_enabled %}
+    <div class="card shadow-sm mt-3">
+      <div class="card-header">Новая версия (файл)</div>
+      <div class="card-body">
+        <form method="post" action="/admin/knowledge/documents/{{ doc.id }}/upload-version" enctype="multipart/form-data" class="row g-2">
+          <div class="col-12">
+            <input type="file" name="file" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary btn-sm">Загрузить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header">Версии</div>
+      <div class="card-body p-0">
+        {% if not versions %}
+        <p class="text-muted small p-3 mb-0">Нет версий.</p>
+        {% else %}
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>#</th><th>status</th><th>created</th></tr></thead>
+          <tbody>
+            {% for v in versions %}
+            <tr>
+              <td>{{ v.version_number }}</td>
+              <td><span class="badge bg-light text-dark border">{{ v.status }}</span></td>
+              <td class="small">{{ v.created_at }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

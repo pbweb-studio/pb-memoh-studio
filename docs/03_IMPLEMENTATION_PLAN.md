@@ -377,6 +377,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 13b — Studio Admin UI: детали + безопасные формы
+
+**Статус:** детальные страницы `GET /admin/chats/{id}`, `/admin/projects/{id}`, `/admin/knowledge/documents/{id}`, `/admin/sla/incidents/{id}`, `/admin/assistant-rules/{id}`; формы (POST под тем же `STUDIO_ADMIN_TOKEN`): смена роли чата (`set_chat_role`), создание/архивация проекта, bind/unbind чата проекта, создание/отключение правила (`create_rule` / `disable_rule`), ack/resolve SLA (`acknowledge_incident` / `resolve_incident`), загрузка KB (`ingest_new_document_from_upload`, `ingest_file_upload_to_document` при включённом KB). Flash через query `fs` / `fe` после PRG (303). Ссылки между сущностями в шаблонах. **Без** новых бизнес-сущностей, Memoh, бота, LLM/RAG.
+
+**Тесты:** [`studio/tests/test_admin_ui_phase13b.py`](studio/tests/test_admin_ui_phase13b.py); регрессия 13a и API.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -404,5 +412,5 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10f** — HTTP upload + Docling (pdf/docx); **10g** — импорт document из Telegram (control group); **10+** — расширенный RAG/Docling pipeline |
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
 | 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
-| 13 | Studio Admin: **13a** — Jinja2 + Bootstrap 5, read-only `/admin/*`, `STUDIO_ADMIN_TOKEN` (Bearer или cookie после login); дальше — HTMX/мутации по постановке |
+| 13 | Studio Admin: **13a** — каркас read-only; **13b** — детали + формы (те же сервисы, что REST) |
 | 14 | Prod compose, Caddy, runbook, backup (деплой только с подтверждением) |

@@ -34,6 +34,7 @@
 | 11b Assistant rules in KB RAG prompt + applied_rule_ids | Done |
 | 12a Telegram Desktop JSON → Event Mirror import | Done |
 | 13a Studio Admin UI skeleton (read-only /admin) | Done |
+| 13b Studio Admin UI details + safe forms | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 13a — `admin_ui`, HTML `/admin/*`, тесты `test_admin_ui_phase13a.py`; полный `pytest tests/` **277** passed (Docker).
+**Последнее:** фаза 13b — детали `/admin/chats|projects|…/{id}`, формы (роль чата, проект, bind, правила, SLA, KB upload), `test_admin_ui_phase13b.py`; полный `pytest tests/` **283** passed (Docker).

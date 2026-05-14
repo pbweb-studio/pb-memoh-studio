@@ -27,9 +27,21 @@
     <form method="post" action="/admin/logout" class="d-grid">
       <button type="submit" class="btn btn-outline-secondary btn-sm">Выйти</button>
     </form>
-    <div class="text-muted mt-3" style="font-size: 0.7rem;">read-only · 13a</div>
+    <div class="text-muted mt-3" style="font-size: 0.7rem;">Studio Admin · 13b</div>
   </aside>
   <main class="flex-grow-1 p-4 overflow-auto">
+    {% if flash_success %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      {{ flash_success }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+    {% if flash_error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      {{ flash_error }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
     {% block content %}{% endblock %}
   </main>
 </div>

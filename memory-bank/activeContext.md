@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** фаза **13a** в Studio — read-only веб-админка **`/admin/*`** (Jinja2 + Bootstrap 5), auth **`STUDIO_ADMIN_TOKEN`** (Bearer или cookie после login); **без** Memoh, Bot API, LLM, мутаций сущностей.
+**Сейчас:** фаза **13b** в Studio — Admin UI: детальные страницы + POST-формы под **`/admin/*`** (те же сервисы, что REST; flash `fs`/`fe`); auth **`STUDIO_ADMIN_TOKEN`**; **без** Memoh, Bot API, LLM, новых сущностей.
 
 **Ветка:** `pb-studio/main`.
 

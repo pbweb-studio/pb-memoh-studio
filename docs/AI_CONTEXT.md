@@ -6,7 +6,7 @@
 
 ## Текущая фаза
 
-**Фаза 13a (Studio Admin UI skeleton)** — HTML под `/admin/*`: Jinja2 + Bootstrap 5, read-only таблицы и дашборд; **`STUDIO_ADMIN_TOKEN`** обязателен для защищённых путей (Bearer или cookie после `POST /admin/login`); `GET /admin` → `/admin/`, статика `/admin/static`. Без Memoh, бота, LLM/RAG, мутаций сущностей.
+**После 13b** — Studio Admin: read-only списки (**13a**) + детальные страницы и POST-формы (**13b**) под `/admin/*`; Jinja2 + Bootstrap 5; **`STUDIO_ADMIN_TOKEN`** (Bearer или cookie); формы вызывают те же сервисы, что REST; flash `fs`/`fe` без секретов; загрузка KB в админке при **`STUDIO_KB_ENABLED`**.
 
 **Фаза 12a (Studio: Telegram Desktop JSON → Event Mirror)** — `POST /history-import/telegram-json`, `GET /history-import/jobs*`, таблица `studio_history_import_jobs`; `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; запись в `studio_chats` / `studio_messages` (без Memoh/Bot API).
 
@@ -20,8 +20,9 @@
 
 ## Что уже работает
 
-- Фазы 0–13a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **13a:** каркас Studio Admin (`/admin/*`), read-only страницы, auth по `STUDIO_ADMIN_TOKEN`.
+- Фазы 0–13b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **13b:** детали сущностей и POST-формы в `/admin/*` (те же сервисы, что REST); см. `docs/06_DECISIONS.md`.
+- **13a:** каркас Studio Admin, read-only списки; см. `docs/06_DECISIONS.md`.
 - **12a:** импорт экспорта Telegram Desktop JSON в Event Mirror (`/history-import/*`), jobs в БД.
 - **11b:** те же правила — в KB RAG (`rag.py`, `/knowledge/ask`, `/kb_ask`): `applied_rule_ids`, опциональный `chat_id` в ask body.
 - **11a:** правила ассистента в БД + audit, API `/assistant-rules*`, команды `/rule_*`.
@@ -72,11 +73,12 @@
 - **Фаза 11a:** assistant rules в Studio DB + audit + admin API + `/rule_*` из control group; см. `docs/06_DECISIONS.md`.
 - **Фаза 11b:** assistant rules в user-prompt KB RAG + `applied_rule_ids`; см. `docs/06_DECISIONS.md`.
 - **Фаза 12a:** импорт Telegram Desktop JSON в Event Mirror + jobs API; см. `docs/06_DECISIONS.md`.
-- **Фаза 13a:** Studio Admin UI skeleton (`/admin/*`, read-only, `STUDIO_ADMIN_TOKEN`); см. `docs/06_DECISIONS.md`.
+- **Фаза 13a:** Studio Admin skeleton — read-only `/admin/*`; см. `docs/06_DECISIONS.md`.
+- **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 
-- По постановке: **13+** (расширение админки), **6+** или расширение **10+** из плана.
+- По постановке: **13+** (дальнейший admin UX), **6+** или расширение **10+** из плана.
 
 ## Вопросы к GPT
 

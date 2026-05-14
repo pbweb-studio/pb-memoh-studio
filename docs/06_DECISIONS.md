@@ -275,3 +275,8 @@
 - HTML без валидной авторизации: **302** на `/admin/login` (параметр `next`); не-HTML **Accept** (например только `application/json`) без Bearer — **401**.
 - Контент **read-only** (таблицы и счётчики из БД); **без** изменений Memoh, бота, LLM/RAG; `POST /admin/logout` — сброс cookie.
 
+## Фаза 13b — Studio Admin UI: детали и формы (выполнено)
+
+- Те же **`STUDIO_ADMIN_TOKEN`** / cookie-сессия для **всех** POST под `/admin/*`; сообщения об успехе/ошибке через query **`fs`** / **`fe`** (URL-encoded, без секретов); валидация через Pydantic/`ValueError` → читаемый flash.
+- Операции только через существующие сервисы: роль чата, проект create/archive, bind/unbind, правила create/disable, SLA ack/resolve, KB upload (при **`STUDIO_KB_ENABLED`**).
+

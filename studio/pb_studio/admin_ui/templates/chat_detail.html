@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Чат {{ chat.id }} — Studio Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
+  <li class="breadcrumb-item"><a href="/admin/chats">Чаты</a></li>
+  <li class="breadcrumb-item active">{{ chat.id }}</li>
+</ol></nav>
+<h1 class="h3 mb-3">Чат</h1>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Поля</span>
+        <span class="badge bg-secondary">{{ chat.chat_role }}</span>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th class="w-25">id</th><td><code>{{ chat.id }}</code></td></tr>
+            <tr><th>telegram_chat_id</th><td>{{ chat.telegram_chat_id }}</td></tr>
+            <tr><th>type</th><td>{{ chat.chat_type }}</td></tr>
+            <tr><th>title</th><td>{{ chat.title or '—' }}</td></tr>
+            <tr><th>username</th><td>{{ chat.username or '—' }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ chat.created_at }}</td></tr>
+            <tr><th>updated_at</th><td class="small">{{ chat.updated_at }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header">Сменить роль</div>
+      <div class="card-body">
+        <form method="post" action="/admin/chats/{{ chat.id }}/role" class="row g-2 align-items-end">
+          <div class="col-12">
+            <label class="form-label small text-muted">Новая роль (не control_group)</label>
+            <select name="role" class="form-select form-select-sm" required>
+              {% for r in role_choices %}
+              <option value="{{ r }}" {% if r == chat.chat_role %}selected{% endif %}>{{ r }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary btn-sm">Сохранить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-header">Проекты (активные привязки)</div>
+      <div class="card-body">
+        {% if not project_links %}
+        <p class="text-muted small mb-0">Нет активных привязок.</p>
+        {% else %}
+        <ul class="list-unstyled small mb-0">
+          {% for proj, link in project_links %}
+          <li class="mb-1">
+            <a href="/admin/projects/{{ proj.id }}">{{ proj.name }}</a>
+            <span class="badge bg-light text-dark border">{{ link.role_in_project }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

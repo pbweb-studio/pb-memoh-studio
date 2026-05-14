@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Правила — Studio Admin{% endblock %}
+{% block content %}
+<h1 class="h3 mb-2">{{ page_title }}</h1>
+<p class="text-muted small mb-3">{{ page_subtitle }}</p>
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Создать правило</div>
+  <div class="card-body">
+    <form method="post" action="/admin/assistant-rules" class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label small">scope</label>
+        <select name="scope" class="form-select form-select-sm" required>
+          {% for s in scopes %}
+          <option value="{{ s }}">{{ s }}</option>
+          {% endfor %}
+        </select>
+        <div class="form-text small">Для <code>global</code> не указывайте project/chat. Для <code>project</code> — выберите проект. Для <code>chat</code> — выберите чат.</div>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">project (для scope=project)</label>
+        <select name="project_id" class="form-select form-select-sm">
+          <option value="">—</option>
+          {% for p in projects_select %}
+          <option value="{{ p.id }}">{{ p.slug }} — {{ p.name[:40] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small">chat (для scope=chat)</label>
+        <select name="chat_id" class="form-select form-select-sm">
+          <option value="">—</option>
+          {% for c in chats_select %}
+          <option value="{{ c.id }}">{{ c.telegram_chat_id }} · {{ (c.title or '')[:32] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label small">Текст правила</label>
+        <textarea name="rule_text" class="form-control form-control-sm" rows="4" required maxlength="50000"></textarea>
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary btn-sm">Создать</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% if empty %}
+<div class="alert alert-light border">Нет данных.</div>
+{% else %}
+<div class="table-responsive card shadow-sm">
+<table class="table table-sm table-hover mb-0">
+  <thead class="table-light"><tr>
+    {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+  </tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for cell in row %}
+      <td>
+        {% if detail_prefix and loop.index0 == 0 %}
+        <a href="{{ detail_prefix }}/{{ cell }}"><code class="small">{{ cell }}</code></a>
+        {% else %}
+        <code class="small">{{ cell }}</code>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

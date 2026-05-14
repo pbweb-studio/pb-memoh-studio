@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Проекты — Studio Admin{% endblock %}
+{% block content %}
+<h1 class="h3 mb-2">{{ page_title }}</h1>
+<p class="text-muted small mb-3">{{ page_subtitle }}</p>
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Создать проект</div>
+  <div class="card-body">
+    <form method="post" action="/admin/projects" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-0">slug</label>
+        <input name="slug" class="form-control form-control-sm" required pattern="[a-z0-9][a-z0-9_-]*" placeholder="my-project">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small mb-0">name</label>
+        <input name="name" class="form-control form-control-sm" required maxlength="512">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small mb-0">description (опц.)</label>
+        <input name="description" class="form-control form-control-sm" maxlength="8000">
+      </div>
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-primary btn-sm">Создать</button>
+      </div>
+    </form>
+    <p class="text-muted small mb-0 mt-2">slug: латиница, цифры, <code>_</code> и <code>-</code>.</p>
+  </div>
+</div>
+{% if empty %}
+<div class="alert alert-light border">Нет данных.</div>
+{% else %}
+<div class="table-responsive card shadow-sm">
+<table class="table table-sm table-hover mb-0">
+  <thead class="table-light"><tr>
+    {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+  </tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>
+      {% for cell in row %}
+      <td>
+        {% if detail_prefix and loop.index0 == 0 %}
+        <a href="{{ detail_prefix }}/{{ cell }}"><code class="small">{{ cell }}</code></a>
+        {% else %}
+        <code class="small">{{ cell }}</code>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endif %}
+{% endblock %}

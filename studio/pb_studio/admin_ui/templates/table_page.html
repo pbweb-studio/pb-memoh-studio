@@ -20,7 +20,17 @@
   </tr></thead>
   <tbody>
     {% for row in rows %}
-    <tr>{% for cell in row %}<td><code class="small">{{ cell }}</code></td>{% endfor %}</tr>
+    <tr>
+      {% for cell in row %}
+      <td>
+        {% if detail_prefix and loop.index0 == (detail_col|default(0)) %}
+        <a href="{{ detail_prefix }}/{{ cell }}"><code class="small">{{ cell }}</code></a>
+        {% else %}
+        <code class="small">{{ cell }}</code>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
     {% endfor %}
   </tbody>
 </table>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Проект {{ project.slug }} — Studio Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
+  <li class="breadcrumb-item"><a href="/admin/projects">Проекты</a></li>
+  <li class="breadcrumb-item active">{{ project.slug }}</li>
+</ol></nav>
+<h1 class="h3 mb-3">{{ project.name }}</h1>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Данные</span>
+        <span class="badge {% if project.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">{{ project.status }}</span>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th class="w-25">id</th><td><code>{{ project.id }}</code></td></tr>
+            <tr><th>slug</th><td><code>{{ project.slug }}</code></td></tr>
+            <tr><th>name</th><td>{{ project.name }}</td></tr>
+            <tr><th>description</th><td class="small">{{ project.description or '—' }}</td></tr>
+            <tr><th>archived_at</th><td class="small">{{ project.archived_at or '—' }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ project.created_at }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if project.status == 'active' %}
+    <form method="post" action="/admin/projects/{{ project.id }}/archive" onsubmit="return confirm('Архивировать проект?');">
+      <button type="submit" class="btn btn-outline-warning btn-sm">Архивировать</button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header">Привязать чат</div>
+      <div class="card-body">
+        <form method="post" action="/admin/projects/{{ project.id }}/bind-chat" class="row g-2">
+          <div class="col-12">
+            <label class="form-label small">Чат</label>
+            <select name="chat_id" class="form-select form-select-sm" required>
+              <option value="" disabled selected>— выберите —</option>
+              {% for c in chats_select %}
+              <option value="{{ c.id }}">{{ c.telegram_chat_id }} · {{ (c.title or '')[:48] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small">Роль в проекте</label>
+            <select name="role_in_project" class="form-select form-select-sm">
+              <option value="secondary">secondary</option>
+              <option value="primary">primary</option>
+              <option value="client">client</option>
+              <option value="internal">internal</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary btn-sm">Привязать</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-header">Привязанные чаты</div>
+      <div class="card-body p-0">
+        {% if not chat_links %}
+        <p class="text-muted small p-3 mb-0">Пусто.</p>
+        {% else %}
+        <table class="table table-sm mb-0">
+          <thead class="table-light"><tr><th>чат</th><th>роль</th><th></th></tr></thead>
+          <tbody>
+            {% for link, ch in chat_links %}
+            <tr>
+              <td><a href="/admin/chats/{{ ch.id }}"><code class="small">{{ ch.telegram_chat_id }}</code></a></td>
+              <td><span class="badge bg-light text-dark border">{{ link.role_in_project }}</span></td>
+              <td class="text-end">
+                {% if link.is_active %}
+                <form method="post" action="/admin/projects/{{ project.id }}/unbind-chat" class="d-inline" onsubmit="return confirm('Отвязать?');">
+                  <input type="hidden" name="chat_id" value="{{ ch.id }}">
+                  <button type="submit" class="btn btn-outline-danger btn-sm py-0">Отвязать</button>
+                </form>
+                {% else %}
+                <span class="text-muted small">inactive</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

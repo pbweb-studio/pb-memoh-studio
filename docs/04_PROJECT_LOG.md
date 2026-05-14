@@ -210,6 +210,12 @@
 - **Без** Memoh, bot/polling/webhook, LLM/RAG, мутаций сущностей (кроме входа/выхода сессии).
 - Тесты: `studio/tests/test_admin_ui_phase13a.py`; полный `pytest tests/` (**277** passed, Docker).
 
+## 2026-05-14 — Фаза 13b (Studio Admin UI: детали + формы)
+
+- Детальные GET под `/admin/*`; POST-формы вызывают существующие `control_group`, `projects`, `assistant_rules`, `sla`, `knowledge` services; flash `fs`/`fe`; шаблоны `*_detail.html`, списки проектов/KB/правил с карточками форм; `admin_ui/flash.py`.
+- **Без** Memoh, бота, LLM/RAG, новых сущностей.
+- Тесты: `studio/tests/test_admin_ui_phase13b.py`; полный `pytest tests/` (**283** passed, Docker).
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

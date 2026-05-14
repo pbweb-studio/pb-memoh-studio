@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Правило {{ rule.id }} — Studio Admin{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb small mb-0">
+  <li class="breadcrumb-item"><a href="/admin/assistant-rules">Правила</a></li>
+  <li class="breadcrumb-item active">{{ rule.id }}</li>
+</ol></nav>
+<h1 class="h3 mb-3">Правило ассистента</h1>
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Мета</span>
+        <span class="badge {% if rule.status == 'active' %}bg-success{% else %}bg-secondary{% endif %}">{{ rule.status }}</span>
+      </div>
+      <div class="card-body">
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th class="w-25">id</th><td><code class="small">{{ rule.id }}</code></td></tr>
+            <tr><th>scope</th><td>{{ rule.scope }}</td></tr>
+            <tr><th>project</th><td>{% if rule.project_id %}<a href="/admin/projects/{{ rule.project_id }}"><code>{{ rule.project_id }}</code></a>{% else %}—{% endif %}</td></tr>
+            <tr><th>chat</th><td>{% if rule.chat_id %}<a href="/admin/chats/{{ rule.chat_id }}"><code>{{ rule.chat_id }}</code></a>{% else %}—{% endif %}</td></tr>
+            <tr><th>source</th><td>{{ rule.source }}</td></tr>
+            <tr><th>disabled_at</th><td class="small">{{ rule.disabled_at or '—' }}</td></tr>
+            <tr><th>created_at</th><td class="small">{{ rule.created_at }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card shadow-sm">
+      <div class="card-header">Текст</div>
+      <div class="card-body"><pre class="small mb-0" style="white-space: pre-wrap;">{{ rule.rule_text }}</pre></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    {% if rule.status == 'active' %}
+    <div class="card shadow-sm">
+      <div class="card-header">Отключить</div>
+      <div class="card-body">
+        <form method="post" action="/admin/assistant-rules/{{ rule.id }}/disable" class="row g-2">
+          <div class="col-12">
+            <label class="form-label small">Причина (опционально)</label>
+            <input type="text" name="reason" class="form-control form-control-sm" maxlength="500">
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-outline-danger btn-sm">Отключить</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
