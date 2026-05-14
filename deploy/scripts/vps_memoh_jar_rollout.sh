@@ -76,7 +76,7 @@ docker compose -f deploy/docker-compose.memoh.yml ps || true
 echo "=== wait memoh API /health (up to ~120s) ==="
 ok=0
 for i in $(seq 1 60); do
-  if curl -sf "http://127.0.0.1:8080/health" >/dev/null 2>&1; then
+  if curl -sf -o /dev/null -X HEAD "http://127.0.0.1:8080/health" 2>/dev/null; then
     ok=1
     echo "MEMOH_HEALTH_OK iteration=$i"
     break
