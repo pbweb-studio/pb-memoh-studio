@@ -158,8 +158,12 @@ def main() -> None:
             auth,
         )
         if status2 not in (200, 201):
-            raise SystemExit(f"model missing and create failed HTTP {status2}: {mbody}")
-        print("OK: registered chat model via POST /models (fallback)")
+            if status2 == 409:
+                print("OK: chat model already exists (409)")
+            else:
+                raise SystemExit(f"model missing and create failed HTTP {status2}: {mbody}")
+        else:
+            print("OK: registered chat model via POST /models (fallback)")
     else:
         print("OK: chat model present:", args.chat_model)
 
