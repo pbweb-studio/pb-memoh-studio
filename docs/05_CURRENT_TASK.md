@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 11a (assistant rules — storage / API / команды)
+## После фазы 12a (Telegram Desktop JSON → Event Mirror)
 
-**Статус:** активные `assistant_rules` подмешиваются в **user**-prompt KB RAG (`ask_knowledge_base`): глобальные; + **project** при `project_id` в запросе; + **chat** при `chat_id` (API `POST /knowledge/ask`) или для `/kb_ask` — `studio_chats.id` активной control group. Ответ содержит `applied_rule_ids`. **Без** Memoh, без изменения system prompt Memoh, без сводок/SLA/digest, без Studio Admin UI.
+**Статус:** импорт JSON в те же таблицы зеркала (`studio_chats`, `studio_messages`, …), jobs API, флаги `STUDIO_HISTORY_IMPORT_*`; **без** Memoh/Bot API/LLM/Admin UI.
 
-**Следующий шаг:** по постановке — **6+**, **12–14**, расширение RAG, или иной эпик.
+**Следующий шаг:** по постановке — **6+**, **13–14**, доработки импорта (другие форматы / инкрементальный UI), или иной эпик.

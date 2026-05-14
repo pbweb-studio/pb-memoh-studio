@@ -198,6 +198,12 @@
 - **Без** Memoh, второго бота, polling/webhook Studio, отдельного admin API для импорта; RAG 10e не менялся.
 - Тесты: `studio/tests/test_knowledge_phase10g.py`; полный `pytest tests/` (**249** passed); `docker compose -f docker-compose.local.yml config`.
 
+## 2026-05-14 — Фаза 12a (Studio: импорт Telegram Desktop JSON → Event Mirror)
+
+- Пакет `pb_studio/history_import/`; таблица `studio_history_import_jobs`; миграция `016_studio_history_import_jobs`; `POST /history-import/telegram-json`, `GET /history-import/jobs`, `GET /history-import/jobs/{id}` при `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; `STUDIO_HISTORY_IMPORT_MAX_BYTES`; запись в `studio_chats`, `studio_messages` (без `TelegramRawUpdate`), `studio_telegram_users`, lifecycle для `service`.
+- **Без** Memoh, Telegram Bot API, polling/webhook Studio, LLM/RAG/embeddings, Studio Admin UI, исходящих сообщений в Telegram.
+- Тесты: `studio/tests/test_history_import_phase12a.py`; полный `pytest tests/` (**268** passed).
+
 ## 2026-05-14 — Фаза 11b (Studio: assistant rules → KB RAG prompt)
 
 - `list_active_rules_for_kb_rag` в `assistant_rules/service.py`; `rag.py` — блок «Инструкции Studio» **перед** фрагментами в user message; `KnowledgeAskOut.applied_rule_ids`; тело `POST /knowledge/ask` — опциональный `chat_id`; `/kb_ask` передаёт `control_group_chat_id` как контекст чата для chat-scope правил.

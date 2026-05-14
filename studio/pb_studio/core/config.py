@@ -129,6 +129,17 @@ class Settings(BaseSettings):
         description="STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN — безопасная обрезка текста digest/single",
     )
 
+    studio_history_import_enabled: bool = Field(
+        default=False,
+        description="STUDIO_HISTORY_IMPORT_ENABLED — POST /history-import/telegram-json (без Memoh/Bot API)",
+    )
+    studio_history_import_max_bytes: int = Field(
+        default=52_428_800,
+        ge=64,
+        le=500_000_000,
+        description="STUDIO_HISTORY_IMPORT_MAX_BYTES — макс. размер JSON импорта",
+    )
+
     studio_kb_enabled: bool = Field(
         default=False,
         description="STUDIO_KB_ENABLED — API и команды /kb_* (без embeddings/LLM)",

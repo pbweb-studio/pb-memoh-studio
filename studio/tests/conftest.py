@@ -8,6 +8,7 @@ import pb_studio.sla.models  # noqa: F401 — phase 8a SLA
 import pb_studio.projects.models  # noqa: F401 — phase 9a projects
 import pb_studio.project_digests.models  # noqa: F401 — phase 9b project digests
 import pb_studio.assistant_rules.models  # noqa: F401 — phase 11a assistant rules
+import pb_studio.history_import.models  # noqa: F401 — phase 12a history import jobs
 import pb_studio.knowledge.models  # noqa: F401 — phase 10a knowledge base
 import pytest
 import pytest_asyncio
@@ -62,6 +63,8 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_TELEGRAM_IMPORT_ENABLED",
         "STUDIO_KB_TELEGRAM_DOWNLOAD_TIMEOUT_MS",
         "STUDIO_KB_TELEGRAM_MAX_FILE_BYTES",
+        "STUDIO_HISTORY_IMPORT_ENABLED",
+        "STUDIO_HISTORY_IMPORT_MAX_BYTES",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

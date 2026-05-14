@@ -361,6 +361,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 12a — Импорт Telegram Desktop JSON → Event Mirror
+
+**Статус:** пакет [`studio/pb_studio/history_import/`](studio/pb_studio/history_import/) (`parser.py`, `service.py`, `schemas.py`, `constants.py`); таблица `studio_history_import_jobs` (Alembic `016_studio_history_import_jobs`); API под **`STUDIO_ADMIN_TOKEN`** + **`STUDIO_HISTORY_IMPORT_ENABLED=true`**: `POST /history-import/telegram-json` (multipart `file`), `GET /history-import/jobs`, `GET /history-import/jobs/{id}`; env **`STUDIO_HISTORY_IMPORT_MAX_BYTES`** (по умолчанию 50 MiB). Нормализация в `studio_chats`, `studio_messages` (`raw_update_id` = null), `studio_telegram_users`, `studio_chat_lifecycle_events` для `service`-сообщений. **Без** Memoh, Bot API, polling/webhook, LLM/RAG/embeddings, Studio Admin UI, отправки в Telegram.
+
+**Тесты:** [`studio/tests/test_history_import_phase12a.py`](studio/tests/test_history_import_phase12a.py).
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -387,6 +395,6 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
 | 10 | База знаний: **10a** — документы/версии/чанки; **10b** — parser pipeline…; **10c** — embeddings + pgvector search…; **10d** — `openai_compatible` /deterministic providers, батчи; **10e** — RAG MVP (`/knowledge/ask`, `/kb_ask`); **10f** — HTTP upload + Docling (pdf/docx); **10g** — импорт document из Telegram (control group); **10+** — расширенный RAG/Docling pipeline |
 | 11 | Правила ассистента: **11a** — `studio_assistant_rules` + audit, API `/assistant-rules*`, команды `/rule_*`; **11b** — применение активных правил к KB RAG (`/knowledge/ask`, `/kb_ask`), `applied_rule_ids` (**без** Memoh/сводок/SLA/digest) |
-| 12 | Импорт истории Telegram Desktop JSON |
+| 12 | Импорт истории: **12a** — Telegram Desktop JSON → `studio_chats` / `studio_messages` (и связанные), jobs API (**без** Memoh/Bot API) |
 | 13 | Studio Admin (HTMX/Jinja/Bootstrap) |
 | 14 | Prod compose, Caddy, runbook, backup (деплой только с подтверждением) |

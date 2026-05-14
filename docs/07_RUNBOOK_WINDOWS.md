@@ -51,6 +51,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 11a (assistant rules)** эндпоинты `GET/POST/PATCH /assistant-rules`, `POST /assistant-rules/{id}/disable`, `GET /assistant-rules/audit` — под тем же `STUDIO_ADMIN_TOKEN`, что `/projects` и `/knowledge` (если токен задан — Bearer обязателен). Отдельных env-флагов нет.
 
+Для **фазы 12a (импорт Telegram Desktop JSON)** включите **`STUDIO_HISTORY_IMPORT_ENABLED=true`** в **`studio-api`** (и при необходимости **`studio-worker`** для единообразия env); **`STUDIO_HISTORY_IMPORT_MAX_BYTES`** — лимит размера JSON (по умолчанию 52428800). API: `POST /history-import/telegram-json` (multipart `file`), `GET /history-import/jobs`, `GET /history-import/jobs/{id}` — только с **`STUDIO_ADMIN_TOKEN`**. Без Memoh и без Telegram Bot API.
+
 Проверка API:
 
 ```powershell

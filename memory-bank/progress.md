@@ -32,6 +32,7 @@
 | 10g KB Telegram document import (control group) | Done |
 | 11a Assistant rules storage + API + /rule_* (no LLM apply) | Done |
 | 11b Assistant rules in KB RAG prompt + applied_rule_ids | Done |
+| 12a Telegram Desktop JSON → Event Mirror import | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 11b — правила в `rag.py` + `applied_rule_ids` + `chat_id` в ask; pytest **261** passed.
+**Последнее:** фаза 12a — `history_import`, `studio_history_import_jobs`, API `/history-import/*`; pytest **268** passed.

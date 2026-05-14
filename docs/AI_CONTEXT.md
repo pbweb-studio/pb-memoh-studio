@@ -6,6 +6,8 @@
 
 ## Текущая фаза
 
+**Фаза 12a (Studio: Telegram Desktop JSON → Event Mirror)** — `POST /history-import/telegram-json`, `GET /history-import/jobs*`, таблица `studio_history_import_jobs`; `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; запись в `studio_chats` / `studio_messages` (без Memoh/Bot API).
+
 **Фаза 11b (Studio: assistant rules → KB RAG)** — активные правила в user-prompt `ask_knowledge_base` (global + project при `project_id` + chat при `chat_id`); `POST /knowledge/ask` — `applied_rule_ids`, опциональный `chat_id`; `/kb_ask` использует `studio_chats.id` control group для chat-rules. **Без** Memoh и без применения правил к сводкам/SLA/digest.
 
 Фазы **10g** (Telegram → KB), **10f** (HTTP KB), **10e** — см. журнал.
@@ -16,7 +18,8 @@
 
 ## Что уже работает
 
-- Фазы 0–11b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- Фазы 0–12a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **12a:** импорт экспорта Telegram Desktop JSON в Event Mirror (`/history-import/*`), jobs в БД.
 - **11b:** те же правила — в KB RAG (`rag.py`, `/knowledge/ask`, `/kb_ask`): `applied_rule_ids`, опциональный `chat_id` в ask body.
 - **11a:** правила ассистента в БД + audit, API `/assistant-rules*`, команды `/rule_*`.
 - **10g:** импорт KB из Telegram document в control group (`/kb_import_last`, `/kb_import_file`), Bot API getFile+download, те же лимиты/Docling что 10f.
@@ -28,7 +31,7 @@
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**261** кейсов после фазы 11b, локально/Docker).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**268** кейсов после фазы 12a, локально/Docker).
 
 ## Что ещё не готово
 
@@ -65,6 +68,7 @@
 - **Фаза 10f:** HTTP multipart upload в KB, опциональный Docling для PDF/DOCX, `/kb_import_help`; см. `docs/06_DECISIONS.md`.
 - **Фаза 11a:** assistant rules в Studio DB + audit + admin API + `/rule_*` из control group; см. `docs/06_DECISIONS.md`.
 - **Фаза 11b:** assistant rules в user-prompt KB RAG + `applied_rule_ids`; см. `docs/06_DECISIONS.md`.
+- **Фаза 12a:** импорт Telegram Desktop JSON в Event Mirror + jobs API; см. `docs/06_DECISIONS.md`.
 
 ## Следующая задача
 

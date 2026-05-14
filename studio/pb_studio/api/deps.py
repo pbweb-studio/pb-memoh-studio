@@ -75,6 +75,14 @@ async def verify_kb_embeddings_enabled(settings: Settings = Depends(get_settings
         )
 
 
+async def verify_history_import_enabled(settings: Settings = Depends(get_settings)) -> None:
+    if not settings.studio_history_import_enabled:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="STUDIO_HISTORY_IMPORT_ENABLED is false",
+        )
+
+
 async def verify_kb_rag_enabled(settings: Settings = Depends(get_settings)) -> None:
     if not settings.studio_kb_enabled:
         raise HTTPException(

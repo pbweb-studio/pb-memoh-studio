@@ -261,3 +261,10 @@
 - API только под **`STUDIO_ADMIN_TOKEN`** (как `/projects`, `/knowledge` при заданном токене); **без** вызова Memoh и **без** chat completion в самой фазе 11a; применение к KB RAG — **фаза 11b**.
 - Команды **`/rule_*`**: только active control group, тот же ACL **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`**, ответы только `sendMessage` в CG.
 
+## Фаза 12a — Импорт Telegram Desktop JSON в Event Mirror (выполнено)
+
+- Включение: **`STUDIO_HISTORY_IMPORT_ENABLED=true`** при **`STUDIO_ADMIN_TOKEN`**; лимит размера файла **`STUDIO_HISTORY_IMPORT_MAX_BYTES`** (минимум 64 B в валидации Settings; по умолчанию 50 MiB).
+- Импорт: **`POST /history-import/telegram-json`** (multipart `file` = JSON экспорта); синхронная обработка в API; job в **`studio_history_import_jobs`** со статусами **`pending`** / **`processing`** / **`completed`** / **`failed`** (на практике создаётся в **`processing`** и завершается в том же запросе).
+- Данные: **`studio_chats`** (upsert по `telegram_chat_id`), **`studio_messages`** с **`raw_update_id = null`** и `raw_message` в форме, совместимой с потребителями зеркала (`message_id`, `date`, `chat`, опционально `from`, `text`/`caption`, вложенный фрагмент экспорта под **`studio_history_import`**); **`studio_telegram_users`** при наличии `from`; **`studio_chat_lifecycle_events`** для сообщений типа **`service`** (без `TelegramRawUpdate`).
+- **Без** Memoh, Telegram Bot API, polling/webhook Studio, LLM/RAG/embeddings, Studio Admin UI, исходящих сообщений в Telegram.
+
