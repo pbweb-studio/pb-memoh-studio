@@ -63,6 +63,13 @@
 - **Операции:** Celery `generate_pending_chat_summaries`; `POST /summaries/generate-pending`, `POST /summaries/{id}/generate` под `STUDIO_ADMIN_TOKEN`.
 - **Не делается:** отправка сводок в Telegram (`sendMessage` для сводок), второй бот, polling/webhook.
 
+## Фаза 6c — сводки: продуктовый HTTP API по чату (Studio)
+
+- **Назначение:** удобные вызовы «сегодня / вчера / произвольный период / последняя generated» по `studio_chats.id` (UUID в пути), поверх уже существующих `plan_summary_job` + шаблонного `apply_generation_to_row` (6b).
+- **Авторизация:** те же админ-зависимости, что и остальные защищённые роуты — при заданном `STUDIO_ADMIN_TOKEN` обязателен `Authorization: Bearer …`.
+- **Семантика:** если за период уже есть строка `generated` — возврат без дубликата; если `pending` — генерация и возврат; если строки нет — `plan` + генерация; периоды today/yesterday считаются в **UTC**; для `failed` за тот же период — HTTP **409** (ручное вмешательство в БД).
+- **Не делается:** Memoh, внешние LLM HTTP, `sendMessage` для сводок, RAG, SLA, проекты, Studio Admin UI, изменения polling/webhook, второй бот.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

@@ -5,17 +5,42 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from pb_studio.api.deps import DbSession, SettingsDep, verify_admin_optional
+from pb_studio.summaries.models import StudioChatSummary
+from pb_studio.summaries.constants import SummaryType
 from pb_studio.summaries.generator import generate_one_summary, generate_pending_summaries_batch
 from pb_studio.summaries.planner import get_summary, list_summaries, plan_summary_job
+from pb_studio.summaries.product import (
+    ensure_chat_summary_for_period,
+    get_latest_generated_for_chat,
+    utc_today_period,
+    utc_yesterday_period,
+)
 from pb_studio.summaries.schemas import (
     ChatSummaryOut,
+    ChatSummaryProductOut,
     GenerateOneResult,
     GeneratePendingResult,
+    PeriodSummaryBody,
     PlanSummaryRequest,
     PlanSummaryResponse,
 )
 
 router = APIRouter(tags=["summaries"])
+
+
+def _to_product(row: StudioChatSummary) -> ChatSummaryProductOut:
+    return ChatSummaryProductOut(
+        id=row.id,
+        chat_id=row.chat_id,
+        chat_role=row.chat_role,
+        summary_type=row.summary_type,
+        period_start=row.period_start,
+        period_end=row.period_end,
+        status=row.status,
+        source_event_count=row.source_event_count,
+        summary_text=row.summary_text,
+        generated_at=row.generated_at,
+    )
 
 
 @router.get(
@@ -59,6 +84,100 @@ async def post_summaries_plan(session: DbSession, body: PlanSummaryRequest) -> P
 async def post_summaries_generate_pending(session: DbSession, settings: SettingsDep) -> GeneratePendingResult:
     raw = await generate_pending_summaries_batch(session, settings)
     return GeneratePendingResult.model_validate(raw)
+
+
+def _product_http(exc: ValueError) -> HTTPException:
+    msg = str(exc)
+    if "status failed" in msg.lower():
+        return HTTPException(status.HTTP_409_CONFLICT, detail=msg)
+    return HTTPException(status.HTTP_400_BAD_REQUEST, detail=msg)
+
+
+@router.post(
+    "/summaries/chat/{chat_id}/today",
+    response_model=ChatSummaryProductOut,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_summaries_chat_today(
+    session: DbSession,
+    settings: SettingsDep,
+    chat_id: UUID,
+) -> ChatSummaryProductOut:
+    p0, p1 = utc_today_period()
+    try:
+        row = await ensure_chat_summary_for_period(
+            session,
+            studio_chat_id=chat_id,
+            summary_type=SummaryType.DAILY,
+            period_start=p0,
+            period_end=p1,
+            settings=settings,
+        )
+    except ValueError as exc:
+        raise _product_http(exc) from exc
+    return _to_product(row)
+
+
+@router.post(
+    "/summaries/chat/{chat_id}/yesterday",
+    response_model=ChatSummaryProductOut,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_summaries_chat_yesterday(
+    session: DbSession,
+    settings: SettingsDep,
+    chat_id: UUID,
+) -> ChatSummaryProductOut:
+    p0, p1 = utc_yesterday_period()
+    try:
+        row = await ensure_chat_summary_for_period(
+            session,
+            studio_chat_id=chat_id,
+            summary_type=SummaryType.DAILY,
+            period_start=p0,
+            period_end=p1,
+            settings=settings,
+        )
+    except ValueError as exc:
+        raise _product_http(exc) from exc
+    return _to_product(row)
+
+
+@router.post(
+    "/summaries/chat/{chat_id}/period",
+    response_model=ChatSummaryProductOut,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def post_summaries_chat_period(
+    session: DbSession,
+    settings: SettingsDep,
+    chat_id: UUID,
+    body: PeriodSummaryBody,
+) -> ChatSummaryProductOut:
+    try:
+        row = await ensure_chat_summary_for_period(
+            session,
+            studio_chat_id=chat_id,
+            summary_type=SummaryType.MANUAL,
+            period_start=body.period_start,
+            period_end=body.period_end,
+            settings=settings,
+        )
+    except ValueError as exc:
+        raise _product_http(exc) from exc
+    return _to_product(row)
+
+
+@router.get(
+    "/summaries/chat/{chat_id}/latest",
+    response_model=ChatSummaryProductOut,
+    dependencies=[Depends(verify_admin_optional)],
+)
+async def get_summaries_chat_latest(session: DbSession, chat_id: UUID) -> ChatSummaryProductOut:
+    row = await get_latest_generated_for_chat(session, studio_chat_id=chat_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="no generated summary for this chat")
+    return _to_product(row)
 
 
 @router.get(

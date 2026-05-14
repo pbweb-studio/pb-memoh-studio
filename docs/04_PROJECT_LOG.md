@@ -92,3 +92,11 @@
 - **Без** Memoh, **без** внешнего LLM API, **без** Telegram send для сводок.
 - Тесты: `pytest tests/` (включая `test_summaries_phase6b.py`); `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` на `pb-studio/main`.
+
+## 2026-05-14 — Фаза 6c (Studio: продуктовый API сводок) + compose 6b
+
+- Эндпоинты под `STUDIO_ADMIN_TOKEN`: `POST /summaries/chat/{uuid}/today`, `.../yesterday`, `.../period`, `GET .../latest`; логика в `pb_studio/summaries/product.py`; ответ `ChatSummaryProductOut`.
+- В `docker-compose.local.yml` для `studio-api` и `studio-worker` проброшены `STUDIO_SUMMARY_GENERATION_ENABLED`, `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS`.
+- **Без** Memoh, **без** внешнего LLM, **без** Telegram send для сводок, **без** RAG/SLA/проектов/Studio Admin.
+- Тесты: `pytest tests/` (включая `test_summaries_phase6c.py`); `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` на `pb-studio/main`.

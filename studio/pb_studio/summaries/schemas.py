@@ -56,3 +56,29 @@ class GenerateOneResult(BaseModel):
     id: UUID
     generated: bool
     reason: str | None = None
+
+
+class ChatSummaryProductOut(BaseModel):
+    """Ответ продуктового API 6c (без лишних полей)."""
+
+    id: UUID
+    chat_id: UUID
+    chat_role: str
+    summary_type: str
+    period_start: datetime
+    period_end: datetime
+    status: str
+    source_event_count: int
+    summary_text: str | None
+    generated_at: datetime | None
+
+
+class PeriodSummaryBody(BaseModel):
+    period_start: datetime
+    period_end: datetime
+
+    @model_validator(mode="after")
+    def period_order(self) -> PeriodSummaryBody:
+        if self.period_end <= self.period_start:
+            raise ValueError("period_end must be after period_start")
+        return self

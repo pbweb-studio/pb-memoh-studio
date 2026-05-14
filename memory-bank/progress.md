@@ -14,6 +14,7 @@
 | 5b Outbound system notifications → control group | Done |
 | 6a Summaries infra (DB + planner, no LLM) | Done |
 | 6b Template summary_text generation (no LLM API, no TG send) | Done |
-| 6+ Сводки (LLM / продукт / доставка) и прочее | Pending |
+| 6c Product summaries API (today/yesterday/period/latest, no LLM, no TG send) | Done |
+| 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 6b — generator, Celery generate_pending, admin generate endpoints; pytest 66 passed (Docker).
+**Последнее:** фаза 6c — product API + compose env; pytest 75 passed (Docker).

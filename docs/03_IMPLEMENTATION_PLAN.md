@@ -171,6 +171,21 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 6c — сводки: продуктовый API «сегодня / вчера / период» (без LLM, без Telegram send)
+
+**Статус:** `summaries/product.py` + админ-роуты `POST /summaries/chat/{studio_chat_id}/today|yesterday|period`, `GET /summaries/chat/{studio_chat_id}/latest`. Используются только `plan_summary_job` + `apply_generation_to_row` (шаблон 6b); периоды **today/yesterday** в UTC через `utc_day_bounds`; **manual** для произвольного периода. Идемпотентность: существующая `generated` — возврат; `pending` — догенерация; `failed` за тот же период — **409**. Требуется `STUDIO_SUMMARY_GENERATION_ENABLED=true`. **Без** Memoh, **без** внешнего LLM, **без** `sendMessage` сводок, **без** второго бота и без изменений polling/webhook.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `summaries/product.py` | `ensure_chat_summary_for_period`, `get_latest_generated_for_chat`, `utc_today_period` / `utc_yesterday_period` |
+| `summaries/schemas.py` | `ChatSummaryProductOut`, `PeriodSummaryBody` |
+| `api/routes/summaries.py` | Продуктовые эндпоинты перед `GET /summaries/{summary_id}` |
+| `docker-compose.local.yml` | Проброс `STUDIO_SUMMARY_*` в `studio-api` и `studio-worker` (хвост 6b для compose) |
+
+**Тесты:** `studio/tests/test_summaries_phase6c.py`.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -184,7 +199,8 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 5b | Доставка `pending_for_control_group_delivery` / retry в Telegram control group: `sendMessage`, Celery, админ-эндпоинты (**без** Memoh, **без** polling/webhook Studio) |
 | 6a | Сводки: таблица `studio_chat_summaries`, планировщик pending jobs из Event Mirror, админ-API, Celery `plan_daily_chat_summaries` (**без** LLM, **без** отправки сводок в Telegram) |
 | 6b | Шаблонная генерация `summary_text` из Event Mirror, Celery `generate_pending_chat_summaries`, POST generate (**без** внешнего LLM API, **без** Telegram send сводок) |
-| 6+ | LLM / продукт / UX сводок — только после отдельной постановки |
+| 6c | Продуктовый API сводок по чату: today/yesterday/period/latest под `STUDIO_ADMIN_TOKEN` (**без** LLM, **без** Telegram send сводок; только Studio DB) |
+| 6+ | LLM / доставка сводок в Telegram / прочее — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |
 | 9 | Проекты: bind/list/digest |

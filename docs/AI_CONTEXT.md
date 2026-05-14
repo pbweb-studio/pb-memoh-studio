@@ -6,19 +6,19 @@
 
 ## Текущая фаза
 
-**Фаза 6b (сводки — шаблонная генерация текста)** — `summaries/generator.py`: pending → `summary_text` из `studio_messages` / `studio_chat_lifecycle_events` (детерминированный шаблон); Celery `generate_pending_chat_summaries`; `POST /summaries/generate-pending`, `POST /summaries/{id}/generate`; env `STUDIO_SUMMARY_*`. **Без** внешних LLM HTTP, **без** `sendMessage` для сводок. Memoh **не** менялся.
+**Фаза 6c (сводки — продуктовый API по чату)** — `summaries/product.py` + `POST /summaries/chat/{uuid}/today|yesterday|period`, `GET .../latest` под `STUDIO_ADMIN_TOKEN`; планировщик + шаблонная генерация (6b); периоды today/yesterday в UTC; без дубликатов для `generated`; `failed` за период → 409. Env `STUDIO_SUMMARY_*` проброшены в `studio-api` / `studio-worker` в `docker-compose.local.yml`. **Без** внешних LLM HTTP, **без** `sendMessage` для сводок. Memoh **не** менялся.
 
-Фазы **6a**, **5b**, **4b** — как ранее.
+Фазы **6b**, **6a**, **5b**, **4b** — как ранее.
 
 ## Текущая цель
 
-Фаза **6+** (LLM / продукт / доставка сводок) — **не** начинать до отдельной постановки.
+Фаза **6+** (LLM и/или доставка сводок в Telegram) — **не** начинать до отдельной постановки.
 
 ## Что уже работает
 
-- Фазы 0–6b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **6b:** шаблонная генерация сводок, батч с изоляцией ошибок, админ-эндпоинты генерации.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**66** кейсов после фазы 6b).
+- Фазы 0–6c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **6c:** продуктовые эндпоинты сводок по `studio_chats.id`, идемпотентность и догенерация `pending`.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**75** кейсов после фазы 6c).
 
 ## Что ещё не готово
 
@@ -42,7 +42,7 @@
 
 - Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД / ожидание доставки.
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
-- Сводки 6a–6b: только Studio DB + шаблон; границы — см. `docs/06_DECISIONS.md` (фазы 6a, 6b).
+- Сводки 6a–6c: только Studio DB + шаблон; продуктовые маршруты 6c — см. `docs/06_DECISIONS.md` (фаза 6c); границы 6a–6b — там же.
 
 ## Следующая задача
 
