@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 
 from pydantic import Field
@@ -90,6 +91,26 @@ class Settings(BaseSettings):
         default=50,
         description="STUDIO_CONTROL_COMMANDS_MAX_BATCH — лимит сообщений/команд за один цикл",
     )
+    studio_control_commands_allowed_user_ids: str = Field(
+        default="",
+        description="STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS — CSV / пробелы: Telegram user id; пусто = все участники control group",
+    )
+
+    @property
+    def studio_control_commands_allowed_user_ids_set(self) -> frozenset[int]:
+        raw = (self.studio_control_commands_allowed_user_ids or "").strip()
+        if not raw:
+            return frozenset()
+        ids: list[int] = []
+        for part in re.split(r"[\s,;]+", raw):
+            p = part.strip()
+            if not p or not p.isdigit():
+                continue
+            try:
+                ids.append(int(p))
+            except ValueError:
+                continue
+        return frozenset(ids)
 
     @property
     def celery_backend_effective(self) -> str:

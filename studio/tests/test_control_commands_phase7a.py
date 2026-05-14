@@ -66,14 +66,21 @@ async def cc_client(cc_engine):
         app.dependency_overrides.clear()
 
 
-def _msg(update_id: int, chat_id: int, *, text: str = "hello", message_id: int = 1) -> dict:
+def _msg(
+    update_id: int,
+    chat_id: int,
+    *,
+    text: str = "hello",
+    message_id: int = 1,
+    from_user_id: int = 42,
+) -> dict:
     return {
         "update_id": update_id,
         "message": {
             "message_id": message_id,
             "date": 1700000000,
             "chat": {"id": chat_id, "type": "supergroup", "title": "T"},
-            "from": {"id": 42, "is_bot": False, "first_name": "U"},
+            "from": {"id": from_user_id, "is_bot": False, "first_name": "U"},
             "text": text,
         },
     }
@@ -418,6 +425,277 @@ async def test_no_httpx_when_send_mocked(cc_client, monkeypatch):
         send_message=AsyncMock(return_value=(True, 200, "", 500)),
     )
     await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_summary_chats_excludes_control_group(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780001, -78001))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78001})
+    await client.post("/events/telegram", json=_msg(780002, -78002))
+    await client.post("/events/telegram", json=_msg(780003, -78003))
+    cg = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -78001))
+    assert cg is not None
+    await client.post("/events/telegram", json=_msg(780004, -78001, text="/summary_chats", message_id=5))
+    mock = AsyncMock(return_value=(True, 200, "", 1))
+    await run_control_commands_cycle(session, get_settings(), send_message=mock)
+    await session.commit()
+    body = str(mock.await_args)
+    assert str(cg.id) not in body
+    assert "-78002" in body and "-78003" in body
+
+
+@pytest.mark.asyncio
+async def test_summary_all_today_multiple_chats(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    fixed = datetime(2025, 9, 9, 10, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("pb_studio.summaries.product.summaries_clock", lambda: fixed)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780101, -78101))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78101})
+    await client.post("/events/telegram", json=_msg(780102, -78102))
+    await client.post("/events/telegram", json=_msg(780103, -78103))
+    t2 = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -78102))
+    t3 = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -78103))
+    p0, _ = utc_day_bounds(fixed.date())
+    for ch in (t2, t3):
+        assert ch is not None
+        session.add(
+            StudioMessage(
+                chat_id=ch.id,
+                telegram_message_id=2,
+                date=p0 + timedelta(hours=1),
+                text="line",
+                raw_message={"from": {"id": 1, "is_bot": False}, "text": "line"},
+            )
+        )
+    await session.commit()
+    await client.post("/events/telegram", json=_msg(780104, -78101, text="/summary_all_today", message_id=8))
+    mock = AsyncMock(return_value=(True, 200, "", 2))
+    await run_control_commands_cycle(session, get_settings(), send_message=mock)
+    await session.commit()
+    n = await session.scalar(select(func.count()).select_from(StudioChatSummary))
+    assert n >= 2
+    assert "Сводки" in str(mock.await_args)
+
+
+@pytest.mark.asyncio
+async def test_summary_all_yesterday_idempotent_two_cycles(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    fixed = datetime(2025, 10, 10, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("pb_studio.summaries.product.summaries_clock", lambda: fixed)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780201, -78201))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78201})
+    await client.post("/events/telegram", json=_msg(780202, -78202))
+    t2 = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -78202))
+    assert t2 is not None
+    p0, _ = utc_day_bounds((fixed.date() - timedelta(days=1)))
+    session.add(
+        StudioMessage(
+            chat_id=t2.id,
+            telegram_message_id=2,
+            date=p0 + timedelta(hours=2),
+            text="y",
+            raw_message={"from": {"id": 1, "is_bot": False}, "text": "y"},
+        )
+    )
+    await session.commit()
+    await client.post("/events/telegram", json=_msg(780203, -78201, text="/summary_all_yesterday", message_id=3))
+    mock = AsyncMock(return_value=(True, 200, "", 1))
+    s = get_settings()
+    await run_control_commands_cycle(session, s, send_message=mock)
+    await session.commit()
+    n1 = await session.scalar(select(func.count()).select_from(StudioChatSummary))
+    await client.post("/events/telegram", json=_msg(780204, -78201, text="/summary_all_yesterday", message_id=4))
+    await run_control_commands_cycle(session, s, send_message=mock)
+    await session.commit()
+    n2 = await session.scalar(select(func.count()).select_from(StudioChatSummary))
+    assert n2 == n1
+
+
+@pytest.mark.asyncio
+async def test_acl_denied_no_summary(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    monkeypatch.setenv("STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS", "999")
+    get_settings.cache_clear()
+    fixed = datetime(2025, 11, 5, 8, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("pb_studio.summaries.product.summaries_clock", lambda: fixed)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780301, -78301))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78301})
+    await client.post("/events/telegram", json=_msg(780302, -78302))
+    target = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -78302))
+    assert target is not None
+    p0, _ = utc_day_bounds(fixed.date())
+    session.add(
+        StudioMessage(
+            chat_id=target.id,
+            telegram_message_id=2,
+            date=p0 + timedelta(hours=1),
+            text="acl",
+            raw_message={"from": {"id": 1, "is_bot": False}, "text": "acl"},
+        )
+    )
+    await session.commit()
+    await client.post(
+        "/events/telegram",
+        json=_msg(780303, -78301, text=f"/summary_today {target.id}", message_id=5, from_user_id=42),
+    )
+    await run_control_commands_cycle(session, get_settings(), send_message=AsyncMock(return_value=(True, 200, "", 9)))
+    await session.commit()
+    cmd = await session.scalar(select(StudioControlCommand))
+    assert cmd is not None
+    assert cmd.status == ControlCommandStatus.FAILED_ACCESS_DENIED
+    n = await session.scalar(select(func.count()).select_from(StudioChatSummary))
+    assert n == 0
+
+
+@pytest.mark.asyncio
+async def test_acl_allowed_matching_sender(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    monkeypatch.setenv("STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS", "42, 100")
+    get_settings.cache_clear()
+    fixed = datetime(2025, 11, 6, 8, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("pb_studio.summaries.product.summaries_clock", lambda: fixed)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780401, -78401))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78401})
+    await client.post("/events/telegram", json=_msg(780402, -78402))
+    target = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == -78402))
+    assert target is not None
+    p0, _ = utc_day_bounds(fixed.date())
+    session.add(
+        StudioMessage(
+            chat_id=target.id,
+            telegram_message_id=2,
+            date=p0 + timedelta(hours=1),
+            text="okacl",
+            raw_message={"from": {"id": 1, "is_bot": False}, "text": "okacl"},
+        )
+    )
+    await session.commit()
+    await client.post(
+        "/events/telegram",
+        json=_msg(780403, -78401, text=f"/summary_today {target.id}", message_id=5, from_user_id=100),
+    )
+    await run_control_commands_cycle(session, get_settings(), send_message=AsyncMock(return_value=(True, 200, "", 9)))
+    await session.commit()
+    cmd = await session.scalar(select(StudioControlCommand))
+    assert cmd.status == ControlCommandStatus.PROCESSED
+
+
+@pytest.mark.asyncio
+async def test_long_all_summary_truncated(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    monkeypatch.setattr("pb_studio.control_commands.service.TELEGRAM_TEXT_SAFE_MAX", 250)
+    fixed = datetime(2025, 12, 2, 10, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr("pb_studio.summaries.product.summaries_clock", lambda: fixed)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780501, -78501))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78501})
+    for i in range(6):
+        tid = -78510 - i
+        await client.post("/events/telegram", json=_msg(780510 + i, tid))
+        ch = await session.scalar(select(StudioChat).where(StudioChat.telegram_chat_id == tid))
+        assert ch is not None
+        p0, _ = utc_day_bounds(fixed.date())
+        session.add(
+            StudioMessage(
+                chat_id=ch.id,
+                telegram_message_id=2,
+                date=p0 + timedelta(hours=1),
+                text="x" * 400,
+                raw_message={"from": {"id": 1, "is_bot": False}, "text": "x" * 400},
+            )
+        )
+    await session.commit()
+    await client.post("/events/telegram", json=_msg(780599, -78501, text="/summary_all_today", message_id=50))
+    mock = AsyncMock(return_value=(True, 200, "", 1))
+    await run_control_commands_cycle(session, get_settings(), send_message=mock)
+    await session.commit()
+    txt = str(mock.await_args)
+    assert "обрезан" in txt
+
+
+@pytest.mark.asyncio
+async def test_long_chats_list_truncated(cc_client, monkeypatch):
+    _env_7a(monkeypatch)
+    monkeypatch.setattr("pb_studio.control_commands.service.SUMMARY_CHATS_MAX_LINES", 4)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780601, -78601))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78601})
+    for i in range(8):
+        await client.post("/events/telegram", json=_msg(780610 + i, -78620 - i))
+    await client.post("/events/telegram", json=_msg(780699, -78601, text="/summary_chats", message_id=9))
+    mock = AsyncMock(return_value=(True, 200, "", 1))
+    await run_control_commands_cycle(session, get_settings(), send_message=mock)
+    await session.commit()
+    txt = str(mock.await_args)
+    assert "обрезан" in txt
+
+
+@pytest.mark.asyncio
+async def test_access_denied_audit_and_no_token_in_last_error(cc_client, monkeypatch):
+    from pb_studio.event_mirror.models import AuditLog
+
+    _env_7a(monkeypatch)
+    monkeypatch.setenv("STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS", "1")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "MYSECRETBOTTOKENZZ")
+    get_settings.cache_clear()
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780701, -78701))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78701})
+    await client.post("/events/telegram", json=_msg(780702, -78701, text="/summary_help", message_id=3, from_user_id=2))
+    await run_control_commands_cycle(session, get_settings(), send_message=AsyncMock(return_value=(True, 200, "", 1)))
+    await session.commit()
+    cmd = await session.scalar(select(StudioControlCommand))
+    assert cmd.status == ControlCommandStatus.FAILED_ACCESS_DENIED
+    assert "MYSECRET" not in (cmd.last_error or "")
+    assert "ZZ" not in (cmd.last_error or "")
+    aud = await session.scalar(
+        select(func.count()).select_from(AuditLog).where(AuditLog.action == "control_commands.access_denied")
+    )
+    assert aud >= 1
+
+
+@pytest.mark.asyncio
+async def test_get_control_commands_filter_command_name(cc_client, monkeypatch):
+    from pb_studio.control_group.service import get_control_group_chat
+
+    _env_7a(monkeypatch)
+    client, session = cc_client
+    await client.post("/events/telegram", json=_msg(780801, -78801))
+    await client.post("/control-group/set", json={"telegram_chat_id": -78801})
+    await client.post("/events/telegram", json=_msg(780802, -78801, text="/summary_chats", message_id=2))
+    session.expire_all()
+    assert await get_control_group_chat(session) is not None
+    out = await run_control_commands_cycle(session, get_settings(), send_message=AsyncMock(return_value=(True, 200, "", 1)))
+    assert out["scan"]["inserted"] >= 1, out
+    await session.commit()
+    session.expire_all()
+    monkeypatch.setenv("STUDIO_ADMIN_TOKEN", "adm7b")
+    get_settings.cache_clear()
+    r = await client.get(
+        "/control-commands",
+        params={"command_name": "summary_chats"},
+        headers={"Authorization": "Bearer adm7b"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) >= 1
+    assert all(row["command_name"] == "summary_chats" for row in data)
+
+
+def test_parser_summary_chats_no_args():
+    p = parse_control_group_command_line("/summary_chats")
+    assert p is not None and p.name == ControlCommandName.SUMMARY_CHATS
+
+
+def test_parser_summary_all_today():
+    p = parse_control_group_command_line("/summary_all_today")
+    assert p is not None and p.name == ControlCommandName.SUMMARY_ALL_TODAY
 
 
 def test_redact_secrets_strips_bot_token():

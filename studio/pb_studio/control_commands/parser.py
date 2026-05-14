@@ -61,6 +61,21 @@ def parse_control_group_command_line(text: str | None) -> ParsedControlCommand |
     if cmd == "/summary_help":
         return ParsedControlCommand(ControlCommandName.SUMMARY_HELP, {})
 
+    if cmd == "/summary_chats":
+        if rest:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "summary_chats takes no arguments"})
+        return ParsedControlCommand(ControlCommandName.SUMMARY_CHATS, {})
+
+    if cmd == "/summary_all_today":
+        if rest:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "summary_all_today takes no arguments"})
+        return ParsedControlCommand(ControlCommandName.SUMMARY_ALL_TODAY, {})
+
+    if cmd == "/summary_all_yesterday":
+        if rest:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "summary_all_yesterday takes no arguments"})
+        return ParsedControlCommand(ControlCommandName.SUMMARY_ALL_YESTERDAY, {})
+
     if cmd == "/summary_today":
         if len(rest) < 1:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "missing_chat_uuid"})

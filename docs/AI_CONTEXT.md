@@ -6,7 +6,7 @@
 
 ## Текущая фаза
 
-**Фаза 7a (команды сводок из control group через Event Mirror)** — таблица `studio_control_commands`, пакет `control_commands`, скан `studio_messages` активной control group, продуктовая логика `summaries/product.py`, ответы `sendMessage` в control group (и доставка 6d при флаге), Celery `process_control_group_summary_commands`, админ `GET /control-commands` и `POST /control-commands/process-pending`, env `STUDIO_CONTROL_COMMANDS_*`. **Без** Memoh, **без** второго бота и polling/webhook Studio, **без** LLM/RAG. Memoh **не** менялся.
+**Фаза 7b (UX команд сводок + ACL в control group)** — поверх 7a: `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`, обновлённый help; список чатов и агрегаты с обрезкой под лимит Telegram; ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (пусто = все); статус `failed_access_denied` + отказ в control group + аудит; `GET /control-commands?command_name=`; `redact_secrets` для `last_error`. **Без** Memoh, **без** второго бота и polling/webhook Studio, **без** LLM/RAG. Memoh **не** менялся.
 
 Фазы **6d**, **6c**, **6b**, **6a**, **5b**, **4b** — как ранее.
 
@@ -16,9 +16,9 @@
 
 ## Что уже работает
 
-- Фазы 0–7a по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **7a:** команды `/summary_*` из control group по зеркалу + админ API + Celery.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**105** кейсов после фазы 7a).
+- Фазы 0–7b по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **7a–7b:** команды сводок из control group по зеркалу (в т.ч. список чатов и all-day агрегаты), ACL по Telegram user id, админ API + Celery.
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (**116** кейсов после фазы 7b, Docker).
 
 ## Что ещё не готово
 
@@ -43,7 +43,7 @@
 - Один бот; системные Telegram-сообщения **не** в клиентские/проектные чаты; без control group — только БД / ожидание доставки.
 - Outbound Studio: только `sendMessage` в control group; аудит и ретраи — см. `docs/06_DECISIONS.md` (фаза 5b).
 - Сводки 6a–6d: Studio DB + шаблон + продуктовый API + доставка в control group — см. `docs/06_DECISIONS.md` (фазы 6a–6d).
-- Фаза **7a:** команды `/summary_*` только из зеркала control group → ответы только в control group; см. `docs/06_DECISIONS.md` (фаза 7a).
+- Фазы **7a–7b:** команды `/summary_*` только из зеркала control group → ответы только в control group; ACL по `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`; см. `docs/06_DECISIONS.md` (фазы 7a, 7b).
 
 ## Следующая задача
 

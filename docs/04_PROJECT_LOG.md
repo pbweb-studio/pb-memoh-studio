@@ -114,3 +114,10 @@
 - **Без** Memoh, **без** второго бота, **без** polling/webhook Studio, **без** LLM/RAG/SLA/проектов/Studio Admin UI; ответы только в активную control group.
 - Тесты: `studio/tests/test_control_commands_phase7a.py`; полный `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
 - SHA: `git rev-parse HEAD` после фиксирующего коммита.
+
+## 2026-05-14 — Фаза 7b (Studio: UX команд сводок + ACL в control group)
+
+- Расширение `control_commands`: `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`, обновлённый help; ACL `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`; статус `failed_access_denied`, аудит `control_commands.access_denied`; агрегаты и списки с обрезкой; `GET /control-commands?command_name=`; `redact_secrets` в `last_error` при исключениях.
+- **Без** Memoh, LLM/RAG/SLA/проектов/Studio Admin UI, второго бота, polling/webhook Studio.
+- Тесты: `studio/tests/test_control_commands_phase7a.py`; `pytest tests/` в Docker; `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` на ветке после коммита 7b (см. отчёт / CI).

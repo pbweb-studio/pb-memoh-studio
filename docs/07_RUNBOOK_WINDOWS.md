@@ -27,7 +27,7 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фаз 6b–6d** в те же сервисы **`studio-api`** и **`studio-worker`** проброшены: `STUDIO_SUMMARY_GENERATION_ENABLED`, `STUDIO_SUMMARY_MAX_SOURCE_MESSAGES`, `STUDIO_SUMMARY_MAX_BULLETS`, `STUDIO_SUMMARY_DELIVERY_ENABLED`, `STUDIO_SUMMARY_DELIVERY_MAX_RETRIES` (см. `.env.example`). Продуктовые эндпоинты `/summaries/chat/...` и доставка сводок требуют `STUDIO_ADMIN_TOKEN` на API (когда задан).
 
-Для **фазы 7a** добавлены: `STUDIO_CONTROL_COMMANDS_ENABLED`, `STUDIO_CONTROL_COMMANDS_MAX_BATCH` (скан команд из зеркала в control group; по умолчанию выключено). Эндпоинты `GET /control-commands` и `POST /control-commands/process-pending` — под тем же `STUDIO_ADMIN_TOKEN`, если он задан.
+Для **фаз 7a–7b** добавлены: `STUDIO_CONTROL_COMMANDS_ENABLED`, `STUDIO_CONTROL_COMMANDS_MAX_BATCH` (скан команд из зеркала в control group; по умолчанию выключено); `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` — CSV/пробелы Telegram user id; **пусто** = все участники control group могут вызывать команды; иначе только перечисленные id. Эндпоинты `GET /control-commands` (фильтры `status`, `command_name`) и `POST /control-commands/process-pending` — под тем же `STUDIO_ADMIN_TOKEN`, если он задан.
 
 Проверка API:
 

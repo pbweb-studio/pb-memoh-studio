@@ -208,13 +208,29 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | Компонент | Назначение |
 |-----------|------------|
 | `control_commands/models.py` | `StudioControlCommand`, уникальности по `source_message_id` / `source_update_id` |
-| `control_commands/parser.py` | `/summary_today|yesterday|period|latest|help`, валидация UUID и дат |
+| `control_commands/parser.py` | `/summary_today|yesterday|period|latest|help|chats|all_today|all_yesterday` (7b расширение), валидация UUID и дат |
 | `control_commands/service.py` | scan mirror, `begin_nested` при дублях, batch-обработка pending |
 | `api/routes/control_commands.py` | админ-эндпоинты |
 | `worker/tasks.py` | `process_control_group_summary_commands` |
 | `docker-compose.local.yml` | проброс `STUDIO_CONTROL_COMMANDS_*` в api/worker |
 
-**Тесты:** `studio/tests/test_control_commands_phase7a.py`.
+**Тесты:** `studio/tests/test_control_commands_phase7a.py` (включая UX/ACL 7b).
+
+---
+
+## Фаза 7b — UX команд сводок и ACL в control group
+
+**Статус:** команды `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`; обновлён `/summary_help`; список чатов без активной control group с обрезкой длины; «все чаты» — один агрегированный ответ в control group с безопасным обрезанием; `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (CSV Telegram user id, пусто = все); статус `failed_access_denied`, отказ в Telegram, аудит `control_commands.access_denied` без токена; `GET /control-commands` — фильтры `status`, `command_name`; `last_error` при общих ошибках через `redact_secrets`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/SLA/проектов/Studio Admin.
+
+| Компонент | Назначение |
+|-----------|------------|
+| `control_commands/constants.py` | Лимиты текста, `SUMMARY_HELP_TEXT`, статус `failed_access_denied` |
+| `control_commands/service.py` | ACL, `_build_summary_chats_text`, агрегат all today/yesterday |
+| `core/config.py` | `studio_control_commands_allowed_user_ids`, `studio_control_commands_allowed_user_ids_set` |
+| `api/routes/control_commands.py` | query `command_name` |
+| `docker-compose.local.yml`, `.env.example` | `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` |
+
+**Тесты:** расширение `studio/tests/test_control_commands_phase7a.py`.
 
 ---
 
@@ -234,6 +250,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 6c | Продуктовый API сводок по чату: today/yesterday/period/latest под `STUDIO_ADMIN_TOKEN` (**без** LLM, **без** Telegram send сводок; только Studio DB) |
 | 6d | Доставка готовых сводок в control group: `sendMessage`, поля `delivery_*`, Celery `deliver_pending_chat_summaries` (**без** Memoh, **без** LLM; тот же `TELEGRAM_BOT_TOKEN`) |
 | 7a | Команды `/summary_*` из control group по зеркалу: `studio_control_commands`, scan `studio_messages`, product + доставка 6d, Celery + админ API (**без** Memoh, второго бота, polling/webhook Studio) |
+| 7b | UX: `/summary_chats`, `/summary_all_today/yesterday`, ACL по Telegram user id (`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`), агрегаты и обрезка ответов (**без** Memoh/LLM/второго бота) |
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute |

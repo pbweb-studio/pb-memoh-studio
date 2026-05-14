@@ -17,6 +17,7 @@
 | 6c Product summaries API (today/yesterday/period/latest, no LLM, no TG send) | Done |
 | 6d Summary delivery to control group (sendMessage, no Memoh/LLM) | Done |
 | 7a Control group summary commands via Event Mirror | Done |
+| 7b UX summary commands + ACL in control group | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 7a — Alembic 007, control_commands, API + Celery; pytest 105 passed (Docker); compose config ok.
+**Последнее:** фаза 7b — расширение control_commands, ACL env, агрегаты и обрезка, фильтр API; pytest **116** passed (Docker); compose config ok.

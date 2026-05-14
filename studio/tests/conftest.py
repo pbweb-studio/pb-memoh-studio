@@ -24,6 +24,7 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "TELEGRAM_BOT_TOKEN",
         "STUDIO_CONTROL_COMMANDS_ENABLED",
         "STUDIO_CONTROL_COMMANDS_MAX_BATCH",
+        "STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()

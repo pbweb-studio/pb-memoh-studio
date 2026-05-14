@@ -87,6 +87,13 @@
 - **Флаги:** `STUDIO_CONTROL_COMMANDS_ENABLED` (по умолчанию `false`), `STUDIO_CONTROL_COMMANDS_MAX_BATCH` (по умолчанию `50`); Celery `process_control_group_summary_commands`; админ `GET /control-commands`, `POST /control-commands/process-pending` при заданном `STUDIO_ADMIN_TOKEN`.
 - **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG/SLA/проекты/Studio Admin UI, проектные сводки.
 
+## Фаза 7b — UX команд сводок и ACL в control group (Studio)
+
+- **Команды:** `/summary_chats` (список `studio_chats` без активной control group, обрезка по числу строк и по лимиту Telegram); `/summary_all_today` и `/summary_all_yesterday` — один агрегированный ответ в control group по всем чатам кроме control group, через `ensure_chat_summary_for_period` без дублирования jobs (идемпотентность product); обновлён `/summary_help`.
+- **ACL:** `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` — CSV/пробелы/точка с запятой; пусто = все участники; иначе только `message.from.id` из зеркала; отказ — `sendMessage` с коротким текстом, статус команды `failed_access_denied`, аудит `control_commands.access_denied` (payload без токена); `last_error` при прочих сбоях через `redact_secrets`.
+- **API:** `GET /control-commands` — опциональные query `status`, `command_name`; `POST /control-commands/process-pending` без изменения контракта (в счётчиках process может быть `access_denied`).
+- **Не делается:** Memoh, второй бот, polling/webhook Studio, LLM/RAG/SLA/проекты/Studio Admin UI, проектные команды.
+
 ## ADR — Telegram / Memoh → Studio Event Mirror (`POST /events/telegram`) перед фазой 4b
 
 **Статус ADR-документа:** зафиксировано в документации (таблица A/B/C); см. отдельный SHA в `docs/AI_CONTEXT.md` (**ADR commit**).

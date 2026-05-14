@@ -1,9 +1,9 @@
 # Active context
 
-**Сейчас:** фаза **7a** в Studio — команды `/summary_*` из Telegram control group по зеркалу Event Mirror: `studio_control_commands`, `control_commands/parser` + `service`, Celery `process_control_group_summary_commands`, админ `GET /control-commands` и `POST /control-commands/process-pending`, env `STUDIO_CONTROL_COMMANDS_*` в compose (api/worker). Ответы только в активную control group (`sendMessage`); Memoh не менялся; второго бота и polling/webhook Studio нет.
+**Сейчас:** фаза **7b** в Studio — UX команд сводок в control group и ACL: `/summary_chats`, `/summary_all_today`, `/summary_all_yesterday`, обновлённый help; env `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (пусто = все участники); статус `failed_access_denied` + короткий отказ + аудит; фильтр `command_name` на `GET /control-commands`; обрезка длинных ответов. База 7a: `studio_control_commands`, scan зеркала, `summaries/product.py`, Celery `process_control_group_summary_commands`. Ответы только в активную control group (`sendMessage`); Memoh не менялся; второго бота и polling/webhook Studio нет.
 
 **Ветка:** `pb-studio/main`.
 
-**Memoh:** не менялся в 7a.
+**Memoh:** не менялся в 7a–7b.
 
-**Следующий шаг:** фаза **7** (полные сценарии из плана) или **6+** только по отдельной постановке.
+**Следующий шаг:** полная **фаза 7** по плану или **6+** только по отдельной постановке.

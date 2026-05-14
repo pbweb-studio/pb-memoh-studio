@@ -13,9 +13,10 @@ router = APIRouter(prefix="/control-commands", tags=["control-commands"])
 async def get_control_commands(
     session: DbSession,
     status: str | None = Query(default=None, description="Фильтр по status"),
+    command_name: str | None = Query(default=None, description="Фильтр по command_name"),
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[ControlCommandOut]:
-    rows = await list_control_commands(session, status=status, limit=limit)
+    rows = await list_control_commands(session, status=status, command_name=command_name, limit=limit)
     return [ControlCommandOut.model_validate(r) for r in rows]
 
 
