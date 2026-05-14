@@ -5,10 +5,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from pb_studio.api.routes import control as control_routes
-from pb_studio.api.routes import control as control_routes
 from pb_studio.api.routes import control_commands as control_commands_routes
 from pb_studio.api.routes import events as events_routes
 from pb_studio.api.routes import notifications as notifications_routes
+from pb_studio.api.routes import projects as projects_routes
 from pb_studio.api.routes import sla as sla_routes
 from pb_studio.api.routes import summaries as summaries_routes
 from pb_studio.core.config import get_settings
@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
     application.include_router(notifications_routes.router)
     application.include_router(summaries_routes.router)
     application.include_router(sla_routes.router)
+    application.include_router(projects_routes.router)
 
     return application
 

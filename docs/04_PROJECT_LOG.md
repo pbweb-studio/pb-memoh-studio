@@ -142,3 +142,10 @@
 - **Без** Memoh, LLM/RAG/проектов/Studio Admin UI, второго бота, polling/webhook Studio.
 - Тесты: `studio/tests/test_sla_phase8c.py`; полный `pytest tests/` в Docker (**156** passed); `docker compose -f docker-compose.local.yml config`.
 - SHA: `795ce12b5cc5cf56aedfc9d08adcd3ab263887d9` (коммит 8c).
+
+## 2026-05-14 — Фаза 9a (Studio: проекты и привязка чатов)
+
+- Таблицы `studio_projects`, `studio_project_chats` (Alembic `011_studio_projects`); пакет `pb_studio/projects` (models/schemas/service/constants); API `/projects*` под `STUDIO_ADMIN_TOKEN`; команды `/project_create|list|bind|unbind|chats|help` из active control group (тот же scan/process, что и `/summary_*`); Celery-алиас `process_control_group_commands` → `run_control_commands_standalone`.
+- **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/дайджестов, Studio Admin UI; исходящие ответы команд — только в control group (`sendMessage`); не шлём в привязываемые чаты.
+- Тесты: `studio/tests/test_projects_phase9a.py`; полный `pytest tests/` в Docker (**169** passed); `docker compose -f docker-compose.local.yml config`.
+- SHA: `git rev-parse HEAD` на ветке после коммита 9a (фиксирующий коммит: `feat(studio): phase 9a projects and Telegram chat binding`).

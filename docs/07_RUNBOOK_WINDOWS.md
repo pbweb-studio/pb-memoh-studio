@@ -31,6 +31,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фаз 8a–8c (SLA)** добавлены: `STUDIO_SLA_ENABLED` (по умолчанию `false`), `STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES`, `STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT`, `STUDIO_SLA_DEFAULT_TIMEZONE`, `STUDIO_SLA_WORKING_HOURS_ENABLED`; для **8c** дополнительно: `STUDIO_SLA_NOTIFICATION_COOLDOWN_MINUTES`, `STUDIO_SLA_NOTIFICATION_DIGEST_MAX_ITEMS`, `STUDIO_SLA_NOTIFICATION_TEXT_MAX_LEN`; детектор и Celery-задача `detect_sla_incidents`; админ-эндпоинты `/sla/*` (включая `GET /sla/notification-events`, `POST /sla/incidents/{id}/notify`, фильтры на `GET /sla/incidents`, `PATCH /sla/policies/{id}`, `POST /sla/policies/{id}/mute`, `POST /sla/policies/{id}/unmute`) — под `STUDIO_ADMIN_TOKEN`, если задан. Уведомления SLA — только в активную control group (тот же `TELEGRAM_BOT_TOKEN`).
 
+Для **фазы 9a (проекты)** эндпоинты `GET/POST/PATCH /projects`, archive, bind/unbind/chats — под тем же `STUDIO_ADMIN_TOKEN`, если задан. Команды `/project_*` в Telegram используют те же `STUDIO_CONTROL_COMMANDS_*`, что и `/summary_*`; Celery: `process_control_group_commands` (и по-прежнему `process_control_group_summary_commands`) вызывают один и тот же `run_control_commands_standalone`.
+
 Проверка API:
 
 ```powershell

@@ -48,6 +48,12 @@ def process_control_group_summary_commands() -> dict[str, Any]:
     return asyncio.run(run_control_commands_standalone())
 
 
+@celery_app.task(name="pb_studio.worker.process_control_group_commands")
+def process_control_group_commands() -> dict[str, Any]:
+    """Phase 9a: те же /summary_* плюс /project_* из control group (Event Mirror + pending commands)."""
+    return asyncio.run(run_control_commands_standalone())
+
+
 @celery_app.task(name="pb_studio.worker.detect_sla_incidents")
 def detect_sla_incidents() -> dict[str, int]:
     """Phase 8a: SLA по studio_messages (client/project), без LLM; уведомления только в control group."""

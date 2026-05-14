@@ -186,3 +186,10 @@
 - Реализация: [`studio/pb_studio/response_queue/`](studio/pb_studio/response_queue/), DDL-скелет [`studio/migrations/001_response_queue.sql`](studio/migrations/001_response_queue.sql), тесты [`studio/tests/test_response_queue.py`](studio/tests/test_response_queue.py).
 - **Не делалось намеренно:** правки Memoh, Telegram adapter, реальный Telegram runtime, Celery wiring, FastAPI-роуты продукта (часть Фазы 3).
 - **Рекомендация по интеграции (без изменения текста вариантов A/B/C):** по-прежнему склоняемся к **варианту C** (очередь и статусы в Studio + минимальный контракт в Memoh), пока не доказано, что gateway (A) дешевле по сопровождению. Окончательный выбор — после прототипа Event Mirror + одного E2E без продакшена. **Согласовано с ADR перед 4b:** для доставки raw `Update` в Studio — тот же приоритет **C** (тонкий hook); **A** как запасной пилот при запрете любых патчей Memoh.
+
+## Фаза 9a — проекты в Studio (выполнено)
+
+- Проекты и связи чат↔проект живут только в **Studio DB** (`studio_projects`, `studio_project_chats`); источник команд — **Event Mirror** (`studio_messages` в active control group), без polling/webhook из Studio.
+- Один бот; команды `/project_*` обрабатываются тем же циклом, что `/summary_*`; ответы — **только** `sendMessage` в активную control group; ACL — `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (как в 7b).
+- `project_bind` может выставить `chat_role=project_chat` только для `unknown` / `client_chat`; **нельзя** менять роль active control group и нельзя привязать чат с ролью `control_group`; internal/service — запрещены к bind.
+- Админ-HTTP: `/projects` под тем же **`STUDIO_ADMIN_TOKEN`**, что и `/control-group`, `/summaries`, `/sla` (если токен задан — Bearer обязателен).

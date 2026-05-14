@@ -19,6 +19,12 @@ class ControlCommandName:
     SUMMARY_ALL_TODAY = "summary_all_today"
     SUMMARY_ALL_YESTERDAY = "summary_all_yesterday"
     UNKNOWN = "unknown"
+    PROJECT_HELP = "project_help"
+    PROJECT_LIST = "project_list"
+    PROJECT_CREATE = "project_create"
+    PROJECT_BIND = "project_bind"
+    PROJECT_UNBIND = "project_unbind"
+    PROJECT_CHATS = "project_chats"
 
 
 # Лимиты UX для Telegram sendMessage (оставляем запас под «обрезано»)
@@ -36,4 +42,16 @@ SUMMARY_HELP_TEXT = """Команды сводок (Studio, только из у
 /summary_yesterday <studio_chat_uuid> — за вчера (UTC)
 /summary_period <studio_chat_uuid> <YYYY-MM-DD> <YYYY-MM-DD> — период по календарным дням UTC
 /summary_latest <studio_chat_uuid> — последняя generated-сводка по чату
+
+Проекты: /project_help
+"""
+
+
+PROJECT_HELP_TEXT = """Команды проектов (Studio, только из управляющей группы):
+/project_help — этот текст
+/project_list — список проектов
+/project_create <slug> <название> — создать проект (slug: a-z, 0-9, -, _)
+/project_bind <project_slug> <studio_chat_uuid> — привязать чат к проекту
+/project_unbind <project_slug> <studio_chat_uuid> — отвязать чат (связь деактивируется)
+/project_chats <project_slug> — чаты проекта
 """

@@ -21,6 +21,7 @@
 | 8a SLA infra (policies + incidents, mirror, no LLM) | Done |
 | 8b SLA working hours + mute on policies | Done |
 | 8c SLA notification antispam + digest + audit | Done |
+| 9a Projects + project↔chat binding (Studio DB, no RAG) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 8c — `sla/notifications.py`, migration 010, detector batch notify, API; pytest **156** passed (Docker); compose config ok.
+**Последнее:** фаза 9a — `pb_studio/projects`, migration 011, `/projects` API, `/project_*` control commands, Celery alias `process_control_group_commands`; pytest **169** passed; `docker compose -f docker-compose.local.yml config` ok.

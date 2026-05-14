@@ -273,6 +273,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 9a — проекты в Studio (модель + привязка чатов, без RAG/LLM)
+
+**Статус:** таблицы `studio_projects`, `studio_project_chats` (Alembic `011_studio_projects`); пакет [`studio/pb_studio/projects/`](studio/pb_studio/projects/); админ-API `GET/POST/PATCH /projects`, `POST /projects/{id}/archive`, `POST .../bind-chat`, `unbind-chat`, `GET .../chats` под `STUDIO_ADMIN_TOKEN` (как остальные админ-роуты). Команды Telegram `/project_*` — тот же Event Mirror + `run_control_commands_standalone` (Celery: `process_control_group_summary_commands` без изменений + алиас `process_control_group_commands`). ACL: `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`; ответы только в активную control group; bind может выставить `chat_role=project_chat` для `unknown`/`client_chat`; нельзя привязать active control group и чаты с ролью `control_group`; `unbind` только `is_active=false`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG/digest, Studio Admin UI.
+
+**Тесты:** [`studio/tests/test_projects_phase9a.py`](studio/tests/test_projects_phase9a.py); регрессия control commands / Celery.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -296,7 +304,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
-| 9 | Проекты: bind/list/digest |
+| 9 | Проекты: **9a** — модель + bind чатов в Studio DB + команды `/project_*` (без RAG/digest); дальше — RAG/дайджесты по постановке |
 | 10 | База знаний: Docling, embeddings, pgvector |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |

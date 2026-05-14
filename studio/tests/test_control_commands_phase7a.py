@@ -30,7 +30,7 @@ from pb_studio.response_queue.models import Base
 from pb_studio.summaries.constants import SummaryStatus, SummaryType
 from pb_studio.summaries.models import StudioChatSummary
 from pb_studio.summaries.planner import utc_day_bounds
-from pb_studio.worker.tasks import process_control_group_summary_commands
+from pb_studio.worker.tasks import process_control_group_commands, process_control_group_summary_commands
 
 
 @pytest_asyncio.fixture
@@ -371,6 +371,7 @@ def test_period_bounds_rejects_inverted():
 
 def test_celery_process_control_task_registered():
     assert "pb_studio.worker.process_control_group_summary_commands" in celery_app.tasks
+    assert "pb_studio.worker.process_control_group_commands" in celery_app.tasks
 
 
 def test_celery_process_control_invokes_runner(monkeypatch):
@@ -384,6 +385,20 @@ def test_celery_process_control_invokes_runner(monkeypatch):
 
     monkeypatch.setattr("pb_studio.worker.tasks.asyncio.run", fake_run)
     out = process_control_group_summary_commands()
+    assert "process" in out
+
+
+def test_celery_process_control_group_commands_invokes_runner(monkeypatch):
+    import inspect
+
+    def fake_run(coro):
+        assert inspect.iscoroutine(coro)
+        assert coro.__name__ == "run_control_commands_standalone"
+        coro.close()
+        return {"scan": {}, "process": {}}
+
+    monkeypatch.setattr("pb_studio.worker.tasks.asyncio.run", fake_run)
+    out = process_control_group_commands()
     assert "process" in out
 
 

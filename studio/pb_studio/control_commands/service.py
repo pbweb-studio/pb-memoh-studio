@@ -13,6 +13,7 @@ from pb_studio.control_group.constants import ChatRole
 from pb_studio.control_group.service import get_control_group_chat
 from pb_studio.control_group.telegram_outbound import redact_secrets, telegram_send_message
 from pb_studio.control_commands.constants import (
+    PROJECT_HELP_TEXT,
     SUMMARY_AGG_SNIPPET_CHARS,
     SUMMARY_CHATS_MAX_LINES,
     SUMMARY_HELP_TEXT,
@@ -25,6 +26,8 @@ from pb_studio.control_commands.parser import parse_control_group_command_line, 
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
+from pb_studio.projects import service as studio_projects_service
+from pb_studio.projects.constants import ProjectStatus, RoleInProject
 from pb_studio.summaries.constants import SummaryType
 from pb_studio.summaries.models import StudioChatSummary
 from pb_studio.summaries.product import (
@@ -218,6 +221,7 @@ async def scan_mirror_for_control_commands(
                 StudioMessage.text.startswith("/summary_all_today"),
                 StudioMessage.text.startswith("/summary_all_yesterday"),
                 StudioMessage.text.startswith("/summary"),
+                StudioMessage.text.startswith("/project"),
             ),
             not_(dup_exists),
         )
@@ -303,7 +307,14 @@ async def _process_one_command(
         return
 
     try:
-        if cmd.command_name == ControlCommandName.SUMMARY_HELP or cmd.command_name == ControlCommandName.UNKNOWN:
+        raw_cmd = (cmd.command_text or "").strip()
+        if raw_cmd.startswith("/project"):
+            await _dispatch_project_control_commands(session, cmd, settings, reply, now)
+            return
+
+        if cmd.command_name == ControlCommandName.SUMMARY_HELP or (
+            cmd.command_name == ControlCommandName.UNKNOWN and not raw_cmd.startswith("/project")
+        ):
             text_out = SUMMARY_HELP_TEXT
             if cmd.command_name == ControlCommandName.UNKNOWN:
                 reason = str(cmd.args_json.get("reason") or "")
@@ -454,6 +465,159 @@ async def _process_one_command(
         cmd.processed_at = now
         try:
             await reply(f"Команда не выполнена: {redact_secrets(str(exc)[:500], token)}")
+        except Exception:  # noqa: BLE001
+            pass
+
+
+async def _dispatch_project_control_commands(
+    session: AsyncSession,
+    cmd: StudioControlCommand,
+    settings: Settings,
+    reply,
+    now: datetime,
+) -> None:
+    token = (settings.telegram_bot_token or "").strip()
+    try:
+        if cmd.command_name == ControlCommandName.UNKNOWN:
+            reason = str(cmd.args_json.get("reason") or "")
+            text_out = PROJECT_HELP_TEXT
+            if reason:
+                text_out = f"Ошибка: {reason}\n\n" + text_out
+            mid = await reply(text_out)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.PROJECT_HELP:
+            mid = await reply(PROJECT_HELP_TEXT)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            await _audit_control_command(
+                session,
+                action="control_commands.project_help",
+                command_id=cmd.id,
+                command_name=cmd.command_name,
+                payload={},
+            )
+            return
+
+        if cmd.command_name == ControlCommandName.PROJECT_LIST:
+            rows = await studio_projects_service.list_projects(session, status=ProjectStatus.ACTIVE.value, limit=50)
+            lines = ["Проекты (active):"]
+            for proj in rows:
+                lines.append(f"- {proj.slug} — {proj.name} (id={proj.id})")
+            if not rows:
+                lines.append("(пусто)")
+            mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.PROJECT_CREATE:
+            slug = str(cmd.args_json.get("slug") or "")
+            name = str(cmd.args_json.get("name") or "")
+            try:
+                async with session.begin_nested():
+                    row = await studio_projects_service.create_project(session, slug=slug, name=name)
+            except IntegrityError:
+                mid = await reply("Проект с таким slug уже существует.")
+            except ValueError as exc:
+                mid = await reply(f"Ошибка: {exc}")
+            else:
+                mid = await reply(f"Проект создан: {row.slug} — {row.name}\nid={row.id}")
+                await _audit_control_command(
+                    session,
+                    action="control_commands.project_create",
+                    command_id=cmd.id,
+                    command_name=cmd.command_name,
+                    payload={"project_id": str(row.id), "slug": row.slug},
+                )
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name in (ControlCommandName.PROJECT_BIND, ControlCommandName.PROJECT_UNBIND):
+            slug = str(cmd.args_json.get("project_slug") or "")
+            chat_uid = UUID(str(cmd.args_json.get("chat_id") or ""))
+            proj = await studio_projects_service.get_project_by_slug(session, slug)
+            if proj is None:
+                mid = await reply("Проект не найден.")
+            elif cmd.command_name == ControlCommandName.PROJECT_BIND:
+                try:
+                    link, outcome = await studio_projects_service.bind_chat_to_project(
+                        session,
+                        project_id=proj.id,
+                        chat_id=chat_uid,
+                        role_in_project=RoleInProject.SECONDARY.value,
+                    )
+                    msg = {
+                        "noop_active": "Чат уже привязан к проекту.",
+                        "reactivated": "Связь восстановлена.",
+                        "created": "Чат привязан.",
+                    }.get(outcome, "Готово.")
+                    mid = await reply(f"{msg}\nlink_id={link.id}")
+                    await _audit_control_command(
+                        session,
+                        action="control_commands.project_bind",
+                        command_id=cmd.id,
+                        command_name=cmd.command_name,
+                        payload={"project_id": str(proj.id), "chat_id": str(chat_uid), "outcome": outcome},
+                    )
+                except ValueError as exc:
+                    mid = await reply(f"Ошибка: {exc}")
+            else:
+                row = await studio_projects_service.unbind_chat_from_project(
+                    session, project_id=proj.id, chat_id=chat_uid
+                )
+                mid = await reply("Связь не найдена." if row is None else "Связь деактивирована.")
+                if row is not None:
+                    await _audit_control_command(
+                        session,
+                        action="control_commands.project_unbind",
+                        command_id=cmd.id,
+                        command_name=cmd.command_name,
+                        payload={"project_id": str(proj.id), "chat_id": str(chat_uid)},
+                    )
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.PROJECT_CHATS:
+            slug = str(cmd.args_json.get("project_slug") or "")
+            proj = await studio_projects_service.get_project_by_slug(session, slug)
+            if proj is None:
+                mid = await reply("Проект не найден.")
+            else:
+                links = await studio_projects_service.list_project_chats(session, proj.id, active_only=True)
+                lines = [f"Чаты проекта {proj.slug}:"]
+                for ln in links:
+                    ch = await session.get(StudioChat, ln.chat_id)
+                    tg = ch.telegram_chat_id if ch else "?"
+                    lines.append(f"- link={ln.id} chat={ln.chat_id} tg={tg} role={ln.role_in_project}")
+                if not links:
+                    lines.append("(нет активных привязок)")
+                mid = await reply(_safe_truncate("\n".join(lines)))
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        cmd.status = ControlCommandStatus.IGNORED
+        cmd.processed_at = now
+        cmd.last_error = "unsupported project command"
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("project command failed id=%s", cmd.id)
+        safe_err = redact_secrets(str(exc), token)[:4000]
+        cmd.status = ControlCommandStatus.FAILED
+        cmd.last_error = safe_err
+        cmd.processed_at = now
+        try:
+            await reply(f"Команда проектов не выполнена: {redact_secrets(str(exc)[:500], token)}")
         except Exception:  # noqa: BLE001
             pass
 
