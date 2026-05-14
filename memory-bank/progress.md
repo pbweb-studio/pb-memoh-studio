@@ -5,7 +5,8 @@
 | 0 Bootstrap | Done |
 | 1 Recon Memoh | Done |
 | 2a Response Queue (Studio DB, без Memoh) | Done |
-| 2b/3 Studio API + Celery + интеграция turn | Next |
-| 4+ | Pending |
+| 3 Studio Layer skeleton (FastAPI, DB, Redis, Alembic, Celery, compose) | Done |
+| 4 Event Mirror | Next |
+| 5+ | Pending |
 
-**Последнее:** реализованы модели `studio_response_turns` / `studio_inbound_messages`, `QueueService` (debounce, per-chat ordering, dedupe, dispatch с SKIP LOCKED), контракт `TurnProcessor`, 10 тестов.
+**Последнее:** каркас Studio API и воркеров; Response Queue остаётся внутренним модулем; Telegram и Memoh не трогались.

@@ -4,6 +4,12 @@
 
 name: pb-studio-local
 
+x-studio-common-env: &studio-common-env
+  STUDIO_ENV: docker
+  DATABASE_URL: postgresql+asyncpg://pb_studio:pb_studio_dev@studio-postgres:5432/pb_studio
+  REDIS_URL: redis://studio-redis:6379/0
+  CELERY_BROKER_URL: redis://studio-redis:6379/1
+
 services:
   studio-postgres:
     image: pgvector/pgvector:pg16
@@ -36,6 +42,70 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+
+  studio-migrate:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-migrate
+    environment:
+      <<: *studio-common-env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      studio-postgres:
+        condition: service_healthy
+    restart: "no"
+
+  studio-api:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-api
+    environment:
+      <<: *studio-common-env
+    ports:
+      - "${STUDIO_API_PORT:-8000}:8000"
+    depends_on:
+      studio-migrate:
+        condition: service_completed_successfully
+      studio-postgres:
+        condition: service_healthy
+      studio-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  studio-worker:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-worker
+    environment:
+      <<: *studio-common-env
+    command: >
+      celery -A pb_studio.celery_app:celery_app worker
+      --loglevel=info --queues=studio
+    depends_on:
+      studio-migrate:
+        condition: service_completed_successfully
+      studio-postgres:
+        condition: service_healthy
+      studio-redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  studio-beat:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-beat
+    environment:
+      <<: *studio-common-env
+    command: >
+      celery -A pb_studio.celery_app:celery_app beat --loglevel=info
+    depends_on:
+      studio-redis:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

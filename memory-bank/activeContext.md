@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** Фаза **2a** завершена (очередь в `pb_studio` + тесты). В работу — **2b/3**: API/Celery вокруг очереди; параллельно план Event Mirror (Фаза 4).
+**Сейчас:** Фаза **3** завершена (каркас `studio-api`, Postgres/Redis, SQLAlchemy session, Alembic, Celery worker/beat, Docker Compose, smoke-тесты). В работу — **Фаза 4: Event Mirror** (без правок Memoh до ADR).
 
 **Ветка:** `pb-studio/main`.
 

@@ -11,15 +11,25 @@
 1. Скопируйте `.env.example` → `.env.local` (если файла ещё нет — его создаст агент при необходимости).
 2. Заполните ключи (OpenAI, Telegram и т.д.) по мере готовности фич; без секретов можно поднимать только инфраструктуру.
 
-## Инфраструктура Studio (Postgres + Redis)
+## Инфраструктура Studio (Postgres + Redis + studio-api + Celery)
 
 Из корня репозитория (агент выполняет сам):
 
 ```powershell
-docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml up -d --build
 ```
 
-Переменные `POSTGRES_*` и `REDIS_URL` должны совпадать с `.env.local` / `.env.example`.
+Сервисы: `studio-postgres`, `studio-redis`, одноразовый `studio-migrate` (Alembic), `studio-api` (uvicorn), `studio-worker`, `studio-beat`.
+
+Переменные `POSTGRES_*`, `DATABASE_URL`, `REDIS_URL`, `CELERY_BROKER_URL` должны быть согласованы между `.env.local` и compose (в compose заданы значения по умолчанию для Docker-сети; на хосте для локального pytest без Docker используйте порты **5433** / **6380** как в `.env.example`).
+
+Проверка API:
+
+```powershell
+curl http://127.0.0.1:8000/health
+```
+
+(При занятом порту 8000 задайте `STUDIO_API_PORT` в `.env.local` или в окружении перед `docker compose`.)
 
 ## Тесты Python-пакета Studio
 

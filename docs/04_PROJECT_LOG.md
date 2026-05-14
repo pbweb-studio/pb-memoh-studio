@@ -20,3 +20,11 @@
 - Статус: завершена (безопасная часть); Memoh / Telegram не менялись.
 - Добавлены `studio/pb_studio/response_queue` (SQLAlchemy модели, `QueueService`, Pydantic-контракт, pytest), `studio/migrations/001_response_queue.sql`, обновлены `docs/*`, memory-bank.
 - Коммит: `c4e382c22553f3b7b4fc5b2d46fec50240c3ea82`.
+
+## 2026-05-14 — Фаза 3 (Studio Layer skeleton)
+
+- Статус: завершена; Memoh / Telegram adapter / Telegram runtime **не** менялись и **не** подключались.
+- Добавлены: FastAPI `studio-api` (`GET /health`), Pydantic Settings, async SQLAlchemy session layer, Redis client, Alembic (`studio/alembic`), Celery app + skeleton worker/beat, `studio/Dockerfile`, обновлён `docker-compose.local.yml` (postgres, redis, migrate, studio-api, studio-worker, studio-beat), smoke-тесты Фазы 3.
+- Event Mirror, RAG, SLA, проекты, Studio Admin — **вне** scope Фазы 3.
+- Response Queue (`QueueService`) — только как внутренний модуль; интеграция с Event Mirror — Фаза 4.
+- Коммит: сообщение `feat(studio): phase 3 studio-api skeleton, compose, celery, alembic` (SHA — `git rev-parse HEAD` на `pb-studio/main`).

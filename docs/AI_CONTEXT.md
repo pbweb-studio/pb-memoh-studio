@@ -6,40 +6,44 @@
 
 ## Текущая фаза
 
-**Фаза 2a завершена** — Response Queue в Studio (модели, сервис, тесты) **без** Memoh и **без** Telegram. Дальше: **Фаза 2b / 3** — Celery/FastAPI-оболочка, Event Mirror (Фаза 4), затем интеграция с Memoh по варианту из [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md).
+**Фаза 3 завершена** — каркас Studio Layer: FastAPI `studio-api` (`GET /health`), Pydantic Settings, async Postgres (SQLAlchemy), Redis, Alembic, Celery app + worker/beat skeleton, Docker Compose local (`studio-api`, `studio-worker`, `studio-beat`, `studio-migrate`, Postgres, Redis). Response Queue остаётся **внутренним** сервисом Studio без Memoh и без Telegram runtime.
+
+Дальше: **Фаза 4 — Event Mirror** (зеркалирование событий в Studio; без реализации в Фазе 3).
 
 ## Текущая цель
 
-Поднять Studio API + воркер, связать Event Mirror → `QueueService.enqueue`, выбрать и задокументировать вариант A/B/C перед любыми правками `internal/channel` / `telegram` в Memoh.
+Реализовать **Event Mirror** и связать его с жизненным циклом Studio (включая очередь ответов там, где это уместно по ADR) — в рамках Фазы 4, после отдельного плана и без правок Memoh до зафиксированного варианта A/B/C.
 
 ## Что уже работает
 
-- Фазы 0–1: bootstrap, разведка Memoh (см. историю в `docs/04_PROJECT_LOG.md`).
-- **Фаза 2a:** пакет [`studio/pb_studio/response_queue/`](studio/pb_studio/response_queue/) — таблицы `studio_response_turns` / `studio_inbound_messages`, статусы turn, debounce 2–4 с, per-chat блокировки + глобальный `sequence_number` для dispatch, дедуп по `dedupe_key`, `TurnProcessor`-контракт для воркера; 10 pytest-тестов.
+- Фазы 0–2a: bootstrap, разведка Memoh, Response Queue core (см. историю в `docs/04_PROJECT_LOG.md`).
+- **Фаза 3:** пакет [`studio/pb_studio/`](studio/pb_studio/) — `api/main.py`, `core/config.py`, `core/database.py`, `core/redis_client.py`, `celery_app.py`, `worker/tasks.py`, Alembic `001_initial`, Dockerfile, `docker-compose.local.yml` с сервисами Studio; smoke-тесты Фазы 3.
 
 ## Что ещё не готово
 
+- Event Mirror (Фаза 4).
 - Подключение очереди к Telegram/Memoh runtime.
-- Event Mirror, полноценный Studio API, Celery beat, RAG, SLA, админка.
+- RAG, SLA, админка Studio, HTTP-маршруты очереди для внешних клиентов (по необходимости после Event Mirror).
 
 ## Последний стабильный commit
 
-**Фаза 2a (очередь Studio):** `c4e382c22553f3b7b4fc5b2d46fec50240c3ea82` — сообщение `feat(studio): response queue core phase 2a`.
+**Фаза 3 (Studio skeleton):** сообщение `feat(studio): phase 3 studio-api skeleton, compose, celery, alembic` — полный SHA см. `git rev-parse HEAD` на `pb-studio/main` (в репозитории один коммит фазы 3).
 
 ## Что изменилось в последней фазе
 
-- Добавлен Python-пакет `pb_studio` под `studio/`, SQL-скелет миграции, обновлены docs и memory-bank.
+- Каркас API, инфраструктуры и фоновых процессов Studio; очередь ответов не интегрирована в HTTP/Celery бизнес-потоки (ожидает Event Mirror и ADR).
 
-## Изменённые файлы (Фаза 2a)
+## Изменённые файлы (Фаза 3)
 
-- `studio/pyproject.toml`, `studio/README.md`, `studio/pb_studio/**`, `studio/tests/**`, `studio/migrations/001_response_queue.sql`
-- `docs/03_IMPLEMENTATION_PLAN.md`, `docs/06_DECISIONS.md`, `docs/07_RUNBOOK_WINDOWS.md`, `docs/AI_CONTEXT.md`, `docs/04_PROJECT_LOG.md`, `docs/05_CURRENT_TASK.md`, `memory-bank/activeContext.md`, `memory-bank/progress.md`
+- `studio/**` (Dockerfile, `pb_studio/api`, `pb_studio/core`, `pb_studio/celery_app.py`, `pb_studio/worker`, `alembic/`, `tests/test_smoke_phase3.py`, `README.md`, `pyproject.toml` при необходимости)
+- `docker-compose.local.yml`, `.env.example`
+- `docs/03_IMPLEMENTATION_PLAN.md` (при ссылках), `docs/04_PROJECT_LOG.md`, `docs/05_CURRENT_TASK.md`, `docs/07_RUNBOOK_WINDOWS.md`, `docs/AI_CONTEXT.md`, `memory-bank/activeContext.md`, `memory-bank/progress.md`
 
 ## Принятые решения
 
 - Очередь ответов как **источник истины по turn** живёт в Studio DB до интеграции с Memoh.
-- Memoh и Telegram adapter **не менялись** в 2a.
-- Варианты интеграции A/B/C и рекомендация — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md).
+- Memoh и Telegram adapter **не менялись** в Фазе 3; Telegram runtime **не подключался**.
+- Варианты интеграции A/B/C — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md).
 
 ## Что нельзя трогать
 
@@ -47,7 +51,7 @@
 
 ## Следующая задача
 
-- Фаза 3 (частично) или 2b: FastAPI `/queue/inbound`-стиль + Celery task, вызывающий `flush_due_turns` / `dispatch_next`; подготовка Event Mirror (Фаза 4).
+- **Фаза 4: Event Mirror** — приём/нормализация событий из Memoh (или границы адаптера) в Studio, согласование с очередью и воркерами по плану; без расширения scope Фазы 3.
 
 ## Вопросы к GPT
 

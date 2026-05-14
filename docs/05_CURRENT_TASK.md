@@ -1,9 +1,9 @@
 # Текущая задача
 
-## Фаза 2b / 3 — Studio runtime вокруг очереди
+## Фаза 4 — Event Mirror
 
-**Цель:** HTTP-приём (или внутренний вызов) для `InboundEnqueue`, фоновые задачи Celery: периодический `flush_due_turns`, `dispatch_next` с реализацией `TurnProcessor` (пока заглушка или вызов Memoh после выбора A/B/C).
+**Цель:** зеркалирование релевантных событий из Memoh (или согласованной границы) в Studio: модель событий, транспорт, идемпотентность и связь с внутренними сервисами Studio (в т.ч. Response Queue **по отдельному плану**, без дублирования логики Memoh).
 
-**Зависимости:** Postgres Studio (уже есть compose), Redis; **не** подключать Telegram до Event Mirror (Фаза 4).
+**Зависимости:** работающий каркас Фазы 3 (API, Postgres, Redis, Celery); **не** подключать Telegram runtime до явного решения в `docs/06_DECISIONS.md`.
 
-**Ограничение:** любые правки Memoh (`internal/channel/adapters/telegram`, `internal/channel/inbound.go`, `internal/channel/inbound/channel.go` и т.д.) — только после явного ADR в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md) и ответа на вопросы интеграции.
+**Ограничение:** любые правки Memoh (`internal/channel/adapters/telegram`, `internal/channel/inbound.go`, `internal/channel/inbound/channel.go` и т.д.) — только после явного ADR и выбора варианта A/B/C.
