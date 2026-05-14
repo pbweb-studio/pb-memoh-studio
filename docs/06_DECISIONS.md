@@ -27,3 +27,37 @@
 ## Развилки (TBD)
 
 - Точка встраивания Event Mirror и Response Queue относительно кода Memoh — после Фазы 1 (разведка).
+
+## Фаза 1 — Response Queue / интеграция (зафиксированные варианты)
+
+Разведка: см. [`docs/03_IMPLEMENTATION_PLAN.md`](docs/03_IMPLEMENTATION_PLAN.md). Код Memoh **не менялся**.
+
+### Вариант A — Внешний gateway (Studio держит Telegram token)
+
+- Studio принимает **единственный** webhook/long poll от Telegram (единая точка для `getUpdates`/webhook).
+- Memoh **не** получает сырые Telegram updates напрямую; Studio зеркалирует в БД и **подаёт** пользовательский текст в Memoh через внутренний контракт.
+- **Плюсы:** полный контроль debounce, per-chat FIFO, статусы в Studio без гонок в `TelegramAdapter.dispatchInbound`.
+- **Минусы:** нужен **стабильный способ** «вколоть» сообщение в Memoh как inbound Telegram-эквивалент (сейчас публичный путь — адаптер + `Manager.HandleInbound`; отдельного простого «simulate telegram message» API в разведке не найдено). Риск рассинхрона маршрутов/токенов.
+
+### Вариант B — Точечный patch в Memoh (`internal/channel`)
+
+- **B1:** В [`internal/channel/inbound.go`](internal/channel/inbound.go) — сериализация задач **по ключу** `route_id` или `bot_id+reply_target` (отдельные очереди или mutex), чтобы два быстрых сообщения одного чата не обрабатывались двумя воркерами пула параллельно.
+- **B2:** В [`internal/channel/adapters/telegram/telegram.go`](internal/channel/adapters/telegram/telegram.go) — убрать/ограничить `go handler()` per update (очередь на chat_id в адаптере).
+- **Плюсы:** минимальные задержки, один процесс Memoh.
+- **Минусы:** форк/поддержка отличий от `upstream`; нарушает правило «не трогать ядро» без явного ADR.
+
+### Вариант C — Очередь только в Studio + тонкий хук Memoh
+
+- Event Mirror + Celery (Фазы 3–4) накапливают turn; **один** исходящий запрос в Memoh на turn (после согласования контракта: либо новый минимальный internal endpoint в Memoh, либо согласованный с мейнтейнерами PR).
+- **Плюсы:** бизнес-очередь и статусы полностью в Studio; Memoh остаётся «один ответ за turn».
+- **Минусы:** всё равно может понадобиться **небольшой** patch Memoh для безопасного inject (или договорённость о API).
+
+### Рекомендация для Фазы 2 (черновик)
+
+1. Параллельно поднять **Event Mirror** (Фаза 4) — не блокируется от очереди.
+2. Прототип очереди в **Studio** (Celery, per-chat) + документировать необходимый **контракт** к Memoh.
+3. Перед первым PR в Memoh — выбрать **B** vs **C** vs **A** по трудозатратам и допустимости форка; зафиксировать в новой записи в этом файле.
+
+### Про «глазик» 👀
+
+Не баг Telegram-адаптера как такового: подтверждение **inject** в [`internal/channel/inbound/channel.go`](internal/channel/inbound/channel.go) (`sendModeConfirmation`). Поведение продукта студии (отдельные статусы turn, без путаницы с финальным ответом) реализуется в **Studio Response Queue** и UX управляющей группы, а не заменой этого механизма без решения.

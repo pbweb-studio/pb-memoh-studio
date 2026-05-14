@@ -6,63 +6,52 @@
 
 ## Текущая фаза
 
-Фаза 0 завершена → **Фаза 1: техническая разведка** (без правок ядра Memoh).
+**Фаза 1 завершена** (разведка Memoh без правок кода). Следующая: **Фаза 2** — Response Queue в Studio + выбор интеграции с Memoh по [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md).
 
 ## Текущая цель
 
-Найти в коде Memoh: приём Telegram updates, путь inbound-сообщений, MCP, причину поведения с реакцией «глазик»; зафиксировать план минимальной интеграции Response Queue в `docs/03_IMPLEMENTATION_PLAN.md`.
+Реализовать очередь Studio (per-chat, debounce, статусы) и зафиксировать контракт с Memoh (вариант A/B/C из решений).
 
 ## Что уже работает
 
-- Клонирован upstream Memoh, настроены remotes (`upstream` / `origin`), ветка `pb-studio/main`, тег `stable-upstream-memoh`.
-- Каркас каталогов `studio/`, стартовый комплект `docs/`, Memory Bank, Cursor Rules, `.env.example`, `.cursorignore`.
-- Отдельный `docker-compose.local.yml` для Postgres 16 + pgvector и Redis (инфраструктура Studio).
-- Скелет `docker-compose.prod.yml` (без реального деплоя).
+- Фаза 0: каркас репо, docs, memory-bank, compose studio-infra.
+- **Фаза 1:** карта кода Memoh для Telegram / inbound / MCP / реакции 👀 задокументирована в [`docs/03_IMPLEMENTATION_PLAN.md`](docs/03_IMPLEMENTATION_PLAN.md); варианты Response Queue — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md).
 
 ## Что ещё не готово
 
-- Реализация Studio API, worker, Celery, Alembic, MCP-инструментов.
-- Event Mirror, Response Queue, управляющая группа, сводки, SLA, RAG, импорт истории, полноценный Studio Admin.
-- Интеграция Memoh ↔ Studio в runtime.
+- Studio API/worker/Celery, Event Mirror, Response Queue (runtime), MCP инструментов студии, остальные фазы.
 
 ## Последний стабильный commit
 
-Ветка `pb-studio/main`; сообщение: `chore(repo): bootstrap studio scaffold and docs`. Актуальный hash смотрите командой `git rev-parse HEAD` (в файле не дублируется, чтобы не расходилось с историей при amend).
+**Фаза 1 (разведка):** `PHASE1_RECON_HASH`
+
+_В этом поле — полный hash коммита с результатами разведки (`docs/phase1`). Обновляется коммитом сразу после основного коммита фазы._
 
 ## Что изменилось в последней фазе
 
-- Bootstrap репозитория: слой студии поверх Memoh без изменения продуктовой логики Memoh.
-- Добавлены документация, memory bank, правила Cursor, пример env, compose для локальной БД/Redis студии.
+- Только документация: детальная разведка `internal/channel/adapters/telegram`, `internal/channel/inbound`, `RouteDispatcher`, MCP-слой, причина 👀.
 
-## Изменённые файлы (Фаза 0)
+## Изменённые файлы (Фаза 1)
 
-- `studio/**` (каркас)
-- `docs/**`, `memory-bank/**`, `.cursor/rules/**`
-- `.env.example`, `.cursorignore`, `docker-compose.local.yml`, `docker-compose.prod.yml`
+- [`docs/03_IMPLEMENTATION_PLAN.md`](docs/03_IMPLEMENTATION_PLAN.md)
+- [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md)
+- [`docs/AI_CONTEXT.md`](docs/AI_CONTEXT.md)
+- [`docs/04_PROJECT_LOG.md`](docs/04_PROJECT_LOG.md)
+- [`docs/05_CURRENT_TASK.md`](docs/05_CURRENT_TASK.md)
+- [`memory-bank/activeContext.md`](memory-bank/activeContext.md)
+- [`memory-bank/progress.md`](memory-bank/progress.md)
 
 ## Принятые решения
 
-- Один Telegram-бот.
-- Системные уведомления только в управляющую группу (если не настроена — только логирование в Studio Layer).
-- Memoh не используем как базу бизнес-данных.
-- SLA не через heartbeat Memoh; отдельный монитор.
-- Бизнес-логика и данные — в Studio Layer; связь с Memoh через MCP/API.
-- Telegram events — Event Mirror в Studio.
-- Быстрые сообщения — Response Queue (после разведки в Фазе 1–2).
-- `origin` = [pbweb-studio/pb-memoh-studio](https://github.com/pbweb-studio/pb-memoh-studio), `upstream` = memohai/Memoh.
+- (без изменений относительно Фазы 0; добавлены варианты A/B/C для очереди — см. `docs/06_DECISIONS.md`.)
 
 ## Что нельзя трогать
 
-- Не создавать второго Telegram-бота.
-- Не кастомить heartbeat Memoh под бизнес-логику.
-- Не делать Telegram App на раннем этапе.
-- Не хардкодить документы в промпт.
-- Не использовать memory Memoh как БД.
-- Не менять ядро Memoh без записи в `docs/06_DECISIONS.md` и явной необходимости.
+- (как в Фазе 0.)
 
 ## Следующая задача
 
-- Фаза 1: разведка Memoh (Telegram adapter, inbound, MCP, «глазик»); обновить `docs/03_IMPLEMENTATION_PLAN.md`, `docs/AI_CONTEXT.md`, логи и memory bank.
+- Фаза 2: проектирование и реализация Response Queue в Studio; выбор варианта интеграции с Memoh; тесты.
 
 ## Вопросы к GPT
 

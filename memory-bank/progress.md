@@ -3,7 +3,8 @@
 | Фаза | Статус |
 |------|--------|
 | 0 Bootstrap | Done |
-| 1 Recon Memoh | Next |
-| 2–14 | Pending |
+| 1 Recon Memoh | Done |
+| 2 Response Queue | Next |
+| 3–14 | Pending |
 
-**Последнее:** добавлены каркас `studio/`, документация, memory bank, cursor rules, `.env.example`, compose для Postgres+Redis студии.
+**Последнее:** задокументированы Telegram adapter, inbound pipeline, RouteDispatcher/inject/queue, MCP-слой, причина реакции 👀; добавлены варианты A/B/C для очереди в `docs/06_DECISIONS.md`.

@@ -1,7 +1,7 @@
 # Active context
 
-**Сейчас:** Фаза 0 завершена; старт **Фазы 1** — техническая разведка Memoh (Telegram pipeline, MCP, поведение «глазик»), обновление `docs/03_IMPLEMENTATION_PLAN.md` и `docs/AI_CONTEXT.md`.
+**Сейчас:** Фаза 1 (разведка Memoh) завершена. Старт **Фазы 2** — Response Queue в Studio и выбор контракта с Memoh.
 
 **Ветка:** `pb-studio/main`.
 
-**Блокеры:** нет (секреты не нужны для разведки кода).
+**Блокеры:** нет.
