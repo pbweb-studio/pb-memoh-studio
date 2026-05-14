@@ -25,6 +25,10 @@ class ControlCommandName:
     PROJECT_BIND = "project_bind"
     PROJECT_UNBIND = "project_unbind"
     PROJECT_CHATS = "project_chats"
+    PROJECT_DIGEST_TODAY = "project_digest_today"
+    PROJECT_DIGEST_YESTERDAY = "project_digest_yesterday"
+    PROJECT_DIGEST_PERIOD = "project_digest_period"
+    PROJECT_DIGEST_LATEST = "project_digest_latest"
 
 
 # Лимиты UX для Telegram sendMessage (оставляем запас под «обрезано»)
@@ -54,4 +58,10 @@ PROJECT_HELP_TEXT = """Команды проектов (Studio, только и�
 /project_bind <project_slug> <studio_chat_uuid> — привязать чат к проекту
 /project_unbind <project_slug> <studio_chat_uuid> — отвязать чат (связь деактивируется)
 /project_chats <project_slug> — чаты проекта
+
+Дайджесты (агрегат сводок по проекту):
+/project_digest_today <project_slug>
+/project_digest_yesterday <project_slug>
+/project_digest_period <project_slug> <YYYY-MM-DD> <YYYY-MM-DD>
+/project_digest_latest <project_slug>
 """

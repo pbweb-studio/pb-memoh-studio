@@ -26,6 +26,9 @@ from pb_studio.control_commands.parser import parse_control_group_command_line, 
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.core.database import get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
+from pb_studio.project_digests import service as project_digests_svc
+from pb_studio.project_digests.constants import ProjectDigestType
+from pb_studio.project_digests.delivery import mark_digest_delivered_from_control_command_reply
 from pb_studio.projects import service as studio_projects_service
 from pb_studio.projects.constants import ProjectStatus, RoleInProject
 from pb_studio.summaries.constants import SummaryType
@@ -308,6 +311,9 @@ async def _process_one_command(
 
     try:
         raw_cmd = (cmd.command_text or "").strip()
+        if raw_cmd.startswith("/project_digest"):
+            await _dispatch_project_digest_control_commands(session, cmd, settings, reply, now)
+            return
         if raw_cmd.startswith("/project"):
             await _dispatch_project_control_commands(session, cmd, settings, reply, now)
             return
@@ -465,6 +471,118 @@ async def _process_one_command(
         cmd.processed_at = now
         try:
             await reply(f"Команда не выполнена: {redact_secrets(str(exc)[:500], token)}")
+        except Exception:  # noqa: BLE001
+            pass
+
+
+async def _dispatch_project_digest_control_commands(
+    session: AsyncSession,
+    cmd: StudioControlCommand,
+    settings: Settings,
+    reply,
+    now: datetime,
+) -> None:
+    token = (settings.telegram_bot_token or "").strip()
+    try:
+        if cmd.command_name == ControlCommandName.UNKNOWN:
+            reason = str(cmd.args_json.get("reason") or "")
+            text_out = PROJECT_HELP_TEXT
+            if reason:
+                text_out = f"Ошибка: {reason}\n\n" + text_out
+            mid = await reply(text_out)
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        slug = str(cmd.args_json.get("project_slug") or "")
+        proj = await studio_projects_service.get_project_by_slug(session, slug)
+        if proj is None:
+            mid = await reply("Проект не найден.")
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
+            return
+
+        if cmd.command_name == ControlCommandName.PROJECT_DIGEST_TODAY:
+            p0, p1 = utc_today_period()
+            row, _created = await project_digests_svc.generate_or_get_project_digest_for_period(
+                session,
+                project_id=proj.id,
+                digest_type=ProjectDigestType.DAILY.value,
+                period_start=p0,
+                period_end=p1,
+                settings=settings,
+                summary_type_for_chats=SummaryType.DAILY,
+            )
+        elif cmd.command_name == ControlCommandName.PROJECT_DIGEST_YESTERDAY:
+            p0, p1 = utc_yesterday_period()
+            row, _created = await project_digests_svc.generate_or_get_project_digest_for_period(
+                session,
+                project_id=proj.id,
+                digest_type=ProjectDigestType.DAILY.value,
+                period_start=p0,
+                period_end=p1,
+                settings=settings,
+                summary_type_for_chats=SummaryType.DAILY,
+            )
+        elif cmd.command_name == ControlCommandName.PROJECT_DIGEST_PERIOD:
+            da = str(cmd.args_json.get("date_a") or "")
+            db = str(cmd.args_json.get("date_b") or "")
+            p0, p1 = period_bounds_utc(da, db)
+            row, _created = await project_digests_svc.generate_or_get_project_digest_for_period(
+                session,
+                project_id=proj.id,
+                digest_type=ProjectDigestType.MANUAL.value,
+                period_start=p0,
+                period_end=p1,
+                settings=settings,
+                summary_type_for_chats=SummaryType.MANUAL,
+            )
+        elif cmd.command_name == ControlCommandName.PROJECT_DIGEST_LATEST:
+            row, _created = await project_digests_svc.generate_or_get_project_digest_latest(
+                session,
+                project_id=proj.id,
+                settings=settings,
+            )
+        else:
+            cmd.status = ControlCommandStatus.IGNORED
+            cmd.processed_at = now
+            cmd.last_error = "unsupported project_digest command"
+            return
+
+        snip = (row.digest_text or "")[:3500]
+        body = (
+            f"Дайджест проекта id={row.id}\n"
+            f"slug={proj.slug} type={row.digest_type}\n"
+            f"Повторная отправка: POST /project-digests/{row.id}/deliver-control-group\n\n"
+            f"{snip}"
+        )
+        mid = await reply(_safe_truncate(body))
+        mark_digest_delivered_from_control_command_reply(row, mid)
+        cmd.status = ControlCommandStatus.PROCESSED
+        cmd.processed_at = now
+        cmd.response_telegram_message_id = mid
+        await _audit_control_command(
+            session,
+            action="control_commands.project_digest",
+            command_id=cmd.id,
+            command_name=cmd.command_name,
+            payload={"digest_id": str(row.id), "project_id": str(proj.id)},
+        )
+    except ValueError as exc:
+        mid = await reply(f"Ошибка: {exc}")
+        cmd.status = ControlCommandStatus.PROCESSED
+        cmd.processed_at = now
+        cmd.response_telegram_message_id = mid
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("project digest command failed id=%s", cmd.id)
+        safe_err = redact_secrets(str(exc), token)[:4000]
+        cmd.status = ControlCommandStatus.FAILED
+        cmd.last_error = safe_err
+        cmd.processed_at = now
+        try:
+            await reply(f"Дайджест не выполнен: {redact_secrets(str(exc)[:500], token)}")
         except Exception:  # noqa: BLE001
             pass
 

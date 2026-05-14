@@ -109,14 +109,77 @@ def _parse_project_command_line(line: str) -> ParsedControlCommand:
     return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "unknown_project_command"})
 
 
+def _parse_project_digest_command_line(line: str) -> ParsedControlCommand:
+    parts = line.split()
+    if not parts:
+        return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
+    cmd = parts[0].strip().lower()
+    rest = parts[1:]
+
+    if cmd == "/project_digest_today":
+        if len(rest) != 1:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "project_digest_today needs project_slug"},
+            )
+        slug_t = rest[0].strip()
+        if not _SLUG_TOKEN_RE.match(slug_t):
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+        return ParsedControlCommand(ControlCommandName.PROJECT_DIGEST_TODAY, {"project_slug": slug_t.lower()})
+
+    if cmd == "/project_digest_yesterday":
+        if len(rest) != 1:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "project_digest_yesterday needs project_slug"},
+            )
+        slug_t = rest[0].strip()
+        if not _SLUG_TOKEN_RE.match(slug_t):
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+        return ParsedControlCommand(ControlCommandName.PROJECT_DIGEST_YESTERDAY, {"project_slug": slug_t.lower()})
+
+    if cmd == "/project_digest_latest":
+        if len(rest) != 1:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "project_digest_latest needs project_slug"},
+            )
+        slug_t = rest[0].strip()
+        if not _SLUG_TOKEN_RE.match(slug_t):
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+        return ParsedControlCommand(ControlCommandName.PROJECT_DIGEST_LATEST, {"project_slug": slug_t.lower()})
+
+    if cmd == "/project_digest_period":
+        if len(rest) != 3:
+            return ParsedControlCommand(
+                ControlCommandName.UNKNOWN,
+                {"raw": line, "reason": "project_digest_period needs project_slug and two YYYY-MM-DD"},
+            )
+        slug_t = rest[0].strip()
+        if not _SLUG_TOKEN_RE.match(slug_t):
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_project_slug"})
+        da = _parse_iso_date(rest[1])
+        db = _parse_iso_date(rest[2])
+        if da is None or db is None:
+            return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "invalid_date_format"})
+        return ParsedControlCommand(
+            ControlCommandName.PROJECT_DIGEST_PERIOD,
+            {"project_slug": slug_t.lower(), "date_a": rest[1].strip(), "date_b": rest[2].strip()},
+        )
+
+    return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "unknown_project_digest_command"})
+
+
 def parse_control_group_command_line(text: str | None) -> ParsedControlCommand | None:
     """
     Разобрать строку сообщения из control group.
-    Возвращает None, если это не команда /summary_* или /project_*.
+    Возвращает None, если это не команда /summary_* или /project* (включая /project_digest_*).
     """
     if not text or not isinstance(text, str):
         return None
     line = text.strip()
+    if line.startswith("/project_digest"):
+        return _parse_project_digest_command_line(line)
     if line.startswith("/project"):
         return _parse_project_command_line(line)
     if not line.startswith("/summary"):

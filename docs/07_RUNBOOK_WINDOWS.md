@@ -33,6 +33,8 @@ docker compose -f docker-compose.local.yml up -d --build
 
 Для **фазы 9a (проекты)** эндпоинты `GET/POST/PATCH /projects`, archive, bind/unbind/chats — под тем же `STUDIO_ADMIN_TOKEN`, если задан. Команды `/project_*` в Telegram используют те же `STUDIO_CONTROL_COMMANDS_*`, что и `/summary_*`; Celery: `process_control_group_commands` (и по-прежнему `process_control_group_summary_commands`) вызывают один и тот же `run_control_commands_standalone`.
 
+Для **фазы 9b (project digest)** те же `STUDIO_ADMIN_TOKEN` и `STUDIO_CONTROL_COMMANDS_*`; эндпоинты `GET /projects/{id}/digests`, `POST /projects/{id}/digests/today`, `.../yesterday`, `.../period`, `GET /project-digests/{id}`, `POST /project-digests/{id}/deliver-control-group`, `POST /project-digests/deliver-pending`; команды `/project_digest_today|yesterday|period|latest`; Celery: `generate_daily_project_digests`, `deliver_pending_project_digests` (штатные env сводок/доставки 6b–6d).
+
 Проверка API:
 
 ```powershell

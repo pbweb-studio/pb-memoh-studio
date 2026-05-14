@@ -14,6 +14,7 @@ import pb_studio.summaries.models  # noqa: F401 — phase 6a summaries
 import pb_studio.control_commands.models  # noqa: F401 — phase 7a control commands
 import pb_studio.sla.models  # noqa: F401 — phase 8a SLA
 import pb_studio.projects.models  # noqa: F401 — phase 9a projects
+import pb_studio.project_digests.models  # noqa: F401 — phase 9b project digests
 
 config = context.config
 

@@ -281,6 +281,14 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 
 ---
 
+## Фаза 9b — project digest из chat summaries (Studio DB, без LLM/RAG)
+
+**Статус:** таблица `studio_project_digests` (Alembic `012_studio_project_digests`); пакет [`studio/pb_studio/project_digests/`](studio/pb_studio/project_digests/) (models/schemas/service/delivery); генерация из активных `studio_project_chats` + существующий пайплайн `summaries/product.py` (получить/создать summary, при `pending` — сгенерировать; `failed` summary не валит digest — фиксируется в `metadata_json`); `digest_text` — детерминированный шаблон (проект, период UTC, список чатов с кратким `summary_text`); пустой проект активных чатов → `generated` с текстом «У проекта нет активных чатов.»; уникальность `(project_id, digest_type, period_start, period_end)`. Админ-API: `GET /projects/{id}/digests`, `POST .../digests/today|yesterday|period`, `GET /project-digests/{id}`, `POST .../deliver-control-group`, `POST /project-digests/deliver-pending` под `STUDIO_ADMIN_TOKEN`. Доставка в active control group — тот же `sendMessage` и классификация ошибок, что в **6d**; команды `/project_digest_*` + обновление `/project_help`; Celery `generate_daily_project_digests`, `deliver_pending_project_digests`. **Без** Memoh, второго бота, polling/webhook Studio, LLM/RAG, Studio Admin UI; не шлём в client/project/internal/service чаты.
+
+**Тесты:** [`studio/tests/test_project_digests_phase9b.py`](studio/tests/test_project_digests_phase9b.py); регрессия summaries/projects/control commands.
+
+---
+
 ## Оглавление фаз (0–14)
 
 | Фаза | Содержание |
@@ -304,7 +312,7 @@ ADR (A/B/C) — в [`docs/06_DECISIONS.md`](docs/06_DECISIONS.md); для тра
 | 6+ | LLM / прочая доставка / продукт — только после отдельной постановки |
 | 7 | Сводки из управляющей группы (чат / проект / все), права |
 | 8 | SLA (код, не GPT), рабочие часы, антиспам, mute — **8a–8c:** инфра + календарь/mute + уведомления (см. секции выше) |
-| 9 | Проекты: **9a** — модель + bind чатов в Studio DB + команды `/project_*` (без RAG/digest); дальше — RAG/дайджесты по постановке |
+| 9 | Проекты: **9a** — модель + bind; **9b** — project digest из chat summaries (детерминированный текст, доставка в CG, без LLM/RAG); RAG/knowledge — дальше по постановке |
 | 10 | База знаний: Docling, embeddings, pgvector |
 | 11 | Правила: save/list/disable/audit |
 | 12 | Импорт истории Telegram Desktop JSON |

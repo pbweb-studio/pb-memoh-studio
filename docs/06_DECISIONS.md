@@ -193,3 +193,10 @@
 - Один бот; команды `/project_*` обрабатываются тем же циклом, что `/summary_*`; ответы — **только** `sendMessage` в активную control group; ACL — `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS` (как в 7b).
 - `project_bind` может выставить `chat_role=project_chat` только для `unknown` / `client_chat`; **нельзя** менять роль active control group и нельзя привязать чат с ролью `control_group`; internal/service — запрещены к bind.
 - Админ-HTTP: `/projects` под тем же **`STUDIO_ADMIN_TOKEN`**, что и `/control-group`, `/summaries`, `/sla` (если токен задан — Bearer обязателен).
+
+## Фаза 9b — project digest (выполнено)
+
+- Дайджест проекта строится только из **Studio DB**: активные `studio_project_chats` + строки `studio_chat_summaries` через существующий **product**-пайплайн сводок; без вызова Memoh, без LLM/RAG для текста дайджеста (шаблон).
+- Один бот; команды `/project_digest_*` и доставка готового дайджеста — **только** active control group (`sendMessage`); ACL — `STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`; классификация ошибок Telegram и redact токена — как в **6d**.
+- Админ-HTTP: `GET /projects/{id}/digests`, `POST .../digests/today|yesterday|period`, `GET /project-digests/{id}`, `POST .../deliver-control-group`, `POST /project-digests/deliver-pending` под **`STUDIO_ADMIN_TOKEN`**.
+- Повтор за тот же период не создаёт дубликат строки digest (unique по проекту, типу и границам периода).

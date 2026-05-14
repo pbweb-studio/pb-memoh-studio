@@ -8,6 +8,10 @@ from pb_studio.control_commands.service import run_control_commands_standalone
 from pb_studio.control_group.system_notification_delivery import run_deliver_pending_standalone
 from pb_studio.summaries.generator import run_generate_pending_standalone
 from pb_studio.summaries.planner import run_plan_daily_standalone
+from pb_studio.project_digests.service import (
+    run_deliver_pending_project_digests_standalone,
+    run_generate_daily_project_digests_standalone,
+)
 from pb_studio.sla.detector import run_sla_detection_standalone
 from pb_studio.summaries.summary_delivery import run_deliver_summaries_standalone
 
@@ -58,3 +62,15 @@ def process_control_group_commands() -> dict[str, Any]:
 def detect_sla_incidents() -> dict[str, int]:
     """Phase 8a: SLA по studio_messages (client/project), без LLM; уведомления только в control group."""
     return asyncio.run(run_sla_detection_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.generate_daily_project_digests")
+def generate_daily_project_digests() -> dict[str, int]:
+    """Phase 9b: дайджесты проектов за вчера (UTC) из chat summaries; без LLM."""
+    return asyncio.run(run_generate_daily_project_digests_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.deliver_pending_project_digests")
+def deliver_pending_project_digests() -> dict[str, int]:
+    """Phase 9b: доставка project digest в control group (sendMessage)."""
+    return asyncio.run(run_deliver_pending_project_digests_standalone())

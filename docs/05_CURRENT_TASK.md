@@ -1,7 +1,7 @@
 # Текущая задача
 
-## После фазы 9a (проекты + bind чатов)
+## После фазы 9b (project digest)
 
-**Статус:** `studio_projects` / `studio_project_chats` (Alembic `011`); API `/projects*`; команды `/project_*` из control group; Celery `process_control_group_commands` (алиас к тому же runner, что и summary-команды). Memoh не менялся.
+**Статус:** `studio_project_digests` (Alembic `012`); `pb_studio/project_digests`; API дайджестов + команды `/project_digest_*` из control group; Celery `generate_daily_project_digests` / `deliver_pending_project_digests`. Memoh не менялся.
 
-**Следующий шаг:** по постановке — **6+** (LLM/доставка сводок), **9b** (RAG/digest по проектам) или иной эпик.
+**Следующий шаг:** по постановке — **6+** (LLM/доставка сводок в продукт), **RAG/база знаний** (фазы 10+) или иной эпик.

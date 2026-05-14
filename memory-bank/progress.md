@@ -22,6 +22,7 @@
 | 8b SLA working hours + mute on policies | Done |
 | 8c SLA notification antispam + digest + audit | Done |
 | 9a Projects + project↔chat binding (Studio DB, no RAG) | Done |
+| 9b Project digest from chat summaries (no LLM for digest text) | Done |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** фаза 9a — `pb_studio/projects`, migration 011, `/projects` API, `/project_*` control commands, Celery alias `process_control_group_commands`; pytest **169** passed; `docker compose -f docker-compose.local.yml config` ok.
+**Последнее:** фаза 9b — `pb_studio/project_digests`, migration 012, digest API + `/project_digest_*` commands, Celery `generate_daily_project_digests` / `deliver_pending_project_digests`; pytest **179** passed; `docker compose -f docker-compose.local.yml config` ok; Docker `python:3.12-slim` pytest ok.

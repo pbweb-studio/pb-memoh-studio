@@ -1,7 +1,7 @@
 # Active context
 
-**Сейчас:** фаза **9a** в Studio — проекты: `studio_projects`, `studio_project_chats` (Alembic `011`); `pb_studio/projects`; API `/projects*` под `STUDIO_ADMIN_TOKEN`; команды `/project_*` из active control group (Event Mirror + control commands); Celery `process_control_group_commands` и `process_control_group_summary_commands` → `run_control_commands_standalone`. Memoh не менялся.
+**Сейчас:** фаза **9b** в Studio — project digest: `studio_project_digests` (Alembic `012`); `pb_studio/project_digests`; API `/projects/{id}/digests*`, `/project-digests/*`; команды `/project_digest_*` из active control group; Celery `generate_daily_project_digests`, `deliver_pending_project_digests` (+ по-прежнему цикл `/project_*`/`/summary_*`). Memoh не менялся.
 
 **Ветка:** `pb-studio/main`.
 
-**Следующий шаг:** **6+** или **9b** (RAG/digest по проектам) — по отдельной постановке.
+**Следующий шаг:** **6+** (LLM/продукт) или **RAG/база знаний** — по отдельной постановке.
