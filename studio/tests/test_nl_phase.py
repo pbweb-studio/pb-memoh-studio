@@ -74,7 +74,7 @@ def test_strip_alias_prefix_jarvis():
 
 
 @pytest.mark.asyncio
-async def test_nl_gate_disabled_fail_open(nl_client, monkeypatch):
+async def test_nl_gate_disabled_returns_403(nl_client, monkeypatch):
     _env_nl(monkeypatch, nl_on=False)
     client, _session = nl_client
     r = await client.post(
@@ -88,8 +88,8 @@ async def test_nl_gate_disabled_fail_open(nl_client, monkeypatch):
             "is_bot": False,
         },
     )
-    assert r.status_code == 200
-    assert r.json()["suppress_memoh_assistant"] is False
+    assert r.status_code == 403
+    assert "STUDIO_NL_COMMANDS_ENABLED" in (r.json().get("detail") or "")
 
 
 @pytest.mark.asyncio

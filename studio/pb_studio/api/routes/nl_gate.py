@@ -5,7 +5,12 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from pb_studio.api.deps import DbSession, SettingsDep, verify_memoh_nl_gate_optional
+from pb_studio.api.deps import (
+    DbSession,
+    SettingsDep,
+    verify_memoh_nl_gate_optional,
+    verify_nl_gate_feature_enabled,
+)
 from pb_studio.nl.gate_service import memoh_nl_gate
 
 router = APIRouter(prefix="/integrations/memoh", tags=["integrations"])
@@ -31,7 +36,7 @@ class MemohNlGateResponse(BaseModel):
 @router.post(
     "/nl-gate",
     response_model=MemohNlGateResponse,
-    dependencies=[Depends(verify_memoh_nl_gate_optional)],
+    dependencies=[Depends(verify_memoh_nl_gate_optional), Depends(verify_nl_gate_feature_enabled)],
 )
 async def post_nl_gate(
     body: MemohNlGateRequest,

@@ -335,3 +335,20 @@
 - **Memoh:** узкий вызов `PostNLGate` из inbound для Telegram group/supergroup до старта ассистента при условии `ShouldAttemptNLGate`.
 - **Прод (2026-05-15):** VPS-выкат без `set -x` и без печати `.env`/`config.toml` целиком; публичный URL gate; Bearer на Memoh согласован с Studio (ingest-токен на хосте).
 - **Прод (2026-05-15, NL anti–off-by-one):** VPS **148.253.209.54** — выкат **`566052e1`**: Studio api/worker/beat + Memoh server; smoke **PASS**; live/`/kb_help`/getMe — оператор. Журнал: `docs/04_PROJECT_LOG.md`.
+
+## Single-brain Memoh + Studio MCP (ADR, май 2026)
+
+- **Цель:** один ответчик в Telegram — **Memoh**; Studio остаётся **backend** (Postgres, Event Mirror, KB, SLA, проекты, правила) и отдаётся ассистенту через **MCP** (`studio-mcp`), без второго «разговорного» контура NL.
+- **Prod defaults:** `STUDIO_NL_COMMANDS_ENABLED=false`; Celery beat **не** регистрирует задачу `studio-process-nl-interactions`; `POST /integrations/memoh/nl-gate` возвращает **403** при выключенном флаге (зависимость `verify_nl_gate_feature_enabled` после опционального Bearer).
+- **Memoh:** пустой **`MEMOH_STUDIO_NL_GATE_URL`** и/или **`MEMOH_STUDIO_NL_GATE_DISABLED=true`** (`1`/`true`/`yes`/`on`) — **`PostNLGate`** не выполняет HTTP; inbound не вызывает gate при `NLGateGloballyDisabled()`.
+- **Event Mirror** (`STUDIO_EVENTS_URL` / ingest) **без изменений**, не смешивать с NL.
+- **Studio MCP:** сервис **`studio-mcp`** в `docker-compose.prod.yml` (`python -m pb_studio.mcp_server`), порт **`STUDIO_MCP_LISTEN_PORT`** (default 8765), опциональный **`STUDIO_MCP_AUTH_TOKEN`** (Bearer); 11 инструментов `studio_*` в `pb_studio/mcp_tools/handlers.py` + регистрация в `pb_studio/mcp_server/asgi.py`.
+- **Slash-команды vs MCP-only (prod):** оператор выбирает **`STUDIO_CONTROL_COMMANDS_ENABLED`**. Рекомендация для минимизации дублей с Memoh: **`false`** (только MCP + при необходимости ручные операции в Studio Admin); **emergency:** оставить `true` и задокументировать риск параллельных ответов Studio slash и Memoh в CG. Event Mirror от slash **не** зависит.
+
+### Откат single-brain
+
+1. `STUDIO_NL_COMMANDS_ENABLED=true`, восстановить **`MEMOH_STUDIO_NL_GATE_URL`** и токены gate на Memoh.
+2. Перезапустить **studio-beat** (появится schedule NL) и **studio-api** / **Memoh server**.
+3. Остановить **`studio-mcp`** или убрать MCP-подключение в Memoh Admin.
+4. Опционально: откатить одноразовый `UPDATE` по `studio_nl_interactions` только осознанно (бэкап до правки).
+

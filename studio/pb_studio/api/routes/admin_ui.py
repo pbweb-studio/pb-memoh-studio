@@ -129,6 +129,7 @@ def _table(
     filter_fields: list[dict[str, Any]] | None = None,
     filter_hidden: list[dict[str, str]] | None = None,
     badge_column_indices: list[int] | None = None,
+    banner_html: str | None = None,
 ) -> HTMLResponse:
     empty = len(rows) == 0
     return templates.TemplateResponse(
@@ -138,6 +139,7 @@ def _table(
             "nav_active": nav,
             "page_title": title,
             "page_subtitle": subtitle,
+            "banner_html": banner_html,
             "columns": columns,
             "rows": rows,
             "empty": empty,
@@ -1146,6 +1148,7 @@ async def admin_history_jobs(
 async def admin_nl_interactions(
     request: Request,
     session: DbSession,
+    settings: SettingsDep,
     page: int | None = Query(None),
     limit: int | None = Query(None),
     status: str | None = Query(None),
@@ -1189,6 +1192,13 @@ async def admin_nl_interactions(
         {"name": "mode", "label": "mode", "type": "text", "value": (mode or "").strip()},
         {"name": "intent", "label": "intent", "type": "text", "value": (intent or "").strip()},
     ]
+    banner = None
+    if not settings.studio_nl_commands_enabled:
+        banner = (
+            "<strong>NL responder отключён</strong> (STUDIO_NL_COMMANDS_ENABLED=false). "
+            "Ответы в Telegram — только Memoh; бизнес-данные Studio — через MCP (skill pb-studio-manager). "
+            "Таблица ниже — только для разбора истории."
+        )
     return _table(
         request,
         nav="nl",
@@ -1202,6 +1212,7 @@ async def admin_nl_interactions(
         filter_fields=filter_fields,
         filter_hidden=[{"name": "limit", "value": str(lim)}],
         badge_column_indices=[7],
+        banner_html=banner,
     )
 
 

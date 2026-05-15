@@ -554,7 +554,7 @@ func (p *ChannelInboundProcessor) HandleInbound(ctx context.Context, cfg channel
 	shouldTrigger := shouldTriggerAssistantResponse(msg) || identity.ForceReply
 
 	if shouldTrigger && msg.Channel == channel.ChannelTypeTelegram && !identity.ForceReply {
-		if studiopkg.ShouldAttemptNLGate(msg) {
+		if !studiopkg.NLGateGloballyDisabled() && studiopkg.ShouldAttemptNLGate(msg) {
 			cid, err1 := strconv.ParseInt(strings.TrimSpace(msg.Conversation.ID), 10, 64)
 			mid, err2 := strconv.Atoi(strings.TrimSpace(msg.Message.ID))
 			if err1 == nil && err2 == nil {

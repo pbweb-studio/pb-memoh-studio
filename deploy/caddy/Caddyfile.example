@@ -42,4 +42,7 @@
 
 # Опционально позже: rate limit, IP allowlist для /admin, отдельный listener — см. документацию Caddy.
 #
+# Studio MCP (`studio-mcp` в docker-compose.prod.yml, порт 8765): держите на **внутренней** сети Docker
+# или проксируйте отдельным path с **Bearer** (`STUDIO_MCP_AUTH_TOKEN`), не публикуя без auth в интернет.
+#
 # Готовый двухсайтовый edge для VPS pb-web.ru (Studio + Memoh): см. Caddyfile.pb-web.ru в этой папке.

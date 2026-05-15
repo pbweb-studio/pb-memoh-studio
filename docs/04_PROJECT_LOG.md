@@ -1,5 +1,11 @@
 # Журнал проекта
 
+## 2026-05-15 — Single-brain: NL off by default, Studio MCP, Memoh gate disable
+
+- **Статус:** код в репо — флаги prod NL **false**, beat без NL-задачи при false, `nl-gate` **403** при false, Memoh **`MEMOH_STUDIO_NL_GATE_DISABLED`** + ранний skip в inbound, сервис **`studio-mcp`** в compose, 11 MCP tools, skill **`pb-studio-manager`**, тесты (`test_nl_phase` gate 403, celery schedule, `run_nl` skip, MCP bearer, Go `NLGateGloballyDisabled`), доки/runbook/ADR.
+- **Скрипт:** `studio/scripts/migrate_nl_pending_to_ignored.sql` (опционально для старых pending).
+- **Деплой:** не выполнялся из этой сессии.
+
 ## 2026-05-15 — NL Business & Learning Layer (Studio + Memoh)
 
 - Статус: **код в репо** + **деплой на VPS 148.253.209.54** (2026-05-15, без переустановки Postgres/Redis volumes, без `set -x`, без печати `.env`/`config.toml` целиком).

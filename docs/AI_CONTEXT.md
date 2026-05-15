@@ -6,27 +6,23 @@
 
 ## Текущая фаза
 
-**MVP-стабилизация + NL Business & Learning (май 2026)** — зафиксировано разделение ролей **Memoh vs Studio** (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Рабочий репозиторий на VPS: **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
+**Single-brain Memoh + Studio MCP (май 2026)** — NL как второй ответчик **выключен по умолчанию** (`STUDIO_NL_COMMANDS_ENABLED=false`); Memoh не ходит в gate при пустом URL или **`MEMOH_STUDIO_NL_GATE_DISABLED`**. Бизнес-Studio для ассистента: **`studio-mcp`** (streamable HTTP, Bearer **`STUDIO_MCP_AUTH_TOKEN`**), инструменты `studio_*`, skill **`pb-studio-manager`**. Event Mirror и slash/control — по политике оператора (см. ADR `docs/06_DECISIONS.md`). Рабочий VPS-контур по-прежнему **`148.253.209.54`** / **jar.pb-web.ru** / **memo.pb-web.ru** (выкат этого изменения — отдельным шагом оператора).
 
-- **NL anti–off-by-one (2026-05-15):** Celery worker берёт **одну** `pending` строку с `FOR UPDATE` (Postgres: `SKIP LOCKED`), commit после обработки — без гонки нескольких worker за одну interaction. Логи: `nl_turn_start` / `nl_turn_done` с `source_update_id`; `nl_reply_sent` с превью ответа. Memoh: `PostNLGate` при HTTP non-2xx возвращает **error**; inbound логирует **Warn** и **подавляет** ассистента (без второго ответа при сбое Studio). Диагностика: `studio/scripts/diag_last_nl_interactions.sql`. Тесты: `studio/tests/test_nl_ux_regression.py` (off-by-one A, FIFO C, skip non-pending). Деплой: **studio-api/worker/beat** + **Memoh server** после merge; live acceptance — оператор.
+### §11 Ручная приёмка (Telegram, после выката single-brain)
 
-- **Studio Admin:** **https://jar.pb-web.ru/admin/** — в т.ч. назначение active control group (**коммит `dd285584`**), обзор с подсказкой ролей, **`/admin/control-commands`**, **`/admin/assistant-rules`** (список правил; **HTTP 200** после **`8af1537d`** — отсутствовали импорты `AssistantRuleScope` / `AssistantRuleStatus` / `rules_service` в `admin_ui.py`).
-- **Memoh Web:** **https://memo.pb-web.ru** — UI Memoh; **Memoh server** на том же VPS обрабатывает входящий Telegram (long polling); в коде: **`b0e7b510`** — таймаут long poll Bot API и **redaction** полных URL с токеном в логах.
-- **Группы Telegram (Memoh):** по умолчанию без потокового `editMessageText` для group/supergroup — один финальный `sendMessage` (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED` не truthy → режим *group final only* в `internal/channel/adapters/telegram/stream.go`), чтобы убрать дубли, «……» и зависший typing.
-- **Studio control commands:** парсинг `/cmd@BotName`; **`/kb_help`** и подсказка для `unknown` работают **даже при** `STUDIO_KB_ENABLED=false` (остальные `/kb_*` — только при включённом KB). **Celery beat** вызывает `pb_studio.worker.process_control_group_commands` каждые **`STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`** (дефолт 5 с).
-- **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
-- **Security / `TELEGRAM_BOT_TOKEN`:** при попадании токена в логи рекомендуется ротация в BotFather + обновление в Memoh и Studio `.env.prod` (**см. `docs/15_OPERATOR_GUIDE.md`**). **2026-05-14:** оператор **явно отказался** от ротации текущего бота (согласованный **остаточный риск**); статус **USER_ACTION_REQUIRED** по ротации снят.
-
-**VPS (2026-05-15, NL anti–off-by-one):** **148.253.209.54**, `/opt/pb-studio/pb-memoh-studio` — **HEAD `566052e1`** выкатан: **studio-api/worker/beat** + **Memoh server** пересобраны/`up`, Postgres/Redis volumes **не** трогались. Health: `127.0.0.1:8000/health` **200**, `https://jar.pb-web.ru/health` **200**, `https://memo.pb-web.ru/` **200**, **memoh-jar-server-1** **healthy**. **`vps-e2e-smoke.sh`** — **PASS** (ожидаемые SKIP). Go на хосте VPS: **NOT_RUN**; **`/kb_help`**, getMe/webhook/pending, live 4 фразы — **оператор** (см. `docs/04_PROJECT_LOG.md` запись того же дня).
-
-**Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал. **NL Business & Learning** — gate `POST /integrations/memoh/nl-gate`, Celery `process_nl_interactions`, Memoh `PostNLGate`, таблицы **`017`**, админка **`/admin/nl-interactions`** и см.; см. **`docs/06_DECISIONS.md`**, **`docs/04_PROJECT_LOG.md`** (запись 2026-05-15).
+1. В CG: mention бота — **один** ответ **Memoh** (Studio NL не вмешивается).
+2. В Memoh Admin: MCP **tools/list** видит `studio_list_chats` и остальные `studio_*`.
+3. Вызов инструмента (например список чатов) возвращает осмысленный текст без утечки секретов в ошибках.
+4. **`/admin/nl-interactions`** — баннер «NL responder отключён» при `STUDIO_NL_COMMANDS_ENABLED=false`.
+5. Event Mirror: новое сообщение в группе по-прежнему попадает в зеркало (smoke по `studio_messages` / админке).
 
 ## Текущая цель
 
-Повторить **live** приёмку NL в CG после **`566052e1`** (4 фразы + сверка `diag_last_nl_interactions.sql`); затем **6+** и прочее по плану.
+Выкатить на VPS образы с **single-brain** + **`studio-mcp`**; в Memoh Admin подключить MCP и skill; пройти §11; зафиксировать hash в этом файле.
 
 ## Что уже работает
 
+- **Single-brain + MCP (май 2026):** NL prod off, gate **403**, Memoh `NLGateGloballyDisabled`, Celery beat без NL-task, **`studio-mcp`** + 11 tools, skill **`pb-studio-manager`**; см. `docs/06_DECISIONS.md`, `docker-compose.prod.yml`, `skills/pb-studio-manager/SKILL.md`.
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
 - **MVP стабилизация:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; коммиты **`e6e4a13f`** (код+доки), **`8d2b41d3`** (ссылки на hash), **`7a4a8a10`** (Celery: `dispose_engine` после `run_control_commands_standalone`, чтобы worker не ловил *different event loop*); Memoh group final-only; beat `process_control_group_commands`; `/kb_help` без `STUDIO_KB_ENABLED`; парсер `@bot`; `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
 - **NL Business & Learning:** Alembic **`017`**, пакет **`pb_studio/nl`**, gate, Celery **`process_nl_interactions`**, Memoh **`internal/studio/nl_gate.go`** + inbound; админ-страницы NL/memory/playbooks. См. `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
@@ -103,8 +99,8 @@
 
 ## Следующая задача
 
-- Оператор: пройти §18 шаги **7–10** в Telegram (inventory, отчёт, «запомни», модель) и зафиксировать PASS/FAIL в `docs/04_PROJECT_LOG.md` при расхождении с ожиданиями.
+- Оператор: выкат + §11 (`docs/AI_CONTEXT.md`); при необходимости обновить §18 legacy-NL тесты отдельно.
 
 ## Вопросы к GPT
 
-- нет
+- Нет.

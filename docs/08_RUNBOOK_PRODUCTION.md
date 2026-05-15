@@ -126,6 +126,8 @@ export STUDIO_BASE_URL=http://127.0.0.1:8000
 
 | Флаг | Назначение |
 |------|------------|
+| `STUDIO_NL_COMMANDS_ENABLED` | NL gate + worker (legacy второй ответчик); **false** = single-brain |
+| `STUDIO_MCP_AUTH_TOKEN` | Bearer для сервиса **`studio-mcp`** (пусто = без проверки, только доверенная сеть) |
 | `STUDIO_SYSTEM_NOTIFICATIONS_ENABLED` | Исходящие system notifications в control group |
 | `STUDIO_SUMMARY_GENERATION_ENABLED` / `STUDIO_SUMMARY_DELIVERY_ENABLED` | Сводки (доставка → нужен `TELEGRAM_BOT_TOKEN`) |
 | `STUDIO_CONTROL_COMMANDS_ENABLED` | Команды из control group |
@@ -202,4 +204,14 @@ sudo caddy reload --config /etc/caddy/Caddyfile
 ```
 
 **Вход в Memoh:** логин и пароль из секции `[admin]` в `$MEMOH_ROOT/config.toml` (на стенде часто `/opt/pb-studio/memoh/config.toml`). Это **не** `STUDIO_ADMIN_TOKEN` (это админка Studio на `jar.pb-web.ru`).
+
+---
+
+## H. Single-brain + Studio MCP (операторский чеклист)
+
+- [ ] В `.env.prod`: **`STUDIO_NL_COMMANDS_ENABLED=false`**, задан сильный **`STUDIO_MCP_AUTH_TOKEN`** (если MCP доступен не только из loopback).
+- [ ] `docker compose … up -d` включает сервис **`studio-mcp`**; из контейнера Memoh (или с хоста с общей Docker-сетью) доступен URL вида **`http://studio-mcp:8765`** (transport **streamable HTTP** / **http** — как поддерживает версия Memoh; см. Memoh Admin MCP).
+- [ ] На Memoh: пустой **`MEMOH_STUDIO_NL_GATE_URL`** или **`MEMOH_STUDIO_NL_GATE_DISABLED=true`**; в UI бота добавлено MCP-подключение с **`Authorization: Bearer`** = `STUDIO_MCP_AUTH_TOKEN`.
+- [ ] Установлен skill **`pb-studio-manager`** (репозиторий: `skills/pb-studio-manager/SKILL.md`).
+- [ ] Откат: см. **`docs/06_DECISIONS.md`** (раздел «Откат single-brain»).
 

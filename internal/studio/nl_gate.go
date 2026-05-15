@@ -55,9 +55,27 @@ func nlGateBearer() string {
 	return strings.TrimSpace(os.Getenv("MEMOH_STUDIO_EVENTS_TOKEN"))
 }
 
+// NLGateGloballyDisabled is true when MEMOH_STUDIO_NL_GATE_DISABLED is set to 1/true/yes/on
+// (single-brain mode: do not call Studio nl-gate even if MEMOH_STUDIO_NL_GATE_URL is set).
+func NLGateGloballyDisabled() bool {
+	v := strings.TrimSpace(os.Getenv("MEMOH_STUDIO_NL_GATE_DISABLED"))
+	if v == "" {
+		return false
+	}
+	switch strings.ToLower(v) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
 // PostNLGate calls Studio nl-gate. Empty URL: (false, nil) fail-open.
 // Configured URL: network/HTTP/decode errors return (false, err); HTTP non-2xx returns (false, err) so Memoh can suppress duplicate assistant replies.
 func PostNLGate(ctx context.Context, body NLGateRequest) (bool, error) {
+	if NLGateGloballyDisabled() {
+		return false, nil
+	}
 	url := strings.TrimSpace(os.Getenv("MEMOH_STUDIO_NL_GATE_URL"))
 	if url == "" {
 		return false, nil

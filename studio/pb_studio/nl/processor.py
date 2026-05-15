@@ -546,6 +546,14 @@ async def run_nl_interactions_standalone(
     batch_limit: int | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
+    if not settings.studio_nl_commands_enabled:
+        return {
+            "skipped": True,
+            "reason": "studio_nl_commands_disabled",
+            "scanned_aliases": 0,
+            "inserted_aliases": 0,
+            "processed_nl": 0,
+        }
     factory = get_session_factory(settings)
     counts: dict[str, Any] = {"scanned_aliases": 0, "inserted_aliases": 0, "processed_nl": 0}
     try:

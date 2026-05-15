@@ -193,6 +193,27 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # MCP streamable HTTP для Memoh (только внутренняя сеть compose; наружу — через Caddy path + Bearer или VPN).
+  studio-mcp:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+    container_name: pb-studio-prod-mcp
+    environment:
+      <<: *studio-runtime-env
+      STUDIO_MCP_AUTH_TOKEN: ${STUDIO_MCP_AUTH_TOKEN:-}
+      STUDIO_MCP_LISTEN_HOST: ${STUDIO_MCP_LISTEN_HOST:-0.0.0.0}
+      STUDIO_MCP_LISTEN_PORT: ${STUDIO_MCP_LISTEN_PORT:-8765}
+    command: ["python", "-m", "pb_studio.mcp_server"]
+    expose:
+      - "8765"
+    depends_on:
+      studio-migrate:
+        condition: service_completed_successfully
+      studio-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pb_studio_prod_pgdata:
   pb_studio_prod_redisdata:

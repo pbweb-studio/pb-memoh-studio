@@ -167,6 +167,21 @@ class Settings(BaseSettings):
         description="STUDIO_MEMOH_GATE_TOKEN — Bearer для POST /integrations/memoh/nl-gate; пусто = fallback STUDIO_EVENTS_INGEST_TOKEN",
     )
 
+    studio_mcp_auth_token: str | None = Field(
+        default=None,
+        description="STUDIO_MCP_AUTH_TOKEN — Bearer для HTTP MCP (studio-mcp); пусто = без проверки (только доверенная сеть)",
+    )
+    studio_mcp_listen_host: str = Field(
+        default="0.0.0.0",
+        description="STUDIO_MCP_LISTEN_HOST — bind для процесса studio-mcp",
+    )
+    studio_mcp_listen_port: int = Field(
+        default=8765,
+        ge=1,
+        le=65535,
+        description="STUDIO_MCP_LISTEN_PORT — порт studio-mcp (streamable HTTP)",
+    )
+
     studio_sla_enabled: bool = Field(
         default=False,
         description="STUDIO_SLA_ENABLED — детектор SLA по зеркалу studio_messages",

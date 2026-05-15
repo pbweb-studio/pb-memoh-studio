@@ -48,6 +48,7 @@
 | NL turn isolation — **VPS rollout** (2026-05-15) | Done (build/up Studio+Memoh; smoke PASS; **живой TG-ряд** — оператор) |
 | NL live-path human (inventory/digest/learning/pending) | Done (код+тесты; **деплой Studio** после push — оператор) |
 | NL off-by-one / Celery race (FOR UPDATE SKIP LOCKED, gate fail-closed) | Done (код **`566052e1`**; деплой **148.253.209.54** Studio+Memoh + smoke **PASS**; live/`/kb_help` — оператор) |
+| Single-brain + Studio MCP (`studio-mcp`, NL gate 403, Memoh gate disable) | Done (код в репо; деплой — оператор) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** VPS **148.253.209.54** — **`566052e1`**: Studio api/worker/beat + Memoh server build/up; health/smoke **PASS**; Go на хосте **NOT_RUN**. Оператор: live 4 фразы + `/kb_help` + SQL `diag_last_nl_interactions.sql`.
+**Последнее:** single-brain + `studio-mcp` в репо (NL gate 403, beat без NL, Go `NLGateGloballyDisabled`, MCP tools, skill, доки). Деплой VPS — оператор; pytest/go — локально при наличии toolchain.

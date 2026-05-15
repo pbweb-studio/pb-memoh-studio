@@ -78,6 +78,9 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_KB_TELEGRAM_MAX_FILE_BYTES",
         "STUDIO_HISTORY_IMPORT_ENABLED",
         "STUDIO_HISTORY_IMPORT_MAX_BYTES",
+        "STUDIO_MCP_AUTH_TOKEN",
+        "STUDIO_MCP_LISTEN_HOST",
+        "STUDIO_MCP_LISTEN_PORT",
     ):
         monkeypatch.delenv(key, raising=False)
     get_settings.cache_clear()
