@@ -55,6 +55,33 @@ func TestPostNLGate_DecodeSuppress(t *testing.T) {
 	}
 }
 
+func TestPostNLGate_HTTPErrorReturnsErr(t *testing.T) {
+	prevDo := nlGateHTTPDo
+	defer func() { nlGateHTTPDo = prevDo }()
+
+	nlGateHTTPDo = func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusBadGateway,
+			Body:       io.NopCloser(bytes.NewBufferString("")),
+			Header:     make(http.Header),
+		}, nil
+	}
+
+	t.Setenv("MEMOH_STUDIO_NL_GATE_URL", "http://stub/nl-gate")
+	t.Setenv("MEMOH_STUDIO_NL_GATE_TOKEN", "tok-test")
+
+	sup, err := PostNLGate(
+		context.Background(),
+		NLGateRequest{TelegramChatID: -100, MessageID: 1, Text: "x", RawText: "x"},
+	)
+	if err == nil {
+		t.Fatalf("expected error on HTTP 502")
+	}
+	if sup {
+		t.Fatalf("expected suppress false with error")
+	}
+}
+
 func TestShouldAttemptNLGate_GroupMention(t *testing.T) {
 	msg := channel.InboundMessage{
 		Channel: channel.ChannelTypeTelegram,

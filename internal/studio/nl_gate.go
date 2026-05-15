@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -54,7 +55,8 @@ func nlGateBearer() string {
 	return strings.TrimSpace(os.Getenv("MEMOH_STUDIO_EVENTS_TOKEN"))
 }
 
-// PostNLGate calls Studio nl-gate. Fail-open: on non-2xx or error returns (false, nil) or (false, err).
+// PostNLGate calls Studio nl-gate. Empty URL: (false, nil) fail-open.
+// Configured URL: network/HTTP/decode errors return (false, err); HTTP non-2xx returns (false, err) so Memoh can suppress duplicate assistant replies.
 func PostNLGate(ctx context.Context, body NLGateRequest) (bool, error) {
 	url := strings.TrimSpace(os.Getenv("MEMOH_STUDIO_NL_GATE_URL"))
 	if url == "" {
@@ -81,7 +83,7 @@ func PostNLGate(ctx context.Context, body NLGateRequest) (bool, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return false, nil
+		return false, fmt.Errorf("studio nl gate: HTTP %s", resp.Status)
 	}
 	var out NLGateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

@@ -591,8 +591,18 @@ func (p *ChannelInboundProcessor) HandleInbound(ctx context.Context, cfg channel
 					IsBot:          false,
 				}
 				sup, gerr := studiopkg.PostNLGate(ctx, gbody)
-				if gerr != nil && p.logger != nil {
-					p.logger.Debug("studio nl gate request failed", slog.Any("error", gerr))
+				if gerr != nil {
+					if p.logger != nil {
+						p.logger.Warn(
+							"studio nl gate failed; suppressing memoh assistant to avoid duplicate or stale reply",
+							slog.Int64("telegram_chat_id", cid),
+							slog.Int("telegram_message_id", mid),
+							slog.Any("update_id", upd),
+							slog.Any("error", gerr),
+						)
+					}
+					p.persistPassiveMessage(ctx, identity, msg, text, attachments, resolved.RouteID, sessionID, eventID)
+					return nil
 				}
 				if sup {
 					p.persistPassiveMessage(ctx, identity, msg, text, attachments, resolved.RouteID, sessionID, eventID)

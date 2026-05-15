@@ -110,6 +110,25 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _reply_preview(text: str | None, max_len: int = 160) -> str:
+    s = (text or "").replace("\n", " ").strip()
+    return s[:max_len] if len(s) <= max_len else s[: max_len - 1] + "…"
+
+
+def _nl_log_reply_sent(row: StudioNlInteraction, mid: int | None, text: str) -> None:
+    logger.info(
+        "nl_reply_sent",
+        extra={
+            "nl_interaction_id": str(row.id),
+            "source_update_id": row.source_update_id,
+            "source_message_id": row.source_message_id,
+            "intent": row.intent,
+            "response_telegram_message_id": mid,
+            "reply_preview": _reply_preview(text),
+        },
+    )
+
+
 async def _find_pending_confirmation(
     session: AsyncSession,
     *,
@@ -340,11 +359,24 @@ async def _process_one_nl(
         row.processed_at = now
         return
 
+    if row.status != NlInteractionStatus.PENDING:
+        logger.warning(
+            "nl_process_skip_non_pending",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "status": row.status,
+                "source_message_id": row.source_message_id,
+                "source_update_id": row.source_update_id,
+            },
+        )
+        return
+
     turn_input = nl_turn_router_input(row.input_text, settings)
     logger.info(
         "nl_turn_start",
         extra={
             "nl_interaction_id": str(row.id),
+            "source_update_id": row.source_update_id,
             "source_message_id": row.source_message_id,
             "sender_telegram_user_id": row.sender_telegram_user_id,
             "turn_input_len": len(turn_input),
@@ -357,6 +389,7 @@ async def _process_one_nl(
             "nl_turn_done",
             extra={
                 "nl_interaction_id": str(row.id),
+                "source_update_id": row.source_update_id,
                 "source_message_id": row.source_message_id,
                 "outcome": "learning_confirmation",
             },
@@ -365,13 +398,25 @@ async def _process_one_nl(
 
     allowed = settings.studio_control_commands_allowed_user_ids_set
     if allowed and row.sender_telegram_user_id not in allowed:
+        deny = "Нет прав на NL-команды в этой группе."
         ok, _hs, mid = await _send_text_to_control_group(
-            session, settings, "Нет прав на NL-команды в этой группе.", send_message=send_message
+            session, settings, deny, send_message=send_message
         )
         row.status = NlInteractionStatus.FAILED
         row.last_error = "access_denied"
         row.processed_at = now
         row.response_telegram_message_id = mid
+        if ok:
+            _nl_log_reply_sent(row, mid, deny)
+        logger.info(
+            "nl_turn_done",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "source_update_id": row.source_update_id,
+                "source_message_id": row.source_message_id,
+                "outcome": "access_denied",
+            },
+        )
         return
 
     try:
@@ -385,6 +430,7 @@ async def _process_one_nl(
             "nl_turn_done",
             extra={
                 "nl_interaction_id": str(row.id),
+                "source_update_id": row.source_update_id,
                 "source_message_id": row.source_message_id,
                 "outcome": "router_failed",
             },
@@ -418,10 +464,13 @@ async def _process_one_nl(
         row.response_telegram_message_id = mid
         row.reply_text = msg
         row.processed_at = now
+        if ok:
+            _nl_log_reply_sent(row, mid, msg)
         logger.info(
             "nl_turn_done",
             extra={
                 "nl_interaction_id": str(row.id),
+                "source_update_id": row.source_update_id,
                 "source_message_id": row.source_message_id,
                 "intent": row.intent,
                 "mode": row.mode,
@@ -438,10 +487,13 @@ async def _process_one_nl(
             row.reply_text = txt
             row.status = NlInteractionStatus.PROCESSED
             row.processed_at = now
+            if ok:
+                _nl_log_reply_sent(row, mid, txt)
             logger.info(
                 "nl_turn_done",
                 extra={
                     "nl_interaction_id": str(row.id),
+                    "source_update_id": row.source_update_id,
                     "source_message_id": row.source_message_id,
                     "intent": row.intent,
                     "mode": row.mode,
@@ -461,6 +513,7 @@ async def _process_one_nl(
             "nl_turn_done",
             extra={
                 "nl_interaction_id": str(row.id),
+                "source_update_id": row.source_update_id,
                 "source_message_id": row.source_message_id,
                 "outcome": "format_failed",
             },
@@ -472,10 +525,13 @@ async def _process_one_nl(
     row.reply_text = out
     row.status = NlInteractionStatus.PROCESSED
     row.processed_at = now
+    if ok:
+        _nl_log_reply_sent(row, mid, out)
     logger.info(
         "nl_turn_done",
         extra={
             "nl_interaction_id": str(row.id),
+            "source_update_id": row.source_update_id,
             "source_message_id": row.source_message_id,
             "intent": row.intent,
             "mode": row.mode,
@@ -501,19 +557,27 @@ async def run_nl_interactions_standalone(
             counts["inserted_aliases"] = scan_counts.get("inserted", 0)
             await session.commit()
 
-        async with factory() as session:
-            lim = min(max(batch_limit or settings.studio_control_commands_max_batch, 1), 200)
-            stmt = (
-                select(StudioNlInteraction)
-                .where(StudioNlInteraction.status == NlInteractionStatus.PENDING)
-                .order_by(StudioNlInteraction.created_at.asc())
-                .limit(lim)
-            )
-            rows = list((await session.scalars(stmt)).all())
-            for row in rows:
+        lim = min(max(batch_limit or settings.studio_control_commands_max_batch, 1), 200)
+        for _ in range(lim):
+            async with factory() as session:
+                stmt = (
+                    select(StudioNlInteraction)
+                    .where(StudioNlInteraction.status == NlInteractionStatus.PENDING)
+                    .order_by(StudioNlInteraction.created_at.asc())
+                    .limit(1)
+                )
+                bind = session.get_bind()
+                dname = bind.dialect.name if bind is not None else "postgresql"
+                if dname == "sqlite":
+                    stmt = stmt.with_for_update()
+                else:
+                    stmt = stmt.with_for_update(skip_locked=True)
+                row = (await session.scalars(stmt)).first()
+                if row is None:
+                    break
                 await _process_one_nl(session, row, settings)
                 counts["processed_nl"] += 1
-            await session.commit()
+                await session.commit()
     finally:
         await dispose_engine()
     return counts

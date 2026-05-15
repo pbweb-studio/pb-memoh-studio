@@ -47,6 +47,7 @@
 | NL Business & Learning — **VPS deploy** (148.253.209.54, 2026-05-15) | Done (инфра + smoke; ручной TG §18 7–10 — оператор) |
 | NL turn isolation — **VPS rollout** (2026-05-15) | Done (build/up Studio+Memoh; smoke PASS; **живой TG-ряд** — оператор) |
 | NL live-path human (inventory/digest/learning/pending) | Done (код+тесты; **деплой Studio** после push — оператор) |
+| NL off-by-one / Celery race (FOR UPDATE SKIP LOCKED, gate fail-closed) | Done (код+тесты; **деплой Studio+Memoh** — оператор) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** VPS **148.253.209.54** — выкат **NL turn isolation** (**`e0e75fd`**, ≥ `cf636d96`): Studio api/worker/beat + Memoh server **build/up**, volumes не трогали, smoke **PASS** (ожидаемые SKIP), getMe **jarvispbweb_bot**, webhook пустой, pending **0**. Живой сценарий 4 вопросов — оператор. См. `memory-bank/activeContext.md`, `docs/AI_CONTEXT.md`.
+**Последнее:** NL anti–off-by-one: `processor.py` (claim по одной pending-строке), корреляционные логи, `PostNLGate` HTTP≠2xx → err, Memoh inbound suppress при err; SQL `studio/scripts/diag_last_nl_interactions.sql`; pytest `test_nl_ux_regression.py`. Деплой и live-acceptance — оператор.

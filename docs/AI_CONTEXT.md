@@ -8,6 +8,8 @@
 
 **MVP-стабилизация + NL Business & Learning (май 2026)** — зафиксировано разделение ролей **Memoh vs Studio** (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Рабочий репозиторий на VPS: **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
 
+- **NL anti–off-by-one (2026-05-15):** Celery worker берёт **одну** `pending` строку с `FOR UPDATE` (Postgres: `SKIP LOCKED`), commit после обработки — без гонки нескольких worker за одну interaction. Логи: `nl_turn_start` / `nl_turn_done` с `source_update_id`; `nl_reply_sent` с превью ответа. Memoh: `PostNLGate` при HTTP non-2xx возвращает **error**; inbound логирует **Warn** и **подавляет** ассистента (без второго ответа при сбое Studio). Диагностика: `studio/scripts/diag_last_nl_interactions.sql`. Тесты: `studio/tests/test_nl_ux_regression.py` (off-by-one A, FIFO C, skip non-pending). Деплой: **studio-api/worker/beat** + **Memoh server** после merge; live acceptance — оператор.
+
 - **Studio Admin:** **https://jar.pb-web.ru/admin/** — в т.ч. назначение active control group (**коммит `dd285584`**), обзор с подсказкой ролей, **`/admin/control-commands`**, **`/admin/assistant-rules`** (список правил; **HTTP 200** после **`8af1537d`** — отсутствовали импорты `AssistantRuleScope` / `AssistantRuleStatus` / `rules_service` в `admin_ui.py`).
 - **Memoh Web:** **https://memo.pb-web.ru** — UI Memoh; **Memoh server** на том же VPS обрабатывает входящий Telegram (long polling); в коде: **`b0e7b510`** — таймаут long poll Bot API и **redaction** полных URL с токеном в логах.
 - **Группы Telegram (Memoh):** по умолчанию без потокового `editMessageText` для group/supergroup — один финальный `sendMessage` (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED` не truthy → режим *group final only* в `internal/channel/adapters/telegram/stream.go`), чтобы убрать дубли, «……» и зависший typing.
@@ -15,7 +17,7 @@
 - **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **Security / `TELEGRAM_BOT_TOKEN`:** при попадании токена в логи рекомендуется ротация в BotFather + обновление в Memoh и Studio `.env.prod` (**см. `docs/15_OPERATOR_GUIDE.md`**). **2026-05-14:** оператор **явно отказался** от ротации текущего бота (согласованный **остаточный риск**); статус **USER_ACTION_REQUIRED** по ротации снят.
 
-**VPS (2026-05-15, NL):** **148.253.209.54**, `/opt/pb-studio/pb-memoh-studio` — **HEAD `48b3317`**; без сноса Postgres/Redis volumes; **studio-api/worker/beat** пересобраны после **NL live human fix** (mention NBSP, human list/digest, learning router, pending); Memoh при этом не трогали. Health **jar** / **memo** — **200**; **`vps-e2e-smoke.sh`** — **PASS** (ожидаемые SKIP). Живая приёмка 4 фраз в CG — **оператор после выката**.
+**VPS (2026-05-15, NL):** **148.253.209.54**, `/opt/pb-studio/pb-memoh-studio` — после merge **NL anti–off-by-one** (воркер claim, логи, gate fail-closed): пересобрать **studio-api/worker/beat** и **Memoh server**; volumes не трогать. Предыдущий выкат human-path: **`48b3317`**. Живая приёмка 4 фраз в CG — **оператор после выката** (`git log -1` на `pb-studio/main` для точного hash).
 
 **VPS E2E smoke** — **PASS**; **SKIP**: history import, **12_telegram** (ручной CG), **14_pytest**.
 
@@ -32,6 +34,7 @@
 - **NL Business & Learning:** Alembic **`017`**, пакет **`pb_studio/nl`**, gate, Celery **`process_nl_interactions`**, Memoh **`internal/studio/nl_gate.go`** + inbound; админ-страницы NL/memory/playbooks. См. `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
 - **NL turn isolation (2026-05-15):** единый `turn_input` (`strip_reply_decorations` → `normalize_nl_router_input`) в gate/scan/router/processor; pending learning при independent вопросе → **`IGNORED`** / `superseded_by_new_turn`; Memoh NL gate: **`Text`/`RawText`** из `rawTextForCommand`; тесты **`tests/test_nl_turn_isolation.py`**. Коммит **`aaf5318e`**.
 - **NL live human path (2026-05-15):** снятие `@mention` с NBSP/unicode; human список чатов + CG; санитизация digest; learning по `find` маркеров; OpenAI→deterministic guard; pending/`?`/`@`; runtime model copy. Коммит **`48b33170`**.
+- **NL anti–off-by-one (2026-05-15):** воркер — по одной `pending` строке с блокировкой (`SKIP LOCKED` на Postgres); логи `source_update_id` + `nl_reply_sent`; Memoh — при ошибке `PostNLGate` подавление ассистента; SQL `studio/scripts/diag_last_nl_interactions.sql`; регрессии в `tests/test_nl_ux_regression.py`.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.

@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
@@ -18,7 +19,7 @@ from pb_studio.event_mirror.models import StudioChat
 from pb_studio.nl.constants import LearningType, NlInteractionStatus
 from pb_studio.nl.executor import format_nl_reply
 from pb_studio.nl.models import StudioNlInteraction
-from pb_studio.nl.processor import _process_one_nl, _try_handle_confirmation_reply
+from pb_studio.nl.processor import _process_one_nl, _try_handle_confirmation_reply, run_nl_interactions_standalone
 from pb_studio.nl.turn_input import nl_turn_router_input
 from pb_studio.nl.router_deterministic import route_deterministic
 from pb_studio.nl.schemas import IntentEnum, NLRouterDecision, RouterModeEnum
@@ -340,3 +341,153 @@ async def test_runtime_config_empty_uses_memoh_admin_hint(nl_ux_session):
     out = await format_nl_reply(session, settings, decision, raw_input="модель?")
     assert "Memoh Admin" in out
     assert "не могу надёжно" in out.lower()
+
+
+@pytest.mark.asyncio
+async def test_off_by_one_three_sequential_nl_replies(nl_ux_session, monkeypatch):
+    """A: три разных вопроса — три разных ответа без переноса inventory/digest в «модель»."""
+    session, cg_id = nl_ux_session
+    monkeypatch.setenv("STUDIO_NL_COMMANDS_ENABLED", "true")
+    monkeypatch.setenv("STUDIO_NL_ROUTER_PROVIDER", "deterministic")
+    get_settings.cache_clear()
+    settings = Settings(studio_memoh_model_display_name="pytest-model-xyz")
+
+    class _FakeSummary:
+        id = uuid.uuid4()
+        status = SummaryStatus.GENERATED
+        summary_text = "Секция отчёта за сегодня: закрыли задачу отчётной линии."
+
+    async def _fake_ensure(*_a, **_k):
+        return _FakeSummary()
+
+    sends: list[str] = []
+
+    async def _capture_send(_sess, _set, text, send_message=None):
+        sends.append(text)
+        return True, None, len(sends)
+
+    mids = (401, 402, 403)
+    texts = (
+        "какие чаты ты видишь?",
+        "дай отчёт за сегодня",
+        "на какой модели ты работаешь?",
+    )
+    for mid, txt in zip(mids, texts, strict=True):
+        session.add(
+            StudioNlInteraction(
+                source_message_id=mid,
+                control_group_chat_id=cg_id,
+                sender_telegram_user_id=902,
+                input_text=txt,
+                normalized_text="",
+                trigger_type="mention",
+                mode="router_pending",
+                status=NlInteractionStatus.PENDING,
+                parameters_json={},
+                decision_json={},
+            )
+        )
+    await session.commit()
+
+    with (
+        patch("pb_studio.nl.processor._send_text_to_control_group", new_callable=AsyncMock) as _m_send,
+        patch("pb_studio.nl.executor.ensure_chat_summary_for_period", new_callable=AsyncMock) as m_sum,
+    ):
+        _m_send.side_effect = _capture_send
+        m_sum.side_effect = _fake_ensure
+        for mid in mids:
+            row = (
+                await session.scalars(
+                    select(StudioNlInteraction).where(StudioNlInteraction.source_message_id == mid)
+                )
+            ).first()
+            assert row is not None
+            await _process_one_nl(session, row, settings, send_message=None)
+            await session.commit()
+
+    assert len(sends) == 3
+    out1, out2, out3 = sends
+    assert "PBVOICE" in out1 or "Управление" in out1
+    assert "отчётной линии" in out2 or "закрыли задачу" in out2
+    assert "pytest-model-xyz" in out3
+    assert "PBVOICE" not in out3
+    assert "отчётной линии" not in out3
+
+
+@pytest.mark.asyncio
+async def test_run_nl_interactions_fifo_two_pending(nl_ux_session, nl_ux_engine, monkeypatch):
+    """C: run_nl обрабатывает две PENDING-строки подряд (по одной транзакции)."""
+    _session, cg_id = nl_ux_session
+    factory = async_sessionmaker(nl_ux_engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
+
+    import pb_studio.core.database as db
+
+    async def _dispose_clear_globals() -> None:
+        db._engine = None
+        db._session_factory = None
+
+    monkeypatch.setattr("pb_studio.nl.processor.dispose_engine", _dispose_clear_globals)
+    monkeypatch.setattr("pb_studio.nl.processor.get_session_factory", lambda settings=None: factory)
+
+    monkeypatch.setenv("STUDIO_NL_COMMANDS_ENABLED", "true")
+    monkeypatch.setenv("STUDIO_NL_ROUTER_PROVIDER", "deterministic")
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    async with factory() as s:
+        for mid in (601, 602):
+            s.add(
+                StudioNlInteraction(
+                    source_message_id=mid,
+                    control_group_chat_id=cg_id,
+                    sender_telegram_user_id=903,
+                    input_text="какие чаты" if mid == 601 else "модель?",
+                    normalized_text="",
+                    trigger_type="mention",
+                    mode="router_pending",
+                    status=NlInteractionStatus.PENDING,
+                    parameters_json={},
+                    decision_json={},
+                )
+            )
+        await s.commit()
+
+    with patch("pb_studio.nl.processor._send_text_to_control_group", new_callable=AsyncMock) as m:
+        m.return_value = (True, None, 1)
+        counts = await run_nl_interactions_standalone(settings=settings, batch_limit=10)
+    assert counts["processed_nl"] == 2
+    assert m.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_process_one_nl_skips_non_pending_row(nl_ux_session, monkeypatch, caplog):
+    session, cg_id = nl_ux_session
+    monkeypatch.setenv("STUDIO_NL_COMMANDS_ENABLED", "true")
+    monkeypatch.setenv("STUDIO_NL_ROUTER_PROVIDER", "deterministic")
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    row = StudioNlInteraction(
+        source_message_id=700,
+        control_group_chat_id=cg_id,
+        sender_telegram_user_id=904,
+        input_text="какие чаты",
+        normalized_text="",
+        trigger_type="mention",
+        mode="router_pending",
+        status=NlInteractionStatus.PROCESSED,
+        parameters_json={},
+        decision_json={},
+        reply_text="already",
+    )
+    session.add(row)
+    await session.commit()
+
+    import logging
+
+    caplog.set_level(logging.WARNING)
+    with patch("pb_studio.nl.processor._send_text_to_control_group", new_callable=AsyncMock) as m:
+        await _process_one_nl(session, row, settings, send_message=None)
+        await session.commit()
+    m.assert_not_awaited()
+    assert "nl_process_skip_non_pending" in caplog.text
