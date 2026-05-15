@@ -13,12 +13,10 @@ from pb_studio.assistant_rules import service as assistant_rules_service
 from pb_studio.control_commands.service import _send_text_to_control_group
 from pb_studio.control_group.telegram_outbound import redact_secrets
 from pb_studio.core.config import Settings, get_settings
-from pb_studio.core.database import dispose_engine, get_session_factory
 from pb_studio.nl.constants import LearningType, NlInteractionStatus
 from pb_studio.nl.executor import format_nl_reply, learning_confirmation_message
 from pb_studio.nl.models import StudioMemoryItem, StudioNlInteraction, StudioPlaybook
 from pb_studio.nl.router import route_nl
-from pb_studio.nl.scan import scan_mirror_for_nl_aliases
 from pb_studio.nl.schemas import IntentEnum, NLRouterDecision, RouterModeEnum
 from pb_studio.nl.turn_input import nl_turn_router_input
 
@@ -545,47 +543,13 @@ async def run_nl_interactions_standalone(
     settings: Settings | None = None,
     batch_limit: int | None = None,
 ) -> dict[str, Any]:
-    settings = settings or get_settings()
-    if not settings.studio_nl_commands_enabled:
-        return {
-            "skipped": True,
-            "reason": "studio_nl_commands_disabled",
-            "scanned_aliases": 0,
-            "inserted_aliases": 0,
-            "processed_nl": 0,
-        }
-    factory = get_session_factory(settings)
-    counts: dict[str, Any] = {"scanned_aliases": 0, "inserted_aliases": 0, "processed_nl": 0}
-    try:
-        async with factory() as session:
-            scan_counts = await scan_mirror_for_nl_aliases(
-                session, settings, batch_limit=batch_limit or settings.studio_control_commands_max_batch
-            )
-            counts["scanned_aliases"] = scan_counts.get("scanned", 0)
-            counts["inserted_aliases"] = scan_counts.get("inserted", 0)
-            await session.commit()
-
-        lim = min(max(batch_limit or settings.studio_control_commands_max_batch, 1), 200)
-        for _ in range(lim):
-            async with factory() as session:
-                stmt = (
-                    select(StudioNlInteraction)
-                    .where(StudioNlInteraction.status == NlInteractionStatus.PENDING)
-                    .order_by(StudioNlInteraction.created_at.asc())
-                    .limit(1)
-                )
-                bind = session.get_bind()
-                dname = bind.dialect.name if bind is not None else "postgresql"
-                if dname == "sqlite":
-                    stmt = stmt.with_for_update()
-                else:
-                    stmt = stmt.with_for_update(skip_locked=True)
-                row = (await session.scalars(stmt)).first()
-                if row is None:
-                    break
-                await _process_one_nl(session, row, settings)
-                counts["processed_nl"] += 1
-                await session.commit()
-    finally:
-        await dispose_engine()
-    return counts
+    """Studio NL responder is archived: Memoh owns conversational replies (single-brain)."""
+    _ = batch_limit
+    _ = settings or get_settings()
+    return {
+        "skipped": True,
+        "reason": "nl_responder_archived_single_brain",
+        "scanned_aliases": 0,
+        "inserted_aliases": 0,
+        "processed_nl": 0,
+    }

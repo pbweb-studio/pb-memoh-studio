@@ -15,9 +15,6 @@ from pb_studio.project_digests.service import (
 )
 from pb_studio.sla.detector import run_sla_detection_standalone
 from pb_studio.summaries.summary_delivery import run_deliver_summaries_standalone
-from pb_studio.nl.processor import run_nl_interactions_standalone
-
-
 @celery_app.task(name="pb_studio.worker.ping")
 def ping() -> str:
     """Skeleton task for smoke / connectivity checks."""
@@ -92,5 +89,11 @@ def embed_pending_knowledge_chunks() -> dict[str, int]:
 
 @celery_app.task(name="pb_studio.worker.process_nl_interactions")
 def process_nl_interactions() -> dict[str, Any]:
-    """NL business/learning: alias scan + process pending interactions."""
-    return asyncio.run(run_nl_interactions_standalone())
+    """Legacy task name kept for compatibility; Studio NL responder is archived (single-brain)."""
+    return {
+        "skipped": True,
+        "reason": "nl_responder_archived_single_brain",
+        "scanned_aliases": 0,
+        "inserted_aliases": 0,
+        "processed_nl": 0,
+    }

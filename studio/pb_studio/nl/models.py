@@ -54,7 +54,7 @@ class StudioNlInteraction(Base):
     confidence: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 4), nullable=True)
     parameters_json: Mapped[dict[str, Any]] = mapped_column(JSONCompat, nullable=False, default=dict)
     decision_json: Mapped[dict[str, Any]] = mapped_column(JSONCompat, nullable=False, default=dict)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
+    status: Mapped[str] = mapped_column(String(64), nullable=False, default="pending", index=True)
     reply_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     response_telegram_message_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     last_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

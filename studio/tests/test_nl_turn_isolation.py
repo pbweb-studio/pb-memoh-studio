@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import pytest
+
+pytestmark = pytest.mark.skip(reason="Studio NL responder archived (single-brain); see docs/06_DECISIONS.md")
+
 from unittest.mock import AsyncMock, patch
 
-import pytest
 import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
