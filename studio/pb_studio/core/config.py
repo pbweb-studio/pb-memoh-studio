@@ -154,6 +154,14 @@ class Settings(BaseSettings):
         default=False,
         description="STUDIO_NL_ROUTER_REUSE_KB_CHAT_PROVIDER — явно разрешить те же STUDIO_KB_CHAT_* что и RAG",
     )
+    studio_nl_digest_debug: bool = Field(
+        default=False,
+        description="STUDIO_NL_DIGEST_DEBUG — в NL studio_digest показывать UUID/status/ISO (отладка)",
+    )
+    studio_memoh_model_display_name: str = Field(
+        default="",
+        description="STUDIO_MEMOH_MODEL_DISPLAY_NAME — подпись модели Memoh для ответа NL (без секретов)",
+    )
     studio_memoh_gate_token: str | None = Field(
         default=None,
         description="STUDIO_MEMOH_GATE_TOKEN — Bearer для POST /integrations/memoh/nl-gate; пусто = fallback STUDIO_EVENTS_INGEST_TOKEN",

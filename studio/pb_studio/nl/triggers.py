@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import re
+
 from pb_studio.control_commands.parser import normalize_telegram_slash_command_token, parse_control_group_command_line
 from pb_studio.core.config import Settings
+
+# Telegram @username: 5–32 [A-Za-z0-9_]; допускаем 4+ для совместимости с тестовыми ботами.
+_LEADING_MENTION_RE = re.compile(r"^@[A-Za-z0-9_]{4,32}\s+")
 
 
 _STUDIO_SLASH_PREFIXES = (
@@ -35,6 +40,25 @@ def strip_alias_prefix(text: str, settings: Settings) -> tuple[str, bool]:
             rest = s[len(prefix) :].lstrip()
             return rest, True
     return s, False
+
+
+def strip_leading_bot_mentions(text: str) -> str:
+    """Remove one or more leading @username tokens (Telegram text mentions)."""
+    s = (text or "").strip()
+    while True:
+        m = _LEADING_MENTION_RE.match(s)
+        if not m:
+            break
+        s = s[m.end() :].lstrip()
+    return s.strip()
+
+
+def normalize_nl_router_input(text: str, settings: Settings) -> str:
+    """Text for NL router: strip Jarvis-style alias prefix, then leading @bot mentions."""
+    s = (text or "").strip()
+    s, _ = strip_alias_prefix(s, settings)
+    s = strip_leading_bot_mentions(s)
+    return s.strip()
 
 
 def mentions_bot_in_text(text: str, bot_username_lower: str | None) -> bool:

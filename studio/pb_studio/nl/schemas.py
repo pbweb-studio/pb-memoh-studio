@@ -25,6 +25,7 @@ class IntentEnum(str, Enum):
     kb_ask = "kb_ask"
     diagnostics_status = "diagnostics_status"
     help_capabilities = "help_capabilities"
+    runtime_config_query = "runtime_config_query"
     learning_request = "learning_request"
     casual_or_assistant = "casual_or_assistant"
     unclear = "unclear"

@@ -10,6 +10,7 @@ from pb_studio.control_commands.constants import SUMMARY_AGG_SNIPPET_CHARS, TELE
 from pb_studio.control_commands.service import _list_mirror_chats_excluding_control_group, _safe_truncate
 from pb_studio.control_group.service import get_control_group_chat
 from pb_studio.core.config import Settings
+from pb_studio.event_mirror.models import StudioChat
 from pb_studio.knowledge.rag import ask_knowledge_base
 from pb_studio.knowledge.service import search_knowledge_chunks
 from pb_studio.nl.constants import LearningType
@@ -20,10 +21,34 @@ from pb_studio.projects.models import StudioProject
 from pb_studio.projects.service import get_project_by_slug, list_projects
 from pb_studio.sla.constants import SlaIncidentStatus
 from pb_studio.sla.service import list_sla_incidents
-from pb_studio.summaries.constants import SummaryType
+from pb_studio.summaries.constants import SummaryStatus, SummaryType
 from pb_studio.summaries.product import ensure_chat_summary_for_period, utc_today_period, utc_yesterday_period
 
 logger = logging.getLogger(__name__)
+
+
+def _human_chat_line_for_nl(chat: StudioChat) -> str:
+    """Одна строка для пользователя: без UUID/tg/role."""
+    ct = (chat.chat_type or "").strip().lower()
+    title = (chat.title or "").strip()
+    username = (chat.username or "").strip()
+    tid = int(chat.telegram_chat_id)
+    is_groupish = ct in ("group", "supergroup") or tid < 0
+    if is_groupish:
+        if title:
+            return f"группа {title}"
+        if username:
+            return f"группа @{username}"
+        return "группа без названия"
+    if ct == "private" or tid > 0:
+        if title:
+            return f"личка с {title}"
+        if username:
+            return f"личка @{username}"
+        return "личка"
+    if title:
+        return title
+    return "чат без названия"
 
 
 async def _digest_all_chats(session: AsyncSession, settings: Settings, period: str) -> str:
@@ -44,12 +69,36 @@ async def _digest_all_chats(session: AsyncSession, settings: Settings, period: s
         p0, p1 = utc_today_period()
         label = "сегодня"
     chats = await _list_mirror_chats_excluding_control_group(session, exclude_chat_id=cg.id)
-    header = f"Сводки ({label}, UTC): {p0.isoformat()} — {p1.isoformat()}\nЧатов: {len(chats)}\n"
-    blocks: list[str] = []
     meta = {"source": "nl_studio_digest"}
     stype = SummaryType.MANUAL if period == "last_7_days" else SummaryType.DAILY
+
+    if settings.studio_nl_digest_debug:
+        header = f"Сводки ({label}, UTC): {p0.isoformat()} — {p1.isoformat()}\nЧатов: {len(chats)}\n"
+        blocks: list[str] = []
+        for ch in chats:
+            block_head = f"\n---\n{ch.id} | tg={ch.telegram_chat_id} | role={ch.chat_role}\n"
+            try:
+                summary = await ensure_chat_summary_for_period(
+                    session,
+                    studio_chat_id=ch.id,
+                    summary_type=stype,
+                    period_start=p0,
+                    period_end=p1,
+                    settings=settings,
+                    metadata_json=meta,
+                )
+                snip = (summary.summary_text or "")[:SUMMARY_AGG_SNIPPET_CHARS]
+                blocks.append(block_head + f"summary_id={summary.id} status={summary.status}\n{snip}")
+            except Exception as exc:  # noqa: BLE001
+                blocks.append(block_head + f"ошибка: {str(exc)[:200]}")
+        return _safe_truncate(header + "".join(blocks), TELEGRAM_TEXT_SAFE_MAX)
+
+    intro = f"Кратко за период: {label} (по сводкам Studio, чатов в зеркале: {len(chats)}).\n\n"
+    per_blocks: list[str] = []
+    important: list[str] = []
+    had_any_text = False
     for ch in chats:
-        block_head = f"\n---\n{ch.id} | tg={ch.telegram_chat_id} | role={ch.chat_role}\n"
+        human = _human_chat_line_for_nl(ch)
         try:
             summary = await ensure_chat_summary_for_period(
                 session,
@@ -60,11 +109,41 @@ async def _digest_all_chats(session: AsyncSession, settings: Settings, period: s
                 settings=settings,
                 metadata_json=meta,
             )
-            snip = (summary.summary_text or "")[:SUMMARY_AGG_SNIPPET_CHARS]
-            blocks.append(block_head + f"summary_id={summary.id} status={summary.status}\n{snip}")
-        except Exception as exc:  # noqa: BLE001
-            blocks.append(block_head + f"ошибка: {str(exc)[:200]}")
-    return _safe_truncate(header + "".join(blocks), TELEGRAM_TEXT_SAFE_MAX)
+            snip = (summary.summary_text or "").strip()
+            if summary.status == SummaryStatus.FAILED:
+                important.append(f"— Сводка не сформировалась: {human}.")
+            elif snip:
+                had_any_text = True
+                body = snip[:SUMMARY_AGG_SNIPPET_CHARS]
+                per_blocks.append(f"{human}\n{body}\n")
+            else:
+                important.append(f"— Пока нет текста сводки: {human}.")
+        except Exception:  # noqa: BLE001
+            important.append(f"— Не удалось получить сводку: {human}.")
+
+    body_parts: list[str] = [intro]
+    if per_blocks:
+        body_parts.append("По чатам:\n\n")
+        body_parts.append("\n".join(per_blocks))
+    else:
+        body_parts.append("По чатам пока мало данных (пустые сводки или их ещё не было).\n\n")
+
+    if important:
+        body_parts.append("Важное:\n")
+        body_parts.extend(f"{line}\n" for line in important)
+        body_parts.append("\n")
+
+    body_parts.append("Риски / на что обратить внимание:\n")
+    if not had_any_text and not important:
+        body_parts.append(
+            "— Данных мало: за выбранный период почти нет содержательных сводок по зеркалу.\n"
+        )
+    elif important:
+        body_parts.append("— См. блок «Важное» выше.\n")
+    else:
+        body_parts.append("— Явных сбоев по сбору не видно; при необходимости проверьте SLA и логи генерации сводок.\n")
+
+    return _safe_truncate("".join(body_parts), TELEGRAM_TEXT_SAFE_MAX)
 
 
 async def _resolve_project(session: AsyncSession, guess: str | None) -> StudioProject | None:
@@ -131,8 +210,7 @@ async def _list_chats_text(session: AsyncSession) -> str:
         return "Нет зеркалируемых чатов (кроме control group)."
     lines = ["Чаты Studio (кроме активной control group):", ""]
     for c in chats[:40]:
-        title = (c.title or "").strip() or "-"
-        lines.append(f"{c.id} | tg={c.telegram_chat_id} | role={c.chat_role} | {title}")
+        lines.append(f"— {_human_chat_line_for_nl(c)}")
     if len(chats) > 40:
         lines.append(f"... и ещё {len(chats) - 40}")
     return _safe_truncate("\n".join(lines), TELEGRAM_TEXT_SAFE_MAX)
@@ -204,6 +282,16 @@ def _help_capabilities_text() -> str:
     )
 
 
+def _runtime_config_query_text(settings: Settings) -> str:
+    name = (settings.studio_memoh_model_display_name or "").strip()
+    if name:
+        return f"По настройкам Studio для ответов указано: {name}."
+    return (
+        "Имя и параметры модели Memoh из этого интерфейса Studio не читаются (нет прямого доступа к runtime Memoh). "
+        "Модель задаётся администратором в настройках бота и провайдера в Memoh."
+    )
+
+
 async def format_nl_reply(
     session: AsyncSession,
     settings: Settings,
@@ -230,6 +318,8 @@ async def format_nl_reply(
         return _help_capabilities_text()
     if intent == IntentEnum.diagnostics_status:
         return _diagnostics_text(settings)
+    if intent == IntentEnum.runtime_config_query:
+        return _runtime_config_query_text(settings)
     if intent == IntentEnum.list_chats:
         return await _list_chats_text(session)
     if intent == IntentEnum.list_projects:

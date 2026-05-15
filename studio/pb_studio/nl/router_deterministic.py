@@ -148,6 +148,26 @@ def route_deterministic(text: str) -> NLRouterDecision:
             needs_confirmation=False,
         )
 
+    if any(
+        x in low
+        for x in (
+            "на какой модели",
+            "на какой ты модели",
+            "какая модель",
+            "какая у тебя модель",
+            "какой llm",
+            "what model are you",
+            "what model",
+        )
+    ):
+        return NLRouterDecision(
+            mode=RouterModeEnum.business_action,
+            intent=IntentEnum.runtime_config_query,
+            confidence=0.91,
+            parameters={},
+            needs_confirmation=False,
+        )
+
     if any(x in low for x in ("какие чаты", "список чат", "группы ты видишь")):
         return NLRouterDecision(
             mode=RouterModeEnum.business_action,

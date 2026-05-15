@@ -28,6 +28,38 @@ _YES = frozenset({"да", "yes", "ага", "ок", "y"})
 _NO = frozenset({"нет", "no", "n"})
 
 
+def _looks_like_independent_nl_question(text: str) -> bool:
+    """Не считать сообщение ответом на pending learning (Studio без reply_to из Memoh)."""
+    s = (text or "").strip()
+    if not s:
+        return False
+    low = s.lower()
+    if "?" in s and len(s) > 18:
+        return True
+    needles = (
+        "на какой модели",
+        "какая модель",
+        "отчёт за",
+        "отчет за",
+        "дай отчёт",
+        "дай отчет",
+        "дай сводк",
+        "сводк за",
+        "какие чаты",
+        "список чат",
+        "группы ты видишь",
+        "что горит",
+        "кто без ответа",
+        "просроч",
+        "инцидент",
+        "базе знан",
+        "найди в базе",
+        "что нового",
+        "какой llm",
+    )
+    return any(n in low for n in needles)
+
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -69,6 +101,8 @@ async def _try_handle_confirmation_reply(
         session, control_group_chat_id=row.control_group_chat_id, sender_id=row.sender_telegram_user_id
     )
     if pending is None:
+        return False
+    if _looks_like_independent_nl_question(row.input_text):
         return False
     raw = (row.input_text or "").strip().lower()
     if len(raw) > 120:
