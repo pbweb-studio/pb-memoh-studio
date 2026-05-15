@@ -17,15 +17,13 @@
 - **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **Security / `TELEGRAM_BOT_TOKEN`:** при попадании токена в логи рекомендуется ротация в BotFather + обновление в Memoh и Studio `.env.prod` (**см. `docs/15_OPERATOR_GUIDE.md`**). **2026-05-14:** оператор **явно отказался** от ротации текущего бота (согласованный **остаточный риск**); статус **USER_ACTION_REQUIRED** по ротации снят.
 
-**VPS (2026-05-15, NL):** **148.253.209.54**, `/opt/pb-studio/pb-memoh-studio` — после merge **NL anti–off-by-one** (воркер claim, логи, gate fail-closed): пересобрать **studio-api/worker/beat** и **Memoh server**; volumes не трогать. Предыдущий выкат human-path: **`48b3317`**. Живая приёмка 4 фраз в CG — **оператор после выката** (`git log -1` на `pb-studio/main` для точного hash).
-
-**VPS E2E smoke** — **PASS**; **SKIP**: history import, **12_telegram** (ручной CG), **14_pytest**.
+**VPS (2026-05-15, NL anti–off-by-one):** **148.253.209.54**, `/opt/pb-studio/pb-memoh-studio` — **HEAD `566052e1`** выкатан: **studio-api/worker/beat** + **Memoh server** пересобраны/`up`, Postgres/Redis volumes **не** трогались. Health: `127.0.0.1:8000/health` **200**, `https://jar.pb-web.ru/health` **200**, `https://memo.pb-web.ru/` **200**, **memoh-jar-server-1** **healthy**. **`vps-e2e-smoke.sh`** — **PASS** (ожидаемые SKIP). Go на хосте VPS: **NOT_RUN**; **`/kb_help`**, getMe/webhook/pending, live 4 фразы — **оператор** (см. `docs/04_PROJECT_LOG.md` запись того же дня).
 
 **Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал. **NL Business & Learning** — gate `POST /integrations/memoh/nl-gate`, Celery `process_nl_interactions`, Memoh `PostNLGate`, таблицы **`017`**, админка **`/admin/nl-interactions`** и см.; см. **`docs/06_DECISIONS.md`**, **`docs/04_PROJECT_LOG.md`** (запись 2026-05-15).
 
 ## Текущая цель
 
-Закрыть **ручную приёмку NL** §18 (шаги **7–10** в control group) после выката; затем отдельные задачи (**6+** и прочее).
+Повторить **live** приёмку NL в CG после **`566052e1`** (4 фразы + сверка `diag_last_nl_interactions.sql`); затем **6+** и прочее по плану.
 
 ## Что уже работает
 

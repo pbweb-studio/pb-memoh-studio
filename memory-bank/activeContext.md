@@ -1,9 +1,7 @@
 # Active context
 
-**Сейчас:** зафиксирован **NL anti–off-by-one** (воркер: `FOR UPDATE` / Postgres `SKIP LOCKED` по одной `pending` строке за транзакцию; логи `source_update_id`, `nl_reply_sent`; Memoh: при ошибке/HTTP≠2xx `PostNLGate` — **Warn** + подавление ассистента). Диагностика БД: `studio/scripts/diag_last_nl_interactions.sql`.
+**Сейчас:** VPS **148.253.209.54** — выкат **`566052e1`** (NL worker `FOR UPDATE`/`SKIP LOCKED`, логи `nl_reply_sent`, Memoh suppress при ошибке `PostNLGate`). Smoke **PASS**. **Дальше:** оператор — 4 фразы в CG + `/kb_help` + при необходимости getMe/webhook; повторный `studio/scripts/diag_last_nl_interactions.sql`.
 
-**Деплой после merge:** **studio-api + studio-worker + studio-beat**; **Memoh server** (изменён `internal/channel/inbound/channel.go` + `internal/studio/nl_gate.go`). Оператор: живая приёмка 4 фраз в CG.
+**Ссылки:** **https://jar.pb-web.ru/admin/** · **https://memo.pb-web.ru**
 
-**Ссылки:** Studio Admin **https://jar.pb-web.ru/admin/** · Memoh Web **https://memo.pb-web.ru**
-
-**Следующий шаг:** на VPS пересобрать сервисы выше; в control group — 4 фразы из плана; при **PASS** — строка в `docs/04_PROJECT_LOG.md`; при **FAIL** — `diag_last_nl_interactions.sql` + логи `nl_turn_*` / `nl_reply_sent`.
+**Следующий шаг:** ручная приёмка из `docs/04_PROJECT_LOG.md` (блок 2026-05-15 NL anti–off-by-one); при **PASS** — короткая строка в журнал; при **FAIL** — логи worker + SQL.

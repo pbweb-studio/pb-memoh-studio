@@ -43,6 +43,34 @@
 - **Деплой:** только **studio-api / worker / beat** после merge; оператор повторяет 4 фразы приёмки (чаты / отчёт / запомни / модель).
 
 - Статус: завершена.
+
+### 2026-05-15 — NL anti–off-by-one: worker claim + gate fail-closed (VPS 148.253.209.54)
+
+- **Цель:** убрать гонку Celery за одну `studio_nl_interactions` строку и второй ответ Memoh при сбое `PostNLGate`.
+- **Репо:** `git fetch` + `reset --hard origin/pb-studio/main` → **HEAD `566052e1`**; **без** сноса Postgres/Redis volumes; **без** смены токенов; **без** `set -x` / печати `.env` / `config.toml` целиком.
+- **Go test на VPS:** `go` не в PATH → **NOT_RUN** (сборка Memoh в Docker выполнила `go build` внутри Dockerfile).
+- **Deploy Studio:** `docker compose --env-file .env.prod -f docker-compose.prod.yml build studio-api studio-worker studio-beat` + `up -d` → **PASS** (api **healthy**, worker/beat **Up**).
+- **Deploy Memoh:** `MEMOH_ROOT=/opt/pb-studio/memoh docker compose -f deploy/docker-compose.memoh.yml build server` + `up -d server` → **PASS** (**memoh-jar-server-1** `healthy`).
+- **Health / smoke:** `curl http://127.0.0.1:8000/health` → **200**; `https://jar.pb-web.ru/health` (GET) → **200**; `https://memo.pb-web.ru/` → **200**; `REPO=... BASE=... deploy/scripts/vps-e2e-smoke.sh` → **PASS**, ожидаемые **SKIP** (`10_history`, `12_telegram`, `14_pytest`).
+- **Диагностика БД:** выполнен `studio/scripts/diag_last_nl_interactions.sql` через `docker exec -i pb-studio-prod-postgres psql ...` — последние строки на момент проверки относились к **предшествующему** живому прогону (в т.ч. clarify на «модель» при `@` в сохранённом `input_text`); **повторная** ручная приёмка **после** выката `566052e1` — оператор (4 фразы из § ниже).
+- **Автоматика `/kb_help`:** не вызывалась из этой сессии (нет сценария без Telegram); оператор — в CG **`/kb_help`** и **`/kb_help@jarvispbweb_bot`**.
+- **getMe / webhook / pending_update_count:** из SSH безопасно не извлекались (кавычинг с токеном); оператор: как в `docs/08_RUNBOOK_PRODUCTION.md` / предыдущие записи журнала (**long poll**, пустой webhook).
+- **Код:** `studio/pb_studio/nl/processor.py`, `internal/studio/nl_gate.go`, `internal/channel/inbound/channel.go`, `studio/scripts/diag_last_nl_interactions.sql`, тесты `studio/tests/test_nl_ux_regression.py`; `docs/06_DECISIONS.md`, `docs/AI_CONTEXT.md`, memory-bank.
+
+**Ручная приёмка после `566052e1` (control group, по порядку):**
+
+1. `@jarvispbweb_bot какие чаты ты видишь?`
+2. `@jarvispbweb_bot дай отчёт за сегодня`
+3. `@jarvispbweb_bot запомни: не смешивай ответы между разными вопросами`
+4. `@jarvispbweb_bot на какой модели ты работаешь?`
+
+Затем: повторный `diag_last_nl_interactions.sql`, сверка `source_message_id` ↔ один `id`, `reply_text` ↔ `input_text` той же строки, логи worker на дубликаты `nl_reply_sent` для одного `source_message_id`.
+
+**Статус:** автоматический деплой + smoke зафиксированы; **live** (4 фразы, `/kb_help`, getMe/webhook/pending) — **оператор**.
+
+## 2026-05-14 — Фаза 0 (bootstrap)
+
+- Статус: завершена.
 - Клонирован upstream Memoh; remotes: `upstream` = memohai/Memoh, `origin` = pbweb-studio/pb-memoh-studio; ветка `pb-studio/main`; тег `stable-upstream-memoh`.
 - Добавлены каркас `studio/`, документация `docs/`, Memory Bank, Cursor Rules, `.env.example`, `.cursorignore`, `docker-compose.local.yml` (Postgres16+pgvector, Redis), скелет `docker-compose.prod.yml`.
 - Продуктовая логика Memoh не менялась.
