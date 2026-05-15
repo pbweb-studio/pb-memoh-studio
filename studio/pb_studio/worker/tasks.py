@@ -15,6 +15,7 @@ from pb_studio.project_digests.service import (
 )
 from pb_studio.sla.detector import run_sla_detection_standalone
 from pb_studio.summaries.summary_delivery import run_deliver_summaries_standalone
+from pb_studio.nl.processor import run_nl_interactions_standalone
 
 
 @celery_app.task(name="pb_studio.worker.ping")
@@ -87,3 +88,9 @@ def parse_pending_knowledge_documents() -> dict[str, int]:
 def embed_pending_knowledge_chunks() -> dict[str, int]:
     """Phase 10c: embed pending KB chunks (deterministic provider; pgvector search on Postgres)."""
     return asyncio.run(run_embed_pending_knowledge_standalone())
+
+
+@celery_app.task(name="pb_studio.worker.process_nl_interactions")
+def process_nl_interactions() -> dict[str, Any]:
+    """NL business/learning: alias scan + process pending interactions."""
+    return asyncio.run(run_nl_interactions_standalone())

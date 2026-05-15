@@ -29,9 +29,14 @@ class DashboardCounts:
     history_import_jobs: int
     summaries: int
     sla_incidents: int
+    nl_interactions: int
+    memory_items: int
+    playbooks: int
 
 
 async def fetch_dashboard_counts(session: AsyncSession) -> DashboardCounts:
+    from pb_studio.nl.models import StudioMemoryItem, StudioNlInteraction, StudioPlaybook
+
     chats = int(await session.scalar(select(func.count()).select_from(StudioChat)) or 0)
     messages = int(await session.scalar(select(func.count()).select_from(StudioMessage)) or 0)
     projects = int(await session.scalar(select(func.count()).select_from(StudioProject)) or 0)
@@ -40,6 +45,9 @@ async def fetch_dashboard_counts(session: AsyncSession) -> DashboardCounts:
     jobs = int(await session.scalar(select(func.count()).select_from(StudioHistoryImportJob)) or 0)
     sums = int(await session.scalar(select(func.count()).select_from(StudioChatSummary)) or 0)
     sla = int(await session.scalar(select(func.count()).select_from(StudioSlaIncident)) or 0)
+    nl = int(await session.scalar(select(func.count()).select_from(StudioNlInteraction)) or 0)
+    mem = int(await session.scalar(select(func.count()).select_from(StudioMemoryItem)) or 0)
+    pb = int(await session.scalar(select(func.count()).select_from(StudioPlaybook)) or 0)
     return DashboardCounts(
         chats=chats,
         messages=messages,
@@ -49,6 +57,9 @@ async def fetch_dashboard_counts(session: AsyncSession) -> DashboardCounts:
         history_import_jobs=jobs,
         summaries=sums,
         sla_incidents=sla,
+        nl_interactions=nl,
+        memory_items=mem,
+        playbooks=pb,
     )
 
 
@@ -413,3 +424,75 @@ async def get_sla_incident(session: AsyncSession, incident_id: UUID) -> StudioSl
 
 async def get_assistant_rule(session: AsyncSession, rule_id: UUID) -> StudioAssistantRule | None:
     return await session.get(StudioAssistantRule, rule_id)
+
+
+def _nl_admin_conds(*, status: str | None, mode: str | None, intent: str | None) -> list:
+    from pb_studio.nl.models import StudioNlInteraction
+
+    conds = []
+    if status and status.strip():
+        conds.append(StudioNlInteraction.status == status.strip())
+    if mode and mode.strip():
+        conds.append(StudioNlInteraction.mode == mode.strip())
+    if intent and intent.strip():
+        conds.append(StudioNlInteraction.intent == intent.strip())
+    return conds
+
+
+async def count_nl_interactions_admin(
+    session: AsyncSession, *, status: str | None, mode: str | None, intent: str | None
+) -> int:
+    from pb_studio.nl.models import StudioNlInteraction
+
+    stmt = select(func.count()).select_from(StudioNlInteraction)
+    conds = _nl_admin_conds(status=status, mode=mode, intent=intent)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    return int(await session.scalar(stmt) or 0)
+
+
+async def list_nl_interactions_admin(
+    session: AsyncSession,
+    *,
+    status: str | None,
+    mode: str | None,
+    intent: str | None,
+    limit: int,
+    offset: int,
+) -> list:
+    from pb_studio.nl.models import StudioNlInteraction
+
+    stmt = select(StudioNlInteraction).order_by(StudioNlInteraction.created_at.desc())
+    conds = _nl_admin_conds(status=status, mode=mode, intent=intent)
+    if conds:
+        stmt = stmt.where(and_(*conds))
+    stmt = stmt.limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
+async def list_memory_items_admin(session: AsyncSession, *, limit: int, offset: int) -> list:
+    from pb_studio.nl.models import StudioMemoryItem
+
+    stmt = (
+        select(StudioMemoryItem).order_by(StudioMemoryItem.created_at.desc()).limit(limit).offset(offset)
+    )
+    return list((await session.scalars(stmt)).all())
+
+
+async def count_memory_items_admin(session: AsyncSession) -> int:
+    from pb_studio.nl.models import StudioMemoryItem
+
+    return int(await session.scalar(select(func.count()).select_from(StudioMemoryItem)) or 0)
+
+
+async def list_playbooks_admin(session: AsyncSession, *, limit: int, offset: int) -> list:
+    from pb_studio.nl.models import StudioPlaybook
+
+    stmt = select(StudioPlaybook).order_by(StudioPlaybook.created_at.desc()).limit(limit).offset(offset)
+    return list((await session.scalars(stmt)).all())
+
+
+async def count_playbooks_admin(session: AsyncSession) -> int:
+    from pb_studio.nl.models import StudioPlaybook
+
+    return int(await session.scalar(select(func.count()).select_from(StudioPlaybook)) or 0)

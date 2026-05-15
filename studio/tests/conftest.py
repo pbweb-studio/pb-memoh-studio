@@ -10,6 +10,7 @@ import pb_studio.project_digests.models  # noqa: F401 — phase 9b project diges
 import pb_studio.assistant_rules.models  # noqa: F401 — phase 11a assistant rules
 import pb_studio.history_import.models  # noqa: F401 — phase 12a history import jobs
 import pb_studio.knowledge.models  # noqa: F401 — phase 10a knowledge base
+import pb_studio.nl.models  # noqa: F401 — NL business & learning layer
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -31,6 +32,18 @@ def _isolate_studio_env(monkeypatch: pytest.MonkeyPatch) -> None:
         "STUDIO_CONTROL_COMMANDS_ENABLED",
         "STUDIO_CONTROL_COMMANDS_MAX_BATCH",
         "STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS",
+        "STUDIO_NL_COMMANDS_ENABLED",
+        "STUDIO_NL_PROCESS_INTERVAL_SECONDS",
+        "STUDIO_NL_ROUTER_PROVIDER",
+        "STUDIO_NL_ROUTER_API_BASE_URL",
+        "STUDIO_NL_ROUTER_API_KEY",
+        "STUDIO_NL_ROUTER_MODEL",
+        "STUDIO_NL_ROUTER_TIMEOUT_MS",
+        "STUDIO_NL_ROUTER_CONFIDENCE_EXECUTE",
+        "STUDIO_NL_ROUTER_CONFIDENCE_CLARIFY",
+        "STUDIO_NL_BOT_ALIASES",
+        "STUDIO_NL_ROUTER_REUSE_KB_CHAT_PROVIDER",
+        "STUDIO_MEMOH_GATE_TOKEN",
         "STUDIO_SLA_ENABLED",
         "STUDIO_SLA_DEFAULT_FIRST_RESPONSE_MINUTES",
         "STUDIO_SLA_MAX_NOTIFICATIONS_PER_INCIDENT",

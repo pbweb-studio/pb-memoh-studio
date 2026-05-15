@@ -8,6 +8,8 @@
   Memoh отвечает за обычный AI-чат. Studio отвечает за slash-команды и бизнес-данные (KB, проекты, SLA, правила).
   Управляющая группа: <a href="/admin/control-group">/admin/control-group</a>,
   журнал команд: <a href="/admin/control-commands">/admin/control-commands</a>.
+  NL в control group (упоминание / ответ боту): ответ даёт Studio worker после gate; slash остаётся как сейчас.
+  Журнал: <a href="/admin/nl-interactions">/admin/nl-interactions</a>.
 </div>
 <div class="row g-3">
   <div class="col-md-3 col-6">
@@ -56,6 +58,24 @@
     <div class="card shadow-sm h-100"><div class="card-body">
       <div class="text-muted small">SLA инциденты</div>
       <div class="fs-4 fw-semibold">{{ counts.sla_incidents }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">NL interactions</div>
+      <div class="fs-4 fw-semibold">{{ counts.nl_interactions }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Memory items</div>
+      <div class="fs-4 fw-semibold">{{ counts.memory_items }}</div>
+    </div></div>
+  </div>
+  <div class="col-md-3 col-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <div class="text-muted small">Playbooks</div>
+      <div class="fs-4 fw-semibold">{{ counts.playbooks }}</div>
     </div></div>
   </div>
 </div>

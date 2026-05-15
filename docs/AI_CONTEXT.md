@@ -6,7 +6,7 @@
 
 ## Текущая фаза
 
-**MVP-стабилизация (май 2026)** — зафиксировано разделение ролей **Memoh vs Studio** (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Рабочий репозиторий на VPS: **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
+**MVP-стабилизация + NL Business & Learning (май 2026)** — зафиксировано разделение ролей **Memoh vs Studio** (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Рабочий репозиторий на VPS: **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
 
 - **Studio Admin:** **https://jar.pb-web.ru/admin/** — в т.ч. назначение active control group (**коммит `dd285584`**), обзор с подсказкой ролей, **`/admin/control-commands`**, **`/admin/assistant-rules`** (список правил; **HTTP 200** после **`8af1537d`** — отсутствовали импорты `AssistantRuleScope` / `AssistantRuleStatus` / `rules_service` в `admin_ui.py`).
 - **Memoh Web:** **https://memo.pb-web.ru** — UI Memoh; **Memoh server** на том же VPS обрабатывает входящий Telegram (long polling); в коде: **`b0e7b510`** — таймаут long poll Bot API и **redaction** полных URL с токеном в логах.
@@ -19,16 +19,17 @@
 
 **VPS E2E smoke** — **PASS**; **SKIP**: history import, **12_telegram** (ручной CG), **14_pytest**.
 
-**Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал.
+**Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал. **NL Business & Learning** — gate `POST /integrations/memoh/nl-gate`, Celery `process_nl_interactions`, Memoh `PostNLGate`, таблицы **`017`**, админка **`/admin/nl-interactions`** и см.; см. **`docs/06_DECISIONS.md`**, **`docs/04_PROJECT_LOG.md`** (запись 2026-05-15).
 
 ## Текущая цель
 
-Закрыть MVP по чеклисту приёмки (личка / control group / `/kb_help` / mirror / админка / доки) **без** новых крупных фич; дальнейшие **6+**, **13+**, **10+** — отдельными задачами после стабильного MVP.
+Выкатить **NL layer** на VPS после ревью: миграция **`017`**, env Studio (`STUDIO_NL_*`, `STUDIO_MEMOH_GATE_TOKEN`) + Memoh (`MEMOH_STUDIO_NL_GATE_*`), пересборка **studio-api / worker / beat** и **memoh-server**; ручная приёмка §18 в `docs/04_PROJECT_LOG.md`. Дальше — **6+** и прочие фичи отдельными задачами.
 
 ## Что уже работает
 
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
 - **MVP стабилизация:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; коммиты **`e6e4a13f`** (код+доки), **`8d2b41d3`** (ссылки на hash), **`7a4a8a10`** (Celery: `dispose_engine` после `run_control_commands_standalone`, чтобы worker не ловил *different event loop*); Memoh group final-only; beat `process_control_group_commands`; `/kb_help` без `STUDIO_KB_ENABLED`; парсер `@bot`; `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
+- **NL Business & Learning:** Alembic **`017`**, пакет **`pb_studio/nl`**, gate, Celery **`process_nl_interactions`**, Memoh **`internal/studio/nl_gate.go`** + inbound; админ-страницы NL/memory/playbooks. См. `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
@@ -48,7 +49,7 @@
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (число кейсов — после последнего полного прогона, см. журнал).
+- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (в т.ч. **`test_nl_phase.py`**); Go: **`go test ./internal/studio/... -count=1`** после изменений NL gate.
 
 ## Что ещё не готово
 
@@ -69,6 +70,7 @@
 
 - **Telegram adapter / streaming:** `internal/channel/adapters/telegram/telegram.go`, `stream.go`, `stream_test.go`.
 - **Studio → Memoh hook (4b):** `studio_event_mirror.go`, `studio_event_mirror_test.go`.
+- **NL gate (sync):** `internal/studio/nl_gate.go`, `nl_gate_test.go`; вызов из **`internal/channel/inbound/channel.go`**.
 
 ## Принятые решения
 
@@ -98,7 +100,7 @@
 
 ## Следующая задача
 
-- MVP smoke и **`/admin/assistant-rules`** — **закрыто** (**`8af1537d`** + деплой Studio на VPS). При необходимости: ручное подтверждение UX **group mention** в «Управление Jarvis» (**один ответ**, без дублей / «……») после **`mvp-group-mention-001`** — см. зеркало в **`studio_messages`**. **Ротация `TELEGRAM_BOT_TOKEN`:** не требуем; при новой утечке — ротировать (**остаточный риск принят**).
+- После мержа NL: **деплой** на согласованном VPS (миграция, env, пересборка **Memoh + Studio**), ручной чеклист **§18** в `docs/04_PROJECT_LOG.md` (в т.ч. mention в CG → один ответ Studio, slash без регресса, fail-open Gate).
 
 ## Вопросы к GPT
 

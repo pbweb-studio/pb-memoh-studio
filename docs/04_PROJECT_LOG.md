@@ -1,5 +1,23 @@
 # Журнал проекта
 
+## 2026-05-15 — NL Business & Learning Layer (Studio + Memoh)
+
+- Статус: реализовано в репозитории; **деплой на VPS — отдельный шаг** после `git pull` / миграции / обновления `.env.prod` и `.env.memoh`.
+- **Studio:** Alembic **`017_studio_nl_layer`** (`studio_nl_interactions`, `studio_memory_items`, `studio_playbooks`); пакет **`pb_studio/nl`** (router deterministic/OpenAI-compatible, triggers, executor, scan alias, processor, gate service); **`POST /integrations/memoh/nl-gate`**; Celery **`process_nl_interactions`** + beat interval **`STUDIO_NL_PROCESS_INTERVAL_SECONDS`**; админка **`/admin/nl-interactions`**, **`/admin/memory-items`**, **`/admin/playbooks`**; счётчики на dashboard.
+- **Memoh:** **`internal/studio/nl_gate.go`**, вызов из inbound для Telegram group/supergroup до ассистента; env **`MEMOH_STUDIO_NL_GATE_URL`**, **`MEMOH_STUDIO_NL_GATE_TOKEN`** / **`MEMOH_STUDIO_EVENTS_TOKEN`**, **`MEMOH_STUDIO_NL_GATE_TIMEOUT_MS`**.
+- **Тесты:** `studio/tests/test_nl_phase.py`; `internal/studio/nl_gate_test.go`. Полный прогон: `pytest studio/tests/ -q` (**302 passed** в Docker); `go test ./internal/studio/... -count=1`.
+- Коммит: сообщение **`feat(studio): NL business layer with Memoh gate and admin UI`** (см. `git log -1 --oneline`).
+- **Доки:** `docs/06_DECISIONS.md` (раздел NL), `docs/15_OPERATOR_GUIDE.md`, `docs/AI_CONTEXT.md`, memory-bank.
+
+### §18 Ручная приёмка (NL, краткий чеклист)
+
+1. **`STUDIO_NL_COMMANDS_ENABLED=false`:** mention в CG → отвечает **Memoh** (как раньше); Gate не подавляет.
+2. **`STUDIO_NL_COMMANDS_ENABLED=true`**, Gate URL/token настроены: mention или reply-to-bot в CG, **не** slash Studio → **один** ответ из **Studio** (worker), Memoh **не** дублирует в том же сообщении.
+3. Slash **`/summary_*`**, **`/kb_*`**, **`/project_*`**, **`/rule_*`** в CG → поведение **как до NL** (Memoh не блокируется gate для этих строк).
+4. **Alias** `джарвис, …` / `jarvis, …` в CG (без mention) → обрабатывает Studio scan, Memoh молчит.
+5. **ACL:** пользователь не из **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`** (если список не пуст) → отказ NL, без утечек секретов в тексте ошибки.
+6. **Админка:** открыть **`/admin/nl-interactions`**, фильтры status/mode/intent; memory/playbooks списки открываются.
+
 ## 2026-05-14 — Фаза 0 (Bootstrap)
 
 - Статус: завершена.

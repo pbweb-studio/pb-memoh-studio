@@ -18,7 +18,7 @@
 - **Control group:** одна активная «управляющая» Telegram-группа; системные ответы Studio только туда.
 - **Slash-команды** из control group: `/kb_*`, `/summary_*`, `/project_*`, `/rule_*` — обрабатываются Studio (не Memoh LLM).
 - **KB / RAG**, **проекты**, **SLA**, **правила ассистента** (список в админке: **`/admin/assistant-rules`**, пункт меню «Правила») — хранение и логика в БД Studio.
-- **Studio Admin:** **https://jar.pb-web.ru/admin/** — назначение control group, просмотр чатов, KB, правил, SLA, **журнал команд** `/admin/control-commands`.
+- **Studio Admin:** **https://jar.pb-web.ru/admin/** — назначение control group, просмотр чатов, KB, правил, SLA, **журнал команд** `/admin/control-commands`, журнал NL **`/admin/nl-interactions`**, memory/playbooks.
 
 ## 3. Что не дублируется
 
@@ -32,11 +32,15 @@
 
 | Сообщение | Кто отвечает |
 |-----------|----------------|
-| Обычный текст, mention бота, reply боту | **Memoh** (ассистент) |
+| Обычный текст, mention бота, reply боту в **обычных** группах | **Memoh** (ассистент) |
+| Обычный текст (не slash) с mention/reply в **active control group** при **`STUDIO_NL_COMMANDS_ENABLED=true`** | **Studio** NL worker (ассистент Memoh для этого сообщения подавляется sync gate; ответ из Studio в ту же группу) |
+| Префикс alias + запятая (`джарвис,` и т.д., см. `STUDIO_NL_BOT_ALIASES`) в control group | **Studio** (через скан зеркала; Memoh ассистент не триггерится без mention) |
 | `/kb_*`, `/summary_*`, `/project_*`, `/rule_*` в **active control group** | **Studio** (command mode) |
 | Системные ответы Studio (команды, уведомления, сводки при доставке) | **только** в active control group (`sendMessage`) |
 
 В группах Telegram часто добавляет суффикс `@имя_бота` к команде. Studio нормализует это к той же команде (например `/kb_help@bot` → `/kb_help`).
+
+**NL без дублей:** Memoh вызывает Studio **до** старта LLM (`MEMOH_STUDIO_NL_GATE_URL`); при сбое Gate — только Memoh (fail-open). Подробнее: `docs/06_DECISIONS.md` (раздел NL Business & Learning Layer).
 
 ## 5. Что делать пользователю
 
@@ -44,7 +48,7 @@
 2. **Открыть Studio Admin:** **https://jar.pb-web.ru/admin/** (логин по cookie после POST `/admin/login`).
 3. **Назначить control group:** `/admin/control-group` → выбрать group/supergroup из зеркала → «Сохранить».
 4. **Проверить команды:** в управляющей группе отправить `/kb_help`; статусы и кнопка «Обработать pending» — **`/admin/control-commands`**.
-5. **Флаги на сервере** (без публикации значений): `STUDIO_CONTROL_COMMANDS_ENABLED=true`, `TELEGRAM_BOT_TOKEN` задан для Studio worker/api (тот же токен, что у Memoh), при необходимости `STUDIO_KB_ENABLED` для операций KB кроме справки `/kb_help` (справка работает и при выключенном KB).
+5. **Флаги на сервере** (без публикации значений): `STUDIO_CONTROL_COMMANDS_ENABLED=true`, при NL-режиме **`STUDIO_NL_COMMANDS_ENABLED=true`**, **`MEMOH_STUDIO_NL_GATE_URL`** на Studio API (`…/integrations/memoh/nl-gate`) и согласованный Bearer (`STUDIO_MEMOH_GATE_TOKEN` или общий ingest-токен), `TELEGRAM_BOT_TOKEN` задан для Studio worker/api (тот же токен, что у Memoh), при необходимости `STUDIO_KB_ENABLED` для операций KB кроме справки `/kb_help` (справка работает и при выключенном KB).
 
 ## 6. Smoke-данные на Overview
 

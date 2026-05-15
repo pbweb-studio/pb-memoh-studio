@@ -102,6 +102,63 @@ class Settings(BaseSettings):
         description="STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS — интервал Celery beat для process_control_group_commands",
     )
 
+    studio_nl_commands_enabled: bool = Field(
+        default=False,
+        description="STUDIO_NL_COMMANDS_ENABLED — NL business/learning в active control group",
+    )
+    studio_nl_process_interval_seconds: int = Field(
+        default=8,
+        ge=3,
+        le=300,
+        description="STUDIO_NL_PROCESS_INTERVAL_SECONDS — интервал beat для process_nl_interactions",
+    )
+    studio_nl_router_provider: str = Field(
+        default="deterministic",
+        description="STUDIO_NL_ROUTER_PROVIDER — deterministic | openai_compatible",
+    )
+    studio_nl_router_api_base_url: str | None = Field(
+        default=None,
+        description="STUDIO_NL_ROUTER_API_BASE_URL — OpenAI-compatible /v1 base",
+    )
+    studio_nl_router_api_key: str | None = Field(
+        default=None,
+        description="STUDIO_NL_ROUTER_API_KEY — Bearer для router chat completion (не логировать)",
+    )
+    studio_nl_router_model: str | None = Field(
+        default=None,
+        description="STUDIO_NL_ROUTER_MODEL — модель для JSON router",
+    )
+    studio_nl_router_timeout_ms: int = Field(
+        default=10_000,
+        ge=1000,
+        le=120_000,
+        description="STUDIO_NL_ROUTER_TIMEOUT_MS",
+    )
+    studio_nl_router_confidence_execute: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+        description="STUDIO_NL_ROUTER_CONFIDENCE_EXECUTE",
+    )
+    studio_nl_router_confidence_clarify: float = Field(
+        default=0.45,
+        ge=0.0,
+        le=1.0,
+        description="STUDIO_NL_ROUTER_CONFIDENCE_CLARIFY",
+    )
+    studio_nl_bot_aliases: str = Field(
+        default="джарвис,jarvis,бот",
+        description="STUDIO_NL_BOT_ALIASES — CSV префиксов перед запятой (триггер alias)",
+    )
+    studio_nl_router_reuse_kb_chat_provider: bool = Field(
+        default=False,
+        description="STUDIO_NL_ROUTER_REUSE_KB_CHAT_PROVIDER — явно разрешить те же STUDIO_KB_CHAT_* что и RAG",
+    )
+    studio_memoh_gate_token: str | None = Field(
+        default=None,
+        description="STUDIO_MEMOH_GATE_TOKEN — Bearer для POST /integrations/memoh/nl-gate; пусто = fallback STUDIO_EVENTS_INGEST_TOKEN",
+    )
+
     studio_sla_enabled: bool = Field(
         default=False,
         description="STUDIO_SLA_ENABLED — детектор SLA по зеркалу studio_messages",
@@ -290,6 +347,17 @@ class Settings(BaseSettings):
             except ValueError:
                 continue
         return frozenset(ids)
+
+    @property
+    def studio_nl_bot_alias_prefixes_lower(self) -> tuple[str, ...]:
+        """Lowercase tokens; trigger matches `token,` prefix (comma required)."""
+        raw = (self.studio_nl_bot_aliases or "").strip()
+        out: list[str] = []
+        for part in re.split(r"[\s,;]+", raw):
+            p = part.strip().lower()
+            if p:
+                out.append(p)
+        return tuple(out)
 
     @property
     def studio_kb_allowed_extensions_set(self) -> frozenset[str]:

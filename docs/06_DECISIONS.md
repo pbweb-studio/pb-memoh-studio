@@ -320,3 +320,15 @@
 - **Celery beat:** в `pb_studio.celery_app` добавлен периодический запуск `pb_studio.worker.process_control_group_commands` (интервал `STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`, по умолчанию 5 с); при `STUDIO_CONTROL_COMMANDS_ENABLED=false` задача остаётся no-op на стороне цикла команд.
 - **Celery worker + async engine (май 2026):** `run_control_commands_standalone` в **`finally`** вызывает **`dispose_engine()`** (коммит **`7a4a8a10`**), иначе при повторных **`asyncio.run()`** в worker глобальный AsyncEngine остаётся на «старом» loop и даёт **`RuntimeError: ... different loop`**.
 - **Studio Admin hotfix (май 2026):** **`GET /admin/assistant-rules`** отдавал **500** из‑за **`NameError`** (пропущенные импорты констант/сервиса правил в `admin_ui.py`); исправлено в **`8af1537d`** без смены URL и без изменения REST **`/assistant-rules*`**.
+
+## NL Business & Learning Layer (зафиксировано)
+
+- **Gate (Studio):** `POST /integrations/memoh/nl-gate` — быстрый ответ без LLM; при `STUDIO_NL_COMMANDS_ENABLED=true` и mention/reply в **active control group** (не Studio slash `/summary|/project|/kb|/rule`) — атомарный `INSERT` в `studio_nl_interactions` (`status=pending`), ответ **`suppress_memoh_assistant=true`**; дубликат по `(control_group_chat_id, source_message_id)` — тоже suppress (**идемпотентность**).
+- **Fail-open:** при ошибке Gate или таймауте на стороне Memoh — **не** подавлять Memoh, **без** insert pending; mention/reply для NL **не** создаются сканом зеркала (только gate), чтобы избежать двойного ответа при сбое Gate.
+- **Slash, не распознанный как Studio-команда, но начинается с `/`:** Memoh может обработать как внутреннюю команду — **не** подавляем через Gate автоматически (только известные Studio slash освобождают Memoh для совместимости со сканом команд).
+- **Alias-триггеры** (`STUDIO_NL_BOT_ALIASES`, префикс + запятая): только скан `studio_messages` в control group (`scan_mirror_for_nl_aliases`), `trigger_type=alias`; в группе без mention Memoh ассистент не стартует — дублей нет.
+- **Worker:** Celery `process_nl_interactions` + `run_nl_interactions_standalone` (alias scan + обработка `pending`), `dispose_engine` в `finally`; ответы только `_send_text_to_control_group`; ACL записи — те же **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`**, что и slash-команды.
+- **Router:** `STUDIO_NL_ROUTER_PROVIDER` = `deterministic` | `openai_compatible`; пороги `STUDIO_NL_ROUTER_CONFIDENCE_*`; опционально `STUDIO_NL_ROUTER_REUSE_KB_CHAT_PROVIDER` (риск общего ключа с RAG).
+- **Auth Gate:** `STUDIO_MEMOH_GATE_TOKEN` или fallback **`STUDIO_EVENTS_INGEST_TOKEN`**; Memoh: `MEMOH_STUDIO_NL_GATE_URL`, `MEMOH_STUDIO_NL_GATE_TOKEN` / `MEMOH_STUDIO_EVENTS_TOKEN`, `MEMOH_STUDIO_NL_GATE_TIMEOUT_MS`.
+- **Таблицы:** Alembic `017` — `studio_nl_interactions`, `studio_memory_items`, `studio_playbooks`.
+- **Memoh:** узкий вызов `PostNLGate` из inbound для Telegram group/supergroup до старта ассистента при условии `ShouldAttemptNLGate`.

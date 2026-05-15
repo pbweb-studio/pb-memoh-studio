@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ import (
 	messagepkg "github.com/memohai/memoh/internal/message"
 	pipelinepkg "github.com/memohai/memoh/internal/pipeline"
 	sessionpkg "github.com/memohai/memoh/internal/session"
+	studiopkg "github.com/memohai/memoh/internal/studio"
 )
 
 var base64Std = base64.StdEncoding
@@ -550,6 +552,57 @@ func (p *ChannelInboundProcessor) HandleInbound(ctx context.Context, cfg channel
 		activeChatID = strings.TrimSpace(resolved.ChatID)
 	}
 	shouldTrigger := shouldTriggerAssistantResponse(msg) || identity.ForceReply
+
+	if shouldTrigger && msg.Channel == channel.ChannelTypeTelegram && !identity.ForceReply {
+		if studiopkg.ShouldAttemptNLGate(msg) {
+			cid, err1 := strconv.ParseInt(strings.TrimSpace(msg.Conversation.ID), 10, 64)
+			mid, err2 := strconv.Atoi(strings.TrimSpace(msg.Message.ID))
+			if err1 == nil && err2 == nil {
+				raw := strings.TrimSpace(msg.Message.PlainText())
+				if rt, ok := msg.Metadata["raw_text"].(string); ok && strings.TrimSpace(rt) != "" {
+					raw = strings.TrimSpace(rt)
+				}
+				var uid *int64
+				if s := strings.TrimSpace(msg.Sender.Attribute("user_id")); s != "" {
+					if v, err := strconv.ParseInt(s, 10, 64); err == nil {
+						uid = &v
+					}
+				}
+				var upd *int
+				if u, ok := msg.Metadata["update_id"]; ok {
+					switch t := u.(type) {
+					case float64:
+						v := int(t)
+						upd = &v
+					case int:
+						upd = &t
+					case int64:
+						v := int(t)
+						upd = &v
+					}
+				}
+				gbody := studiopkg.NLGateRequest{
+					TelegramChatID: cid,
+					MessageID:      mid,
+					UpdateID:       upd,
+					Text:           strings.TrimSpace(msg.Message.PlainText()),
+					RawText:        raw,
+					FromID:         uid,
+					IsMentioned:    metadataBool(msg.Metadata, "is_mentioned"),
+					IsReplyToBot:   metadataBool(msg.Metadata, "is_reply_to_bot"),
+					IsBot:          false,
+				}
+				sup, gerr := studiopkg.PostNLGate(ctx, gbody)
+				if gerr != nil && p.logger != nil {
+					p.logger.Debug("studio nl gate request failed", slog.Any("error", gerr))
+				}
+				if sup {
+					p.persistPassiveMessage(ctx, identity, msg, text, attachments, resolved.RouteID, sessionID, eventID)
+					return nil
+				}
+			}
+		}
+	}
 
 	if sessionType == sessionpkg.TypeDiscuss || shouldTrigger {
 		if transcript := p.transcribeInboundAttachments(ctx, strings.TrimSpace(identity.BotID), resolvedAttachments); transcript != "" {

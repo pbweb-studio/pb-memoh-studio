@@ -1140,3 +1140,147 @@ async def admin_history_jobs(
         pagination=pag,
         filter_hidden=[{"name": "limit", "value": str(lim)}],
     )
+
+
+@router.get("/nl-interactions", response_class=HTMLResponse, dependencies=_admin_dep)
+async def admin_nl_interactions(
+    request: Request,
+    session: DbSession,
+    page: int | None = Query(None),
+    limit: int | None = Query(None),
+    status: str | None = Query(None),
+    mode: str | None = Query(None),
+    intent: str | None = Query(None),
+) -> HTMLResponse:
+    lim = clamp_limit(limit)
+    pg = clamp_page(page)
+    total = await admin_data.count_nl_interactions_admin(session, status=status, mode=mode, intent=intent)
+    page_eff = effective_page(pg, total, lim)
+    off = offset_for(page_eff, lim)
+    items = await admin_data.list_nl_interactions_admin(
+        session, status=status, mode=mode, intent=intent, limit=lim, offset=off
+    )
+    rows = [
+        [
+            str(x.id)[:13],
+            format_admin_dt(x.created_at),
+            str(x.sender_telegram_user_id or ""),
+            snip_text(x.input_text or "", 64),
+            x.mode or "",
+            x.intent or "",
+            str(x.confidence or ""),
+            x.status or "",
+            snip_text(x.last_error or "", 40),
+        ]
+        for x in items
+    ]
+    extra: dict[str, str] = {}
+    if status and status.strip():
+        extra["status"] = status.strip()
+    if mode and mode.strip():
+        extra["mode"] = mode.strip()
+    if intent and intent.strip():
+        extra["intent"] = intent.strip()
+    pag = build_pagination_urls(
+        base_path="/admin/nl-interactions", page=page_eff, limit=lim, total=total, extra_query=extra
+    )
+    filter_fields = [
+        {"name": "status", "label": "status", "type": "text", "value": (status or "").strip()},
+        {"name": "mode", "label": "mode", "type": "text", "value": (mode or "").strip()},
+        {"name": "intent", "label": "intent", "type": "text", "value": (intent or "").strip()},
+    ]
+    return _table(
+        request,
+        nav="nl",
+        title="NL interactions",
+        subtitle="studio_nl_interactions",
+        columns=["id", "created", "sender", "text", "mode", "intent", "conf", "status", "error"],
+        rows=rows,
+        breadcrumbs=_bc(("Обзор", "/admin/"), ("NL interactions", None)),
+        pagination=pag,
+        filter_action="/admin/nl-interactions",
+        filter_fields=filter_fields,
+        filter_hidden=[{"name": "limit", "value": str(lim)}],
+        badge_column_indices=[7],
+    )
+
+
+@router.get("/memory-items", response_class=HTMLResponse, dependencies=_admin_dep)
+async def admin_memory_items(
+    request: Request,
+    session: DbSession,
+    page: int | None = Query(None),
+    limit: int | None = Query(None),
+) -> HTMLResponse:
+    lim = clamp_limit(limit)
+    pg = clamp_page(page)
+    total = await admin_data.count_memory_items_admin(session)
+    page_eff = effective_page(pg, total, lim)
+    off = offset_for(page_eff, lim)
+    items = await admin_data.list_memory_items_admin(session, limit=lim, offset=off)
+    rows = [
+        [
+            str(m.id)[:13],
+            m.scope_type,
+            str(m.scope_id or ""),
+            m.item_type,
+            m.status,
+            snip_text(m.text or "", 80),
+            format_admin_dt(m.created_at),
+        ]
+        for m in items
+    ]
+    pag = build_pagination_urls(base_path="/admin/memory-items", page=page_eff, limit=lim, total=total, extra_query={})
+    return _table(
+        request,
+        nav="mem",
+        title="Memory items",
+        subtitle="studio_memory_items",
+        columns=["id", "scope_type", "scope_id", "item_type", "status", "text", "created"],
+        rows=rows,
+        breadcrumbs=_bc(("Обзор", "/admin/"), ("Memory items", None)),
+        pagination=pag,
+        filter_hidden=[{"name": "limit", "value": str(lim)}],
+        badge_column_indices=[4],
+    )
+
+
+@router.get("/playbooks", response_class=HTMLResponse, dependencies=_admin_dep)
+async def admin_playbooks(
+    request: Request,
+    session: DbSession,
+    page: int | None = Query(None),
+    limit: int | None = Query(None),
+) -> HTMLResponse:
+    lim = clamp_limit(limit)
+    pg = clamp_page(page)
+    total = await admin_data.count_playbooks_admin(session)
+    page_eff = effective_page(pg, total, lim)
+    off = offset_for(page_eff, lim)
+    items = await admin_data.list_playbooks_admin(session, limit=lim, offset=off)
+    rows = []
+    for p in items:
+        steps = p.steps_json if isinstance(p.steps_json, list) else []
+        rows.append(
+            [
+                str(p.id)[:13],
+                snip_text(p.title or "", 48),
+                p.scope_type,
+                p.status,
+                str(len(steps)),
+                format_admin_dt(p.created_at),
+            ]
+        )
+    pag = build_pagination_urls(base_path="/admin/playbooks", page=page_eff, limit=lim, total=total, extra_query={})
+    return _table(
+        request,
+        nav="pb",
+        title="Playbooks",
+        subtitle="studio_playbooks",
+        columns=["id", "title", "scope", "status", "steps", "created"],
+        rows=rows,
+        breadcrumbs=_bc(("Обзор", "/admin/"), ("Playbooks", None)),
+        pagination=pag,
+        filter_hidden=[{"name": "limit", "value": str(lim)}],
+        badge_column_indices=[3],
+    )
