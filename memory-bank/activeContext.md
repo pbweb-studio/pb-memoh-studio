@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** **VPS 148.253.209.54** — **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**, **HEAD `dfd24111`** (включает **`8af1537d`**: фикс **500** **`/admin/assistant-rules`**). Пересобраны только **studio-api / studio-worker / studio-beat**; Memoh без пересборки.
+**Сейчас:** **VPS 148.253.209.54** — **`/opt/pb-studio/pb-memoh-studio`**, **`origin/pb-studio/main`** (актуальный **HEAD** — по **`git rev-parse HEAD`** на сервере после **`git pull`/`reset`**). Функциональный фикс Studio — **`8af1537d`**. Пересобраны только **studio-api / studio-worker / studio-beat**; Memoh без пересборки.
 
 **Ссылки:** Studio Admin **https://jar.pb-web.ru/admin/** · Memoh Web **https://memo.pb-web.ru**
 
