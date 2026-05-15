@@ -49,10 +49,29 @@ async def route_nl(settings: Settings, text: str) -> NLRouterDecision:
         return route_deterministic(normalized)
 
     try:
-        return await _call_openai_router(settings, normalized, base_url=base, api_key=key, model=model)
+        d_llm = await _call_openai_router(settings, normalized, base_url=base, api_key=key, model=model)
     except (httpx.HTTPError, json.JSONDecodeError, ValidationError, KeyError, ValueError, TypeError) as exc:
         logger.warning("NL openai router failed: %s", exc)
         return route_deterministic(normalized)
+
+    d_det = route_deterministic(normalized)
+    low = (normalized or "").strip().lower()
+    learning_cue = any(
+        x in low
+        for x in (
+            "запомни",
+            "научись",
+            "измени поведение",
+            "как правило",
+        )
+    )
+    if (
+        d_det.mode == RouterModeEnum.learning
+        and learning_cue
+        and d_llm.mode in (RouterModeEnum.clarify, RouterModeEnum.casual)
+    ):
+        return d_det
+    return d_llm
 
 
 async def _call_openai_router(

@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** **VPS 148.253.209.54** — NL turn isolation **выкатан** (2026-05-15): репо HEAD **`e0e75fd`** (`git reset --hard origin/pb-studio/main`); Studio **api/worker/beat** и **Memoh server** пересобраны и **up**; volumes Postgres/Redis **не трогались**; токены **не менялись**. Проверки: **jar `/health`**, **memo `/health`**, контейнеры **healthy/up**; **getMe** → **jarvispbweb_bot**, **webhook пустой**, **pending_update_count=0**; **vps-e2e-smoke** — **PASS** (SKIP: history, telegram live, pytest в prod-образе). **Живой сценарий «4 вопроса подряд»** (чаты → отчёт → запомни → модель) — **ждёт оператора**; после сообщений — сверка `studio_nl_interactions` / логов на отдельные turn и отсутствие смешивания.
+**Сейчас:** **VPS 148.253.209.54** — после merge зафиксировать **NL live human fix** (strip mention NBSP, digest sanitize, список чатов с CG): пересобрать **studio-api/worker/beat**; **ручная приёмка** — 4 фразы в control group (см. `docs/04_PROJECT_LOG.md` § NL live-path 2026-05-15).
 
 **Ссылки:** Studio Admin **https://jar.pb-web.ru/admin/** · Memoh Web **https://memo.pb-web.ru**
 

@@ -84,6 +84,15 @@ def test_normalize_then_learning_behavior_rule():
     assert "не смешивать" in str(d.parameters.get("suggested_rule_text") or "").lower()
 
 
+def test_normalize_strips_mention_nbsp_before_zapomni():
+    s = Settings()
+    raw = "@jarvispbweb_bot\u00a0запомни: правило один"
+    norm = normalize_nl_router_input(raw, s)
+    assert norm.lower().startswith("запомни")
+    d = route_deterministic(norm)
+    assert d.mode == RouterModeEnum.learning
+
+
 def test_runtime_model_query_not_clarify():
     d = route_deterministic("на какой модели ты работаешь?")
     assert d.mode == RouterModeEnum.business_action
@@ -104,6 +113,9 @@ async def test_format_nl_list_chats_human_no_uuid_tg_role(nl_ux_session):
     assert "tg=" not in out
     assert "role=" not in out.lower()
     assert not re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", out, re.I)
+    assert "Вижу такие чаты" in out
+    assert "•" in out
+    assert "группа Управление" in out
     assert "группа PBVOICE" in out
     assert "личка с" in out and "Денис" in out
 
@@ -135,6 +147,42 @@ async def test_format_nl_digest_human_no_summary_id_status(nl_ux_session, monkey
     assert "status=" not in out
     assert not re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", out, re.I)
     assert "интеграции" in out
+
+
+@pytest.mark.asyncio
+async def test_format_nl_digest_sanitizes_debug_lines_in_summary_text(nl_ux_session, monkeypatch):
+    session, _cg_id = nl_ux_session
+    settings = Settings(studio_nl_digest_debug=False)
+
+    class _FakeSummary:
+        id = uuid.uuid4()
+        status = SummaryStatus.GENERATED
+        summary_text = "summary_id=deadbeef status=generated\nОбсудили релиз."
+
+    async def _fake_ensure(*_a, **_k):
+        return _FakeSummary()
+
+    with patch("pb_studio.nl.executor.ensure_chat_summary_for_period", new_callable=AsyncMock) as m:
+        m.side_effect = _fake_ensure
+        decision = NLRouterDecision(
+            mode=RouterModeEnum.business_action,
+            intent=IntentEnum.studio_digest,
+            confidence=0.9,
+            parameters={"period": "today"},
+        )
+        out = await format_nl_reply(session, settings, decision, raw_input="отчёт за сегодня")
+
+    assert "summary_id" not in out
+    assert "Обсудили релиз" in out
+
+
+def test_sanitize_nl_summary_snippet_strips_debug_tokens():
+    from pb_studio.nl.executor import _sanitize_nl_summary_snippet
+
+    dirty = "summary_id=abc-abc-abc-abc-abcdefabcdef status=generated\nНормальный текст про задачу."
+    clean = _sanitize_nl_summary_snippet(dirty)
+    assert "summary_id" not in clean
+    assert "Нормальный текст" in clean
 
 
 @pytest.mark.asyncio
@@ -226,6 +274,46 @@ async def test_process_one_nl_single_outbound_send(nl_ux_session, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_process_one_nl_learning_row_with_leading_mention_nbsp(nl_ux_session, monkeypatch):
+    session, cg_id = nl_ux_session
+    monkeypatch.setenv("STUDIO_NL_COMMANDS_ENABLED", "true")
+    monkeypatch.setenv("STUDIO_NL_ROUTER_PROVIDER", "deterministic")
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    sends: list[str] = []
+
+    async def _capture_send(_sess, _set, text, send_message=None):
+        sends.append(text)
+        return True, None, 1
+
+    row = StudioNlInteraction(
+        source_message_id=501,
+        control_group_chat_id=cg_id,
+        sender_telegram_user_id=888,
+        input_text="@jarvispbweb_bot\u00a0запомни: не смешивать ответы",
+        normalized_text="",
+        trigger_type="mention",
+        mode="router_pending",
+        status=NlInteractionStatus.PENDING,
+        parameters_json={},
+        decision_json={},
+    )
+    session.add(row)
+    await session.commit()
+
+    with patch("pb_studio.nl.processor._send_text_to_control_group", new_callable=AsyncMock) as m:
+        m.side_effect = _capture_send
+        await _process_one_nl(session, row, settings, send_message=None)
+        await session.commit()
+
+    assert len(sends) == 1
+    assert "Понял как правило" in sends[0]
+    await session.refresh(row)
+    assert row.status == NlInteractionStatus.PENDING_CONFIRMATION
+
+
+@pytest.mark.asyncio
 async def test_runtime_config_display_name_from_settings(nl_ux_session):
     session, _ = nl_ux_session
     settings = Settings(studio_memoh_model_display_name="gpt-4.1-mini (prod)")
@@ -237,3 +325,18 @@ async def test_runtime_config_display_name_from_settings(nl_ux_session):
     )
     out = await format_nl_reply(session, settings, decision, raw_input="модель?")
     assert "gpt-4.1-mini" in out
+
+
+@pytest.mark.asyncio
+async def test_runtime_config_empty_uses_memoh_admin_hint(nl_ux_session):
+    session, _ = nl_ux_session
+    settings = Settings(studio_memoh_model_display_name="")
+    decision = NLRouterDecision(
+        mode=RouterModeEnum.business_action,
+        intent=IntentEnum.runtime_config_query,
+        confidence=0.91,
+        parameters={},
+    )
+    out = await format_nl_reply(session, settings, decision, raw_input="модель?")
+    assert "Memoh Admin" in out
+    assert "не могу надёжно" in out.lower()

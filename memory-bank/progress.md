@@ -46,6 +46,7 @@
 | Studio Admin `/admin/assistant-rules` HTTP 500 | Done (**8af1537d**) |
 | NL Business & Learning — **VPS deploy** (148.253.209.54, 2026-05-15) | Done (инфра + smoke; ручной TG §18 7–10 — оператор) |
 | NL turn isolation — **VPS rollout** (2026-05-15) | Done (build/up Studio+Memoh; smoke PASS; **живой TG-ряд** — оператор) |
+| NL live-path human (inventory/digest/learning/pending) | Done (код+тесты; **деплой Studio** после push — оператор) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
 **Последнее:** VPS **148.253.209.54** — выкат **NL turn isolation** (**`e0e75fd`**, ≥ `cf636d96`): Studio api/worker/beat + Memoh server **build/up**, volumes не трогали, smoke **PASS** (ожидаемые SKIP), getMe **jarvispbweb_bot**, webhook пустой, pending **0**. Живой сценарий 4 вопросов — оператор. См. `memory-bank/activeContext.md`, `docs/AI_CONTEXT.md`.

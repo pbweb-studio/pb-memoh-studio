@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import timedelta
 from typing import Any
 
@@ -26,11 +27,42 @@ from pb_studio.summaries.product import ensure_chat_summary_for_period, utc_toda
 
 logger = logging.getLogger(__name__)
 
+_UUID_LINE_RE = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
+    re.I,
+)
+
+
+def _sanitize_nl_summary_snippet(text: str) -> str:
+    """Убрать из фрагмента сводки техполя, если они попали из старых шаблонов/LLM."""
+    if not (text or "").strip():
+        return ""
+    kept: list[str] = []
+    for line in text.splitlines():
+        s = line.strip()
+        sl = s.lower()
+        if "summary_id=" in sl:
+            continue
+        if "tg=" in sl or "| tg=" in sl:
+            continue
+        if "role=" in sl or "| role=" in sl:
+            continue
+        if sl.startswith("---"):
+            continue
+        if ("status=" in sl or "статус=" in sl) and "generated" in sl:
+            continue
+        if _UUID_LINE_RE.search(s) and ("|" in s or "tg=" in sl or "role=" in sl):
+            continue
+        kept.append(line.rstrip())
+    return "\n".join(kept).strip()
+
 
 def _human_chat_line_for_nl(chat: StudioChat) -> str:
     """Одна строка для пользователя: без UUID/tg/role."""
     ct = (chat.chat_type or "").strip().lower()
     title = (chat.title or "").strip()
+    if title and _UUID_LINE_RE.fullmatch(title.replace(" ", "")):
+        title = ""
     username = (chat.username or "").strip()
     tid = int(chat.telegram_chat_id)
     is_groupish = ct in ("group", "supergroup") or tid < 0
@@ -74,6 +106,9 @@ async def _digest_all_chats(session: AsyncSession, settings: Settings, period: s
 
     if settings.studio_nl_digest_debug:
         header = f"Сводки ({label}, UTC): {p0.isoformat()} — {p1.isoformat()}\nЧатов: {len(chats)}\n"
+        if (settings.studio_env or "").strip().lower() == "production":
+            logger.warning("studio_nl_digest_debug is True in production; raw NL digest exposes IDs")
+        header = "[debug]\n" + header
         blocks: list[str] = []
         for ch in chats:
             block_head = f"\n---\n{ch.id} | tg={ch.telegram_chat_id} | role={ch.chat_role}\n"
@@ -114,8 +149,11 @@ async def _digest_all_chats(session: AsyncSession, settings: Settings, period: s
                 important.append(f"— Сводка не сформировалась: {human}.")
             elif snip:
                 had_any_text = True
-                body = snip[:SUMMARY_AGG_SNIPPET_CHARS]
-                per_blocks.append(f"{human}\n{body}\n")
+                body = _sanitize_nl_summary_snippet(snip[:SUMMARY_AGG_SNIPPET_CHARS])
+                if not body:
+                    important.append(f"— Текст сводки скрыт (технические поля): {human}.")
+                else:
+                    per_blocks.append(f"{human}\n{body}\n")
             else:
                 important.append(f"— Пока нет текста сводки: {human}.")
         except Exception:  # noqa: BLE001
@@ -206,11 +244,10 @@ async def _list_chats_text(session: AsyncSession) -> str:
     if cg is None:
         return "Control group не настроена."
     chats = await _list_mirror_chats_excluding_control_group(session, exclude_chat_id=cg.id)
-    if not chats:
-        return "Нет зеркалируемых чатов (кроме control group)."
-    lines = ["Чаты Studio (кроме активной control group):", ""]
+    lines = ["Вижу такие чаты:", ""]
+    lines.append(f"• {_human_chat_line_for_nl(cg)}")
     for c in chats[:40]:
-        lines.append(f"— {_human_chat_line_for_nl(c)}")
+        lines.append(f"• {_human_chat_line_for_nl(c)}")
     if len(chats) > 40:
         lines.append(f"... и ещё {len(chats) - 40}")
     return _safe_truncate("\n".join(lines), TELEGRAM_TEXT_SAFE_MAX)
@@ -287,8 +324,8 @@ def _runtime_config_query_text(settings: Settings) -> str:
     if name:
         return f"По настройкам Studio для ответов указано: {name}."
     return (
-        "Имя и параметры модели Memoh из этого интерфейса Studio не читаются (нет прямого доступа к runtime Memoh). "
-        "Модель задаётся администратором в настройках бота и провайдера в Memoh."
+        "Я не могу надёжно прочитать точное имя модели из текущего чата: Studio не имеет прямого доступа к runtime Memoh. "
+        "Это можно посмотреть в Memoh Admin → настройки бота и провайдера (Bot / Provider settings)."
     )
 
 

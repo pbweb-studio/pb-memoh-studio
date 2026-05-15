@@ -35,6 +35,13 @@
 
 **Ручные шаги 7–10 (Telegram control group):** выполняет оператор по §18 выше — из этой сессии не верифицированы.
 
+### 2026-05-15 — NL live-path: human replies, learning @mention, digest sanitize
+
+- **Root cause (VPS по БД):** в `studio_nl_interactions.input_text` оставался префикс `@jarvispbweb_bot` при нестандартном пробеле после mention → `route_deterministic` не доходил до ветки «запомни» (fallback clarify). Сводки с `summary_id`/`tg=`/`UUID` — ветка `studio_nl_digest_debug` и/или устаревший образ worker относительно human-`list_chats`.
+- **Исправления (Studio):** расширен `strip_leading_bot_mentions` (NBSP/кириллица сразу после username); learning по маркерам `запомни`/`…` через `find`, не только `startswith`; post-guard OpenAI-router при `clarify`+learning-cue; `format_nl_reply` для ряда intent не уходит в low-confidence clarify; список чатов «Вижу такие чаты» + control group + `•`; санитизация сниппетов digest; runtime model copy; pending: `?`/`@` и расширенные independent keywords.
+- **Тесты:** `pytest tests/test_nl_ux_regression.py tests/test_nl_turn_isolation.py tests/test_nl_phase.py` (включая новые кейсы NBSP + digest sanitize).
+- **Деплой:** только **studio-api / worker / beat** после merge; оператор повторяет 4 фразы приёмки (чаты / отчёт / запомни / модель).
+
 - Статус: завершена.
 - Клонирован upstream Memoh; remotes: `upstream` = memohai/Memoh, `origin` = pbweb-studio/pb-memoh-studio; ветка `pb-studio/main`; тег `stable-upstream-memoh`.
 - Добавлены каркас `studio/`, документация `docs/`, Memory Bank, Cursor Rules, `.env.example`, `.cursorignore`, `docker-compose.local.yml` (Postgres16+pgvector, Redis), скелет `docker-compose.prod.yml`.

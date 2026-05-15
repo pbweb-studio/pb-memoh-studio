@@ -89,19 +89,27 @@ def route_deterministic(text: str) -> NLRouterDecision:
             needs_confirmation=True,
         )
 
-    if low.startswith("запомни") or "измени поведение" in low or "как правило" in low:
-        body = raw
-        for prefix in ("запомни:", "запомни", "измени поведение:", "измени поведение"):
-            if low.startswith(prefix):
-                body = raw[len(prefix) :].strip(" :\t")
-                break
+    # Правила поведения: не только startswith (после @mention / невидимых символов).
+    behavior_markers = (
+        ("запомни:", "запомни:"),
+        ("запомни", "запомни"),
+        ("измени поведение:", "измени поведение:"),
+        ("измени поведение", "измени поведение"),
+        ("как правило", "как правило"),
+    )
+    for needle_low, _ in behavior_markers:
+        idx = low.find(needle_low)
+        if idx == -1:
+            continue
+        needle_len = len(needle_low)
+        body = raw[idx + needle_len :].strip(" :\t")
         return NLRouterDecision(
             mode=RouterModeEnum.learning,
             intent=IntentEnum.learning_request,
             confidence=0.9,
             parameters={
                 "learning_type": LearningType.BEHAVIOR_RULE,
-                "suggested_rule_text": body[:4000] or raw,
+                "suggested_rule_text": body[:4000] or raw[idx:].strip(),
             },
             needs_confirmation=True,
         )

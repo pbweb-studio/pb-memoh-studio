@@ -29,6 +29,18 @@ _YES = frozenset({"да", "yes", "ага", "ок", "y"})
 _NO = frozenset({"нет", "no", "n"})
 _CONFIRM_MAX_LEN = 120
 
+# Для этих intent ответ всегда из format_nl_reply, даже если LLM дал низкую confidence.
+_BUSINESS_ACTION_FORMAT_ALWAYS = frozenset(
+    {
+        IntentEnum.list_chats,
+        IntentEnum.studio_digest,
+        IntentEnum.runtime_config_query,
+        IntentEnum.help_capabilities,
+        IntentEnum.diagnostics_status,
+        IntentEnum.open_risks_or_sla,
+    }
+)
+
 
 def _looks_like_independent_nl_question(text: str) -> bool:
     """Не считать сообщение ответом на pending learning (Studio без reply_to из Memoh)."""
@@ -58,6 +70,18 @@ def _looks_like_independent_nl_question(text: str) -> bool:
         "найди в базе",
         "что нового",
         "какой llm",
+        "запомни",
+        "научись",
+        "какие ",
+        "кто ",
+        "что ",
+        "дай ",
+        "покажи",
+        "найди",
+        "модель",
+        "отчёт",
+        "отчет",
+        "сводка",
     )
     return any(n in low for n in needles)
 
@@ -66,6 +90,10 @@ def _is_likely_learning_confirmation(turn_input: str) -> bool:
     """Короткий ответ на уточнение learning (да/нет/для проекта / для этого чата)."""
     s = (turn_input or "").strip().lower()
     if not s or len(s) > _CONFIRM_MAX_LEN:
+        return False
+    if "?" in s:
+        return False
+    if "@" in s:
         return False
     if s in _YES or s in _NO:
         return True
@@ -403,23 +431,24 @@ async def _process_one_nl(
         return
 
     if decision.mode == RouterModeEnum.business_action and decision.confidence < ex:
-        txt = decision.clarify_question or "Низкая уверенность: уточните формулировку."
-        ok, _hs, mid = await _send_text_to_control_group(session, settings, txt, send_message=send_message)
-        row.response_telegram_message_id = mid
-        row.reply_text = txt
-        row.status = NlInteractionStatus.PROCESSED
-        row.processed_at = now
-        logger.info(
-            "nl_turn_done",
-            extra={
-                "nl_interaction_id": str(row.id),
-                "source_message_id": row.source_message_id,
-                "intent": row.intent,
-                "mode": row.mode,
-                "outcome": "low_confidence_clarify",
-            },
-        )
-        return
+        if decision.intent not in _BUSINESS_ACTION_FORMAT_ALWAYS:
+            txt = decision.clarify_question or "Низкая уверенность: уточните формулировку."
+            ok, _hs, mid = await _send_text_to_control_group(session, settings, txt, send_message=send_message)
+            row.response_telegram_message_id = mid
+            row.reply_text = txt
+            row.status = NlInteractionStatus.PROCESSED
+            row.processed_at = now
+            logger.info(
+                "nl_turn_done",
+                extra={
+                    "nl_interaction_id": str(row.id),
+                    "source_message_id": row.source_message_id,
+                    "intent": row.intent,
+                    "mode": row.mode,
+                    "outcome": "low_confidence_clarify",
+                },
+            )
+            return
 
     try:
         out = await format_nl_reply(session, settings, decision, raw_input=turn_input)

@@ -7,6 +7,11 @@ from pb_studio.core.config import Settings
 
 # Telegram @username: 5–32 [A-Za-z0-9_]; допускаем 4+ для совместимости с тестовыми ботами.
 _LEADING_MENTION_RE = re.compile(r"^@[A-Za-z0-9_]{4,32}\s+")
+# Иногда после @username нет ASCII-пробела (NBSP/NNBSP или сразу кириллица) — иначе роутер не видит «запомни».
+_LEADING_MENTION_RE_LOOSE = re.compile(
+    r"^@[A-Za-z0-9_]{4,32}(?:[\s\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]+|(?=[\u0400-\u04ffЁё]))"
+)
+_BIDI_AND_BOM = re.compile(r"^[\ufeff\u200e\u200f\u202a-\u202e]+")
 
 
 _STUDIO_SLASH_PREFIXES = (
@@ -45,8 +50,9 @@ def strip_alias_prefix(text: str, settings: Settings) -> tuple[str, bool]:
 def strip_leading_bot_mentions(text: str) -> str:
     """Remove one or more leading @username tokens (Telegram text mentions)."""
     s = (text or "").strip()
+    s = _BIDI_AND_BOM.sub("", s)
     while True:
-        m = _LEADING_MENTION_RE.match(s)
+        m = _LEADING_MENTION_RE.match(s) or _LEADING_MENTION_RE_LOOSE.match(s)
         if not m:
             break
         s = s[m.end() :].lstrip()
