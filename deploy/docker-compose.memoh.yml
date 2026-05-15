@@ -100,6 +100,10 @@ services:
       memoh-internal:
         aliases:
           - memoh-server
+      # Доступ к `studio-mcp` (single-brain): тот же хост, сеть `pb-studio-prod_default` из docker-compose.prod.yml.
+      studio-prod:
+        aliases:
+          - memoh-server-on-studio-net
 
   web:
     image: memohai/web:latest
@@ -126,3 +130,6 @@ volumes:
 networks:
   memoh-internal:
     driver: bridge
+  studio-prod:
+    name: pb-studio-prod_default
+    external: true
