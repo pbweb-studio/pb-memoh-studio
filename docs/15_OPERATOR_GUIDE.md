@@ -17,7 +17,7 @@
 - **Архив** чатов и сообщений студии.
 - **Control group:** одна активная «управляющая» Telegram-группа; системные ответы Studio только туда.
 - **Slash-команды** из control group: `/kb_*`, `/summary_*`, `/project_*`, `/rule_*` — обрабатываются Studio (не Memoh LLM).
-- **KB / RAG**, **проекты**, **SLA**, **правила ассистента** — хранение и логика в БД Studio.
+- **KB / RAG**, **проекты**, **SLA**, **правила ассистента** (список в админке: **`/admin/assistant-rules`**, пункт меню «Правила») — хранение и логика в БД Studio.
 - **Studio Admin:** **https://jar.pb-web.ru/admin/** — назначение control group, просмотр чатов, KB, правил, SLA, **журнал команд** `/admin/control-commands`.
 
 ## 3. Что не дублируется

@@ -39,10 +39,11 @@
 | 14a Prod compose + env example + runbook/backup (no deploy) | Done |
 | 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
 | 14c Staging deploy jar.pb-web.ru (VPS 148.253.209.54) | Done |
-| VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done |
-| MVP стабилизация (роли, beat, Memoh group final-only, admin команды, доки) | Done (код); VPS выкат **2026-05-15** HEAD **7a4a8a10** |
-| MVP Telegram-приёмка (mvp-* маркеры, /kb_help@bot) | Pending (пользователь) |
+| VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done (PASS на HEAD **`8af1537d`**) |
+| MVP стабилизация (роли, beat, Memoh group final-only, admin команды, доки) | Done |
+| MVP Telegram-приёмка (mvp-* маркеры, /kb_help@bot) | Done по скринам; group mention UX — при необходимости оператор |
 | Celery worker dispose_engine после control commands | Done (**7a4a8a10**) |
+| Studio Admin `/admin/assistant-rules` HTTP 500 | Done (**8af1537d**) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** на VPS пройдены health/getMe/control-group/SQL; smoke worker **PASS**; остаются smoke **FAIL** только **`/admin/assistant-rules` 500**; см. `docs/04_PROJECT_LOG.md` (2026-05-15), `docs/AI_CONTEXT.md`.
+**Последнее:** **`8af1537d`** — импорты в **`admin_ui.py`**; VPS Studio **api/worker/beat** пересобраны; **`vps-e2e-smoke.sh`** **PASS**; в **`studio_messages`** есть **`mvp-group-mention-001`**. См. `docs/04_PROJECT_LOG.md`, `docs/AI_CONTEXT.md`.

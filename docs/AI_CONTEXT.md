@@ -8,16 +8,16 @@
 
 **MVP-стабилизация (май 2026)** — зафиксировано разделение ролей **Memoh vs Studio** (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Рабочий репозиторий на VPS: **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
 
-- **Studio Admin:** **https://jar.pb-web.ru/admin/** — в т.ч. назначение active control group (**коммит `dd285584`**), обзор с подсказкой ролей, **`/admin/control-commands`** (журнал slash-команд + кнопка «Обработать pending»).
+- **Studio Admin:** **https://jar.pb-web.ru/admin/** — в т.ч. назначение active control group (**коммит `dd285584`**), обзор с подсказкой ролей, **`/admin/control-commands`**, **`/admin/assistant-rules`** (список правил; **HTTP 200** после **`8af1537d`** — отсутствовали импорты `AssistantRuleScope` / `AssistantRuleStatus` / `rules_service` в `admin_ui.py`).
 - **Memoh Web:** **https://memo.pb-web.ru** — UI Memoh; **Memoh server** на том же VPS обрабатывает входящий Telegram (long polling); в коде: **`b0e7b510`** — таймаут long poll Bot API и **redaction** полных URL с токеном в логах.
 - **Группы Telegram (Memoh):** по умолчанию без потокового `editMessageText` для group/supergroup — один финальный `sendMessage` (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED` не truthy → режим *group final only* в `internal/channel/adapters/telegram/stream.go`), чтобы убрать дубли, «……» и зависший typing.
 - **Studio control commands:** парсинг `/cmd@BotName`; **`/kb_help`** и подсказка для `unknown` работают **даже при** `STUDIO_KB_ENABLED=false` (остальные `/kb_*` — только при включённом KB). **Celery beat** вызывает `pb_studio.worker.process_control_group_commands` каждые **`STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`** (дефолт 5 с).
 - **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **Security / `TELEGRAM_BOT_TOKEN`:** при попадании токена в логи рекомендуется ротация в BotFather + обновление в Memoh и Studio `.env.prod` (**см. `docs/15_OPERATOR_GUIDE.md`**). **2026-05-14:** оператор **явно отказался** от ротации текущего бота (согласованный **остаточный риск**); статус **USER_ACTION_REQUIRED** по ротации снят.
 
-**VPS (2026-05-15):** на **148.253.209.54** выполнен выборочный деплой: `git reset --hard origin/pb-studio/main` → **HEAD `7a4a8a106974b4ce1a67bd3677bef280048e54d3`** (включает **`8d2b41d3`** + MVP **`e6e4a13f`** + **`fix(celery): dispose async engine after control commands standalone`**). Пересобраны **memoh-jar `server`**, **studio-api / studio-worker / studio-beat**. Health: **memo.pb-web.ru** и **jar.pb-web.ru/admin** — **200**; `getMe` → **jarvispbweb_bot** / **ИИ Purple Bear**; **webhook пустой**; **pending_update_count=0**. Active control group по API: **Управление Jarvis**, **telegram_chat_id=-1003903704506**, **studio_chat_uuid=863b1234-0ccf-45c2-a1c3-e3b0b0479863**. В БД уже есть **`kb_help` → processed** с **`response_telegram_message_id` не null** (исторические прогоны). **2026-05-14:** в Telegram подтверждены ответы на **`mvp-private-001`** (личка), **`/kb_help`** и **`/kb_help@jarvispbweb_bot`** (control group). Маркер **`mvp-group-mention-001`** в обычной группе — по желанию для строки в `studio_messages`. **vps-e2e-smoke.sh:** логи worker **PASS** после фикса Celery; остаются **FAIL** только **`/admin/assistant-rules` (500)** — вне MVP-чеклиста slash-команд; **SKIP**: history import, live Telegram-блок скрипта, pytest в образе.
+**VPS (2026-05-15):** на **148.253.209.54**: `git reset --hard origin/pb-studio/main` → **HEAD `8af1537d13c0a23d2e4f5b62a2dba0e3b04278d3`** (docs **`4e882451`** + **`fix(studio-admin): restore missing imports for assistant-rules admin page`**). Пересобраны **studio-api / studio-worker / studio-beat** (Memoh **не** пересобирался). Health: **memo.pb-web.ru** **200**; **jar.pb-web.ru** админка с токеном — **200** на **`/admin/assistant-rules`**; `getMe` → **jarvispbweb_bot** / **ИИ Purple Bear**; **webhook пустой**; **pending_update_count=0**. Active control group: **Управление Jarvis**, **telegram_chat_id=-1003903704506**, **studio_chat_uuid=863b1234-0ccf-45c2-a1c3-e3b0b0479863**. **`vps-e2e-smoke.sh`:** **PASS** (в т.ч. **`4_admin_/admin/assistant-rules`** и фильтр **`?status=active`**); ожидаемые **SKIP**: history import, **12_telegram**, **14_pytest**. В **`studio_messages`** по SQL на VPS: **≥1** строка с **`mvp-group-mention-001`** (зеркало); визуально в Telegram (один ответ Memoh, без дублей / «……») — **USER_CONFIRM_REQUIRED** при необходимости повторной проверки.
 
-**VPS E2E smoke** — см. абзац выше; ожидаемые **SKIP** без изменений: history import, **12_telegram** (ручной CG), **14_pytest**.
+**VPS E2E smoke** — **PASS**; **SKIP**: history import, **12_telegram** (ручной CG), **14_pytest**.
 
 **Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал.
 
@@ -92,13 +92,13 @@
 - **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
 - **Фаза 13c:** фильтры, пагинация и полировка списков в Studio Admin; см. `docs/06_DECISIONS.md`.
 - **Фаза 14c:** первый deploy Studio на VPS + домен; инцидент `set -x` / ротация admin token — см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
-- **MVP стабилизация:** Memoh = runtime/ассистент; Studio = mirror + slash-команды + бизнес-данные; beat для control commands; см. `docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
+- **MVP стабилизация:** Memoh = runtime/ассистент; Studio = mirror + slash-команды + бизнес-данные; beat для control commands; **`8af1537d`** — исправление **500** на **`GET /admin/assistant-rules`** (NameError из‑за пропущенных импортов); см. `docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
 - **Фаза 14b:** deploy readiness — checklist, `validate_env_prod.py`, `smoke-prod.sh`, restore/backup KB; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 - **Фаза 14a:** prod compose + env example + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 
 ## Следующая задача
 
-- Telegram: личка **`mvp-private-001`**, **`/kb_help`** и **`/kb_help@jarvispbweb_bot`** в control group — **выполнено** (**2026-05-14**). Опционально: **`@jarvispbweb_bot mvp-group-mention-001`** в группе. **Ротация `TELEGRAM_BOT_TOKEN`:** оператор **отказался** (**2026-05-14**, согласовано). Отдельно: разобрать **HTTP 500** на **`/admin/assistant-rules`** (список), если нужен чистый smoke без FAIL.
+- MVP smoke и **`/admin/assistant-rules`** — **закрыто** (**`8af1537d`** + деплой Studio на VPS). При необходимости: ручное подтверждение UX **group mention** в «Управление Jarvis» (**один ответ**, без дублей / «……») после **`mvp-group-mention-001`** — см. зеркало в **`studio_messages`**. **Ротация `TELEGRAM_BOT_TOKEN`:** не требуем; при новой утечке — ротировать (**остаточный риск принят**).
 
 ## Вопросы к GPT
 

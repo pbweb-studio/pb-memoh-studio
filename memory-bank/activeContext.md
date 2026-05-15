@@ -1,17 +1,15 @@
 # Active context
 
-**Сейчас:** **VPS 148.253.209.54** — **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**, **HEAD `7a4a8a10`** (MVP **`e6e4a13f`** + docs **`8d2b41d3`** + Celery fix **`7a4a8a10`**). Выборочно пересобраны **memoh-jar `server`** и **studio-api / studio-worker / studio-beat**.
+**Сейчас:** **VPS 148.253.209.54** — **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**, **HEAD `8af1537d`** (фикс **500** на **`GET /admin/assistant-rules`** + доки). Пересобраны только **studio-api / studio-worker / studio-beat**; Memoh без пересборки.
 
 **Ссылки:** Studio Admin **https://jar.pb-web.ru/admin/** · Memoh Web **https://memo.pb-web.ru**
 
-**Проверено на сервере:** **getMe** → **jarvispbweb_bot** / **ИИ Purple Bear**; **webhook пустой**; **pending_update_count=0**; **`GET /control-group`** — active, **Управление Jarvis**, **telegram_chat_id=-1003903704506**; в БД **485395885** — `chat_role=unknown` (не control group). В Telegram (скрины оператора, **2026-05-14**): личка с **`mvp-private-001`**, **`/kb_help`** и **`/kb_help@jarvispbweb_bot`** в control group — ответы бота **ИИ Purple Bear** корректны.
+**Проверено:** **getMe** → **jarvispbweb_bot** / **ИИ Purple Bear**; **webhook пустой**; **pending_update_count=0**; **`GET /control-group`** — active, **Управление Jarvis**, **telegram_chat_id=-1003903704506**; **`vps-e2e-smoke.sh`** — **PASS** (**`/admin/assistant-rules`** **200**). **SKIP:** history import, live Telegram (блок 12), pytest в prod-образе.
 
-**Security:** ротация **`TELEGRAM_BOT_TOKEN`** — оператор **отказался** (**2026-05-14**, согласовано); **остаточный риск принят**, пункт по ротации закрыт.
+**Telegram (2026-05-14, скрины):** личка **`mvp-private-001`**, **`/kb_help`** и **`/kb_help@jarvispbweb_bot`** в control group — ок.
 
-**Ручной шаг (опционально):** **`@jarvispbweb_bot mvp-group-mention-001 ты тут?`** в обычной группе — для полного маркера в `studio_messages`, если нужен E2E по группе.
+**Зеркало:** в **`studio_messages`** есть текст с **`mvp-group-mention-001`** (как минимум одна строка). Визуально в группе: один нормальный ответ Memoh, без дублей / «……» / зависшего typing — **USER_CONFIRM_REQUIRED**, если нужна свежая проверка после выката.
 
-**Известная проблема вне MVP slash:** **`GET /admin/assistant-rules`** — **HTTP 500** (smoke FAIL на списке).
+**Security:** ротация **`TELEGRAM_BOT_TOKEN`** не выполняется по решению оператора (**остаточный риск принят**); при новой утечке — ротировать.
 
-**Кодовые якоря:** Memoh **`b0e7b510`** (long poll + redaction); Studio control group UI **`dd285584`**; beat + парсер `@bot` + `/admin/control-commands` — в **`e6e4a13f`**.
-
-**Следующий шаг:** при необходимости — маркер в группе выше; отдельно — разбор **500** на **`/admin/assistant-rules`**.
+**Следующий шаг:** только отдельные задачи (**6+**, расширение админки и т.д.); MVP по smoke и админ-маршрутам правил — **закрыт**.
