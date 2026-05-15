@@ -29,7 +29,6 @@ import (
 	messagepkg "github.com/memohai/memoh/internal/message"
 	pipelinepkg "github.com/memohai/memoh/internal/pipeline"
 	sessionpkg "github.com/memohai/memoh/internal/session"
-	studiopkg "github.com/memohai/memoh/internal/studio"
 )
 
 var base64Std = base64.StdEncoding
@@ -552,65 +551,6 @@ func (p *ChannelInboundProcessor) HandleInbound(ctx context.Context, cfg channel
 		activeChatID = strings.TrimSpace(resolved.ChatID)
 	}
 	shouldTrigger := shouldTriggerAssistantResponse(msg) || identity.ForceReply
-
-	if shouldTrigger && msg.Channel == channel.ChannelTypeTelegram && !identity.ForceReply {
-		if !studiopkg.NLGateGloballyDisabled() && studiopkg.ShouldAttemptNLGate(msg) {
-			cid, err1 := strconv.ParseInt(strings.TrimSpace(msg.Conversation.ID), 10, 64)
-			mid, err2 := strconv.Atoi(strings.TrimSpace(msg.Message.ID))
-			if err1 == nil && err2 == nil {
-				plain := strings.TrimSpace(msg.Message.PlainText())
-				eff := strings.TrimSpace(rawTextForCommand(msg, plain))
-				var uid *int64
-				if s := strings.TrimSpace(msg.Sender.Attribute("user_id")); s != "" {
-					if v, err := strconv.ParseInt(s, 10, 64); err == nil {
-						uid = &v
-					}
-				}
-				var upd *int
-				if u, ok := msg.Metadata["update_id"]; ok {
-					switch t := u.(type) {
-					case float64:
-						v := int(t)
-						upd = &v
-					case int:
-						upd = &t
-					case int64:
-						v := int(t)
-						upd = &v
-					}
-				}
-				gbody := studiopkg.NLGateRequest{
-					TelegramChatID: cid,
-					MessageID:      mid,
-					UpdateID:       upd,
-					Text:           eff,
-					RawText:        eff,
-					FromID:         uid,
-					IsMentioned:    metadataBool(msg.Metadata, "is_mentioned"),
-					IsReplyToBot:   metadataBool(msg.Metadata, "is_reply_to_bot"),
-					IsBot:          false,
-				}
-				sup, gerr := studiopkg.PostNLGate(ctx, gbody)
-				if gerr != nil {
-					if p.logger != nil {
-						p.logger.Warn(
-							"studio nl gate failed; suppressing memoh assistant to avoid duplicate or stale reply",
-							slog.Int64("telegram_chat_id", cid),
-							slog.Int("telegram_message_id", mid),
-							slog.Any("update_id", upd),
-							slog.Any("error", gerr),
-						)
-					}
-					p.persistPassiveMessage(ctx, identity, msg, text, attachments, resolved.RouteID, sessionID, eventID)
-					return nil
-				}
-				if sup {
-					p.persistPassiveMessage(ctx, identity, msg, text, attachments, resolved.RouteID, sessionID, eventID)
-					return nil
-				}
-			}
-		}
-	}
 
 	if sessionType == sessionpkg.TypeDiscuss || shouldTrigger {
 		if transcript := p.transcribeInboundAttachments(ctx, strings.TrimSpace(identity.BotID), resolvedAttachments); transcript != "" {

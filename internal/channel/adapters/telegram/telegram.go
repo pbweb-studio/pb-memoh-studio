@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -29,22 +28,7 @@ const (
 	telegramMaxMessageLength        = 4096
 	telegramMediaGroupCollectWindow = 700 * time.Millisecond
 	telegramUpdateDedupeTTL         = 10 * time.Minute
-	// Long poll: Telegram holds the HTTP request open for up to this many seconds.
-	telegramLongPollTimeoutSeconds = 30
-	// HTTP client timeout must exceed long poll + TLS/network slack, or getUpdates fails with "context deadline exceeded".
-	telegramHTTPClientTimeout = 90 * time.Second
 )
-
-// telegramGroupStreamingEnabled returns true when MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED
-// is set to a truthy value. Default (unset) is false: groups use a single final sendMessage
-// instead of editMessageText streaming (avoids "……" placeholders and duplicate/unstable edits).
-func telegramGroupStreamingEnabled() bool {
-	v := strings.TrimSpace(strings.ToLower(os.Getenv("MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED")))
-	if v == "" {
-		return false
-	}
-	return v == "1" || v == "true" || v == "yes" || v == "on"
-}
 
 var (
 	telegramBotLogger      = newSlogBotLogger(nil)
@@ -131,7 +115,7 @@ func (a *TelegramAdapter) getOrCreateBot(cfg Config, configID string) (*tgbotapi
 	if bot, ok := a.bots[cacheKey]; ok {
 		return bot, nil
 	}
-	httpClient, err := common.NewHTTPClient(telegramHTTPClientTimeout, cfg.HTTPProxy)
+	httpClient, err := common.NewHTTPClient(30*time.Second, cfg.HTTPProxy)
 	if err != nil {
 		if a.logger != nil {
 			a.logger.Error("create bot http client failed", slog.String("config_id", configID), slog.Any("error", err))
@@ -295,7 +279,7 @@ func (a *TelegramAdapter) Connect(ctx context.Context, cfg channel.ChannelConfig
 		return nil, err
 	}
 	updateConfig := tgbotapi.NewUpdate(0)
-	updateConfig.Timeout = telegramLongPollTimeoutSeconds
+	updateConfig.Timeout = 30
 	updates := bot.GetUpdatesChan(updateConfig)
 	connCtx, cancel := context.WithCancel(ctx)
 	mediaGroups := make(map[string]*telegramMediaGroupBuffer)
@@ -810,34 +794,15 @@ func (a *TelegramAdapter) OpenStream(ctx context.Context, cfg channel.ChannelCon
 			}
 		}
 	}
-	groupFinalOnly := !isPrivateChat && !telegramGroupStreamingEnabled()
-	if a.logger != nil {
-		mode := "private_draft"
-		switch {
-		case isPrivateChat:
-			mode = "private_draft"
-		case groupFinalOnly:
-			mode = "group_final_only"
-		default:
-			mode = "group_edit_stream"
-		}
-		a.logger.Info(
-			"telegram outbound stream opened",
-			slog.String("config_id", cfg.ID),
-			slog.String("stream_mode", mode),
-			slog.Bool("group_streaming_edits", !isPrivateChat && telegramGroupStreamingEnabled()),
-		)
-	}
 	return &telegramOutboundStream{
-		adapter:          a,
-		cfg:              cfg,
-		target:           target,
-		reply:            opts.Reply,
-		parseMode:        "",
-		isPrivateChat:    isPrivateChat,
-		groupFinalOnly:   groupFinalOnly,
-		streamChatID:     chatID,
-		draftID:          1,
+		adapter:       a,
+		cfg:           cfg,
+		target:        target,
+		reply:         opts.Reply,
+		parseMode:     "",
+		isPrivateChat: isPrivateChat,
+		streamChatID:  chatID,
+		draftID:       1,
 	}, nil
 }
 
