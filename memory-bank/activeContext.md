@@ -1,6 +1,6 @@
 # Active context
 
-**Сейчас:** реализован **single-brain** (NL по умолчанию off, `nl-gate` 403, Memoh `MEMOH_STUDIO_NL_GATE_DISABLED` / пустой gate URL, сервис **`studio-mcp`** + 11 tools, skill **`pb-studio-manager`**). Код в репо; **деплой на VPS не делался** из этой сессии.
+**Сейчас:** **single-brain зафиксирован в коде**: Memoh без `PostNLGate` / `internal/studio`; Studio Celery beat без NL schedule; `process_nl_interactions` и `run_nl_interactions_standalone` — stub; Alembic **`018`** для `status` и финализации `pending`. Деплой на VPS — шаг оператора. Коммиты: **`c1afe432`**, **`f22fd204`**.
 
 **Ссылки:** **https://jar.pb-web.ru/admin/** · **https://memo.pb-web.ru**
 

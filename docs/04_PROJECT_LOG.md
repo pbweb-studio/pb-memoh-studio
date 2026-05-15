@@ -1,5 +1,10 @@
 # Журнал проекта
 
+## 2026-05-15 — Single-brain: удалён Memoh NL gate, архив Studio NL responder
+
+- **Статус:** код в репо — Memoh **`c1afe432`**: удалены `internal/studio/nl_gate*`, inbound без Studio consult, Telegram `stream.go` как upstream; Studio **`f22fd204`**: beat **никогда** не планирует `studio-process-nl-interactions`; `run_nl_interactions_standalone` / Celery task — no-op; Alembic **`018_nl_status_widen_finalize_pending`** (`status` VARCHAR(64), pending → **`ignored_disabled_single_brain_migration`**); pytest `test_nl_ux_regression` / `test_nl_turn_isolation` — **skip**.
+- **Деплой:** оператор — образы + `alembic upgrade head` + §11 (`docs/AI_CONTEXT.md`).
+
 ## 2026-05-15 — Single-brain: NL off by default, Studio MCP, Memoh gate disable
 
 - **Статус:** код в репо — флаги prod NL **false**, beat без NL-задачи при false, `nl-gate` **403** при false, Memoh **`MEMOH_STUDIO_NL_GATE_DISABLED`** + ранний skip в inbound, сервис **`studio-mcp`** в compose, 11 MCP tools, skill **`pb-studio-manager`**, тесты (`test_nl_phase` gate 403, celery schedule, `run_nl` skip, MCP bearer, Go `NLGateGloballyDisabled`), доки/runbook/ADR.

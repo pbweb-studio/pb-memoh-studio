@@ -6,7 +6,7 @@
 
 ## Текущая фаза
 
-**Single-brain Memoh + Studio MCP (май 2026)** — NL как второй ответчик **выключен по умолчанию** (`STUDIO_NL_COMMANDS_ENABLED=false`); Memoh не ходит в gate при пустом URL или **`MEMOH_STUDIO_NL_GATE_DISABLED`**. Бизнес-Studio для ассистента: **`studio-mcp`** (streamable HTTP, Bearer **`STUDIO_MCP_AUTH_TOKEN`**), инструменты `studio_*`, skill **`pb-studio-manager`**. Event Mirror и slash/control — по политике оператора (см. ADR `docs/06_DECISIONS.md`). Рабочий VPS-контур по-прежнему **`148.253.209.54`** / **jar.pb-web.ru** / **memo.pb-web.ru** (выкат этого изменения — отдельным шагом оператора).
+**Single-brain Memoh + Studio MCP (май 2026)** — второй ответчик Studio NL **архивирован**: Memoh **без** `PostNLGate` / `internal/studio`; Celery beat **без** `studio-process-nl-interactions`; `run_nl_interactions_standalone` — no-op; Alembic **`018`** финализирует старые `pending`. Бизнес для ассистента: **`studio-mcp`** (Bearer **`STUDIO_MCP_AUTH_TOKEN`**), инструменты `studio_*`, skill **`pb-studio-manager`**. Event Mirror — пассивный ingest; slash/control — legacy/operator (см. ADR). Коммиты: **`c1afe432`** (Memoh), **`f22fd204`** (Studio).
 
 ### §11 Ручная приёмка (Telegram, после выката single-brain)
 
@@ -22,13 +22,11 @@
 
 ## Что уже работает
 
-- **Single-brain + MCP (май 2026):** NL prod off, gate **403**, Memoh `NLGateGloballyDisabled`, Celery beat без NL-task, **`studio-mcp`** + 11 tools, skill **`pb-studio-manager`**; см. `docs/06_DECISIONS.md`, `docker-compose.prod.yml`, `skills/pb-studio-manager/SKILL.md`.
+- **Single-brain + MCP (май 2026):** Memoh без nl-gate; Studio без NL в beat; **`studio-mcp`** + 11 tools; см. `docs/06_DECISIONS.md`, `docker-compose.prod.yml`, `skills/pb-studio-manager/SKILL.md`.
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
 - **MVP стабилизация:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; коммиты **`e6e4a13f`** (код+доки), **`8d2b41d3`** (ссылки на hash), **`7a4a8a10`** (Celery: `dispose_engine` после `run_control_commands_standalone`, чтобы worker не ловил *different event loop*); Memoh group final-only; beat `process_control_group_commands`; `/kb_help` без `STUDIO_KB_ENABLED`; парсер `@bot`; `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
-- **NL Business & Learning:** Alembic **`017`**, пакет **`pb_studio/nl`**, gate, Celery **`process_nl_interactions`**, Memoh **`internal/studio/nl_gate.go`** + inbound; админ-страницы NL/memory/playbooks. См. `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
-- **NL turn isolation (2026-05-15):** единый `turn_input` (`strip_reply_decorations` → `normalize_nl_router_input`) в gate/scan/router/processor; pending learning при independent вопросе → **`IGNORED`** / `superseded_by_new_turn`; Memoh NL gate: **`Text`/`RawText`** из `rawTextForCommand`; тесты **`tests/test_nl_turn_isolation.py`**. Коммит **`aaf5318e`**.
-- **NL live human path (2026-05-15):** снятие `@mention` с NBSP/unicode; human список чатов + CG; санитизация digest; learning по `find` маркеров; OpenAI→deterministic guard; pending/`?`/`@`; runtime model copy. Коммит **`48b33170`**.
-- **NL anti–off-by-one (2026-05-15):** воркер — по одной `pending` строке с блокировкой (`SKIP LOCKED` на Postgres); логи `source_update_id` + `nl_reply_sent`; Memoh — при ошибке `PostNLGate` подавление ассистента; SQL `studio/scripts/diag_last_nl_interactions.sql`; регрессии в `tests/test_nl_ux_regression.py`.
+- **NL слой (архив conversational):** Alembic **`017`+`018`**, пакет **`pb_studio/nl`** (legacy/debug), HTTP **`POST …/nl-gate`** при `STUDIO_NL_COMMANDS_ENABLED`; Celery **`process_nl_interactions`** — stub; Memoh **`internal/studio`** удалён. См. `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
+- **NL turn isolation / UX / anti–off-by-one:** исторические улучшения NL worker и gate; модульные тесты **`test_nl_ux_regression`** / **`test_nl_turn_isolation`** помечены **skip** после архивации NL responder. См. коммиты до **`f22fd204`**.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
@@ -48,7 +46,7 @@
 - **10a:** KB в БД, версии, чанки, HTTP API, команды `/kb_*` из control group.
 - **9a–9b:** проекты, дайджесты, те же паттерны control group.
 - **8a–8c:** SLA по зеркалу, календарь due, mute на policy, rate-limit и digest уведомлений, админ `/sla/*`.
-- **Проверка 4b:** зафиксирована в журнале; актуальные тесты Studio: `pytest tests/` (в т.ч. **`test_nl_phase.py`**); Go: **`go test ./internal/studio/... -count=1`** после изменений NL gate.
+- **Проверка 4b:** зафиксирована в журнале; Studio: `pytest studio/tests/` (в т.ч. **`test_nl_phase.py`** для legacy gate); Go NL gate тесты удалены вместе с пакетом **`internal/studio`**.
 
 ## Что ещё не готово
 
@@ -67,9 +65,8 @@
 
 ## Файлы Memoh (актуально)
 
-- **Telegram adapter / streaming:** `internal/channel/adapters/telegram/telegram.go`, `stream.go`, `stream_test.go`.
+- **Telegram adapter / streaming:** `internal/channel/adapters/telegram/telegram.go`, `stream.go`, `stream_test.go` (upstream streaming для групп).
 - **Studio → Memoh hook (4b):** `studio_event_mirror.go`, `studio_event_mirror_test.go`.
-- **NL gate (sync):** `internal/studio/nl_gate.go`, `nl_gate_test.go`; вызов из **`internal/channel/inbound/channel.go`**.
 
 ## Принятые решения
 
@@ -99,7 +96,7 @@
 
 ## Следующая задача
 
-- Оператор: выкат + §11 (`docs/AI_CONTEXT.md`); при необходимости обновить §18 legacy-NL тесты отдельно.
+- Оператор: выкат образов (**`c1afe432`** Memoh, **`f22fd204`** Studio + Alembic **`018`**) + §11 live; затем обновить «последний стабильный commit» в этом файле.
 
 ## Вопросы к GPT
 

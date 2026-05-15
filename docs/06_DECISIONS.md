@@ -316,39 +316,28 @@
 - **Команды Studio** обрабатываются из зеркала сообщений control group; ответы — **только** `sendMessage` в активную control group (тот же `TELEGRAM_BOT_TOKEN`, без второго бота и без polling/webhook из Studio).
 - **Парсинг команд в группах:** поддержка суффикса `@BotUserName` у первого токена (`/kb_help@bot` и т.д.).
 - **`/kb_help`:** справка и строки статуса флагов KB/RAG доступны **даже при** `STUDIO_KB_ENABLED=false`; остальные `/kb_*` по-прежнему требуют включённого KB.
-- **Memoh — ответы в группах:** по умолчанию без потокового `editMessageText` для group/supergroup (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED` не truthy → один финальный `sendMessage`), чтобы избежать дублей, «……» и зависшего typing; личка без изменения контракта (по необходимости).
+- **Memoh — ответы в группах:** поведение Telegram streaming как в upstream Memoh (`stream.go` / adapter); отдельные UX-правки `groupFinalOnly` сняты до отдельной задачи.
 - **Celery beat:** в `pb_studio.celery_app` добавлен периодический запуск `pb_studio.worker.process_control_group_commands` (интервал `STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`, по умолчанию 5 с); при `STUDIO_CONTROL_COMMANDS_ENABLED=false` задача остаётся no-op на стороне цикла команд.
 - **Celery worker + async engine (май 2026):** `run_control_commands_standalone` в **`finally`** вызывает **`dispose_engine()`** (коммит **`7a4a8a10`**), иначе при повторных **`asyncio.run()`** в worker глобальный AsyncEngine остаётся на «старом» loop и даёт **`RuntimeError: ... different loop`**.
 - **Studio Admin hotfix (май 2026):** **`GET /admin/assistant-rules`** отдавал **500** из‑за **`NameError`** (пропущенные импорты констант/сервиса правил в `admin_ui.py`); исправлено в **`8af1537d`** без смены URL и без изменения REST **`/assistant-rules*`**.
 
-## NL Business & Learning Layer (зафиксировано)
+## NL Business & Learning Layer (история; conversational path архивирован 2026-05-15)
 
-- **Gate (Studio):** `POST /integrations/memoh/nl-gate` — быстрый ответ без LLM; при `STUDIO_NL_COMMANDS_ENABLED=true` и mention/reply в **active control group** (не Studio slash `/summary|/project|/kb|/rule`) — атомарный `INSERT` в `studio_nl_interactions` (`status=pending`), ответ **`suppress_memoh_assistant=true`**; дубликат по `(control_group_chat_id, source_message_id)` — тоже suppress (**идемпотентность**).
-- **Fail-open:** при **пустом** `MEMOH_STUDIO_NL_GATE_URL` — Memoh не вызывает gate, ассистент работает как раньше.
-- **Gate errors (обновление):** при **настроенном** URL, если `PostNLGate` получает сетевую ошибку, HTTP non-2xx или ошибку декода JSON — возвращается `(false, err)`; inbound **подавляет** Memoh-ассистента (persist passive + return), лог **Warn** с `telegram_chat_id`, `telegram_message_id`, `update_id`. Цель — не отвечать «вторым» Memoh-ответом при сбое Studio или гонке с NL worker. Риск: при недоступности Studio в CG пользователь **не** получит ответ Memoh до восстановления gate/worker.
-- **Slash, не распознанный как Studio-команда, но начинается с `/`:** Memoh может обработать как внутреннюю команду — **не** подавляем через Gate автоматически (только известные Studio slash освобождают Memoh для совместимости со сканом команд).
-- **Alias-триггеры** (`STUDIO_NL_BOT_ALIASES`, префикс + запятая): только скан `studio_messages` в control group (`scan_mirror_for_nl_aliases`), `trigger_type=alias`; в группе без mention Memoh ассистент не стартует — дублей нет.
-- **Worker:** Celery `process_nl_interactions` + `run_nl_interactions_standalone` (alias scan + обработка `pending`), `dispose_engine` в `finally`; ответы только `_send_text_to_control_group`; ACL записи — те же **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`**, что и slash-команды. **Обработка pending:** по одной строке за транзакцию с `SELECT … FOR UPDATE` (Postgres: `SKIP LOCKED`), commit после каждой — исключение гонки нескольких Celery worker за одну `studio_nl_interactions` строку.
-- **Router:** `STUDIO_NL_ROUTER_PROVIDER` = `deterministic` | `openai_compatible`; пороги `STUDIO_NL_ROUTER_CONFIDENCE_*`; опционально `STUDIO_NL_ROUTER_REUSE_KB_CHAT_PROVIDER` (риск общего ключа с RAG).
-- **Auth Gate:** `STUDIO_MEMOH_GATE_TOKEN` или fallback **`STUDIO_EVENTS_INGEST_TOKEN`**; Memoh: `MEMOH_STUDIO_NL_GATE_URL`, `MEMOH_STUDIO_NL_GATE_TOKEN` / `MEMOH_STUDIO_EVENTS_TOKEN`, `MEMOH_STUDIO_NL_GATE_TIMEOUT_MS`.
-- **Таблицы:** Alembic `017` — `studio_nl_interactions`, `studio_memory_items`, `studio_playbooks`.
-- **Memoh:** узкий вызов `PostNLGate` из inbound для Telegram group/supergroup до старта ассистента при условии `ShouldAttemptNLGate`.
-- **Прод (2026-05-15):** VPS-выкат без `set -x` и без печати `.env`/`config.toml` целиком; публичный URL gate; Bearer на Memoh согласован с Studio (ingest-токен на хосте).
-- **Прод (2026-05-15, NL anti–off-by-one):** VPS **148.253.209.54** — выкат **`566052e1`**: Studio api/worker/beat + Memoh server; smoke **PASS**; live/`/kb_help`/getMe — оператор. Журнал: `docs/04_PROJECT_LOG.md`.
+- **Сейчас (single-brain):** Memoh **не** вызывает Studio nl-gate в inbound; пакет **`internal/studio`** с `PostNLGate` удалён. Celery beat **никогда** не регистрирует `studio-process-nl-interactions`. Задача **`pb_studio.worker.process_nl_interactions`** и **`run_nl_interactions_standalone`** — мгновенный no-op с `reason=nl_responder_archived_single_brain` (совместимость имён задач). Alembic **`018_nl_status_widen_finalize_pending`**: колонка **`studio_nl_interactions.status`** → `VARCHAR(64)`; все строки со **`status='pending'`** → **`ignored_disabled_single_brain_migration`**, заполняются `last_error` и `processed_at`. Ответы пользователю в prod — **только** Memoh + **Studio MCP**; HTTP gate и код `pb_studio/nl/*` остаются опциональным legacy/debug при явном **`STUDIO_NL_COMMANDS_ENABLED=true`**.
+- **Ранее (до архивации):** быстрый gate `POST /integrations/memoh/nl-gate`, alias-scan, Celery-обработка `pending`, `PostNLGate` в Memoh inbound (в т.ч. подавление ассистента при ошибке gate) — см. исторические коммиты и `docs/04_PROJECT_LOG.md`; схема таблиц прежняя, кроме длины `status`.
 
 ## Single-brain Memoh + Studio MCP (ADR, май 2026)
 
 - **Цель:** один ответчик в Telegram — **Memoh**; Studio остаётся **backend** (Postgres, Event Mirror, KB, SLA, проекты, правила) и отдаётся ассистенту через **MCP** (`studio-mcp`), без второго «разговорного» контура NL.
-- **Prod defaults:** `STUDIO_NL_COMMANDS_ENABLED=false`; Celery beat **не** регистрирует задачу `studio-process-nl-interactions`; `POST /integrations/memoh/nl-gate` возвращает **403** при выключенном флаге (зависимость `verify_nl_gate_feature_enabled` после опционального Bearer).
-- **Memoh:** пустой **`MEMOH_STUDIO_NL_GATE_URL`** и/или **`MEMOH_STUDIO_NL_GATE_DISABLED=true`** (`1`/`true`/`yes`/`on`) — **`PostNLGate`** не выполняет HTTP; inbound не вызывает gate при `NLGateGloballyDisabled()`.
+- **Prod defaults:** `STUDIO_NL_COMMANDS_ENABLED=false`; Celery beat **никогда** не регистрирует `studio-process-nl-interactions` (даже при `true`); `POST /integrations/memoh/nl-gate` возвращает **403** при выключенном флаге (зависимость `verify_nl_gate_feature_enabled` после опционального Bearer).
+- **Memoh:** **`PostNLGate`** и пакет **`internal/studio`** удалены; inbound не консультирует Studio перед ассистентом. Переменные `MEMOH_STUDIO_NL_GATE_*` в коде не используются (оставить пустыми в `.env`).
 - **Event Mirror** (`STUDIO_EVENTS_URL` / ingest) **без изменений**, не смешивать с NL.
 - **Studio MCP:** сервис **`studio-mcp`** в `docker-compose.prod.yml` (`python -m pb_studio.mcp_server`), порт **`STUDIO_MCP_LISTEN_PORT`** (default 8765), опциональный **`STUDIO_MCP_AUTH_TOKEN`** (Bearer); 11 инструментов `studio_*` в `pb_studio/mcp_tools/handlers.py` + регистрация в `pb_studio/mcp_server/asgi.py`.
 - **Slash-команды vs MCP-only (prod):** оператор выбирает **`STUDIO_CONTROL_COMMANDS_ENABLED`**. Рекомендация для минимизации дублей с Memoh: **`false`** (только MCP + при необходимости ручные операции в Studio Admin); **emergency:** оставить `true` и задокументировать риск параллельных ответов Studio slash и Memoh в CG. Event Mirror от slash **не** зависит.
 
 ### Откат single-brain
 
-1. `STUDIO_NL_COMMANDS_ENABLED=true`, восстановить **`MEMOH_STUDIO_NL_GATE_URL`** и токены gate на Memoh.
-2. Перезапустить **studio-beat** (появится schedule NL) и **studio-api** / **Memoh server**.
-3. Остановить **`studio-mcp`** или убрать MCP-подключение в Memoh Admin.
-4. Опционально: откатить одноразовый `UPDATE` по `studio_nl_interactions` только осознанно (бэкап до правки).
+1. Откатить коммиты Memoh/Studio до состояния с `PostNLGate` и рабочим NL beat (или задеплоить предыдущие образы); восстановить **`MEMOH_STUDIO_NL_GATE_*`** и **`STUDIO_NL_*`** по старому runbook.
+2. При откате миграции **`018`**: вручную осознанно (из бэкапа) вернуть строки `studio_nl_interactions`, помеченные как **`ignored_disabled_single_brain_migration`**, если нужен повторный прогон NL worker.
+3. Остановить **`studio-mcp`** или убрать MCP-подключение в Memoh Admin, если откатываетесь полностью на NL+gate.
 
