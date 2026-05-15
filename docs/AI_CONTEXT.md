@@ -15,7 +15,9 @@
 - **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **Security / `TELEGRAM_BOT_TOKEN`:** если токен бота когда-либо оказывался в логах (в т.ч. до правок redaction) — **ротация в BotFather и обновление в Memoh + Studio `.env.prod`** остаётся действием оператора; до подтверждения в журнале/тикете финальный статус **USER_ACTION_REQUIRED** (не считать инцидент закрытым только правкой логирования).
 
-**VPS E2E smoke** — `deploy/scripts/vps-e2e-smoke.sh` / `vps-e2e-smoke.py`: **PASS** + ожидаемые **SKIP** (RAG, Telegram-ветки без токена/флагов, history import, pytest в prod-образе). Секреты в вывод не попадают.
+**VPS (2026-05-15):** на **148.253.209.54** выполнен выборочный деплой: `git reset --hard origin/pb-studio/main` → **HEAD `7a4a8a106974b4ce1a67bd3677bef280048e54d3`** (включает **`8d2b41d3`** + MVP **`e6e4a13f`** + **`fix(celery): dispose async engine after control commands standalone`**). Пересобраны **memoh-jar `server`**, **studio-api / studio-worker / studio-beat**. Health: **memo.pb-web.ru** и **jar.pb-web.ru/admin** — **200**; `getMe` → **jarvispbweb_bot** / **ИИ Purple Bear**; **webhook пустой**; **pending_update_count=0**. Active control group по API: **Управление Jarvis**, **telegram_chat_id=-1003903704506**, **studio_chat_uuid=863b1234-0ccf-45c2-a1c3-e3b0b0479863**. В БД уже есть **`kb_help` → processed** с **`response_telegram_message_id` не null** (исторические прогоны); вариант **`/kb_help@jarvispbweb_bot`** в `studio_control_commands` на момент проверки **не встречался** — нужна ручная отправка для финального PASS. Маркеры **`mvp-private-001`** / **`mvp-group-mention-001`** в `studio_messages` **не найдены** (сообщения пользователем ещё не отправлялись после деплоя). **vps-e2e-smoke.sh:** логи worker **PASS** после фикса Celery; остаются **FAIL** только **`/admin/assistant-rules` (500)** — вне MVP-чеклиста slash-команд; **SKIP**: history import, live Telegram-блок скрипта, pytest в образе.
+
+**VPS E2E smoke** — см. абзац выше; ожидаемые **SKIP** без изменений: history import, **12_telegram** (ручной CG), **14_pytest**.
 
 **Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал.
 
@@ -26,7 +28,7 @@
 ## Что уже работает
 
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **MVP стабилизация (коммит `e6e4a13f`):** операторский гайд `docs/15_OPERATOR_GUIDE.md`; Memoh group final-only streaming; Studio beat для `process_control_group_commands`; `/kb_help` без требования `STUDIO_KB_ENABLED`; парсер `@bot`; админ `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
+- **MVP стабилизация:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; коммиты **`e6e4a13f`** (код+доки), **`8d2b41d3`** (ссылки на hash), **`7a4a8a10`** (Celery: `dispose_engine` после `run_control_commands_standalone`, чтобы worker не ловил *different event loop*); Memoh group final-only; beat `process_control_group_commands`; `/kb_help` без `STUDIO_KB_ENABLED`; парсер `@bot`; `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
@@ -96,7 +98,7 @@
 
 ## Следующая задача
 
-- Подтвердить на VPS: один poller Memoh, `/kb_help` и `/kb_help@bot` в control group, приёмка без утечек в логах; при необходимости — **ротация `TELEGRAM_BOT_TOKEN`** и перезапуск только memoh-jar + studio-api/worker/beat.
+- Подтвердить в Telegram после деплоя: **`mvp-private-001 привет`** в личку; **`@jarvispbweb_bot mvp-group-mention-001 ты тут?`** в группе; **`/kb_help`** и **`/kb_help@jarvispbweb_bot`** в control group. При необходимости — **ротация `TELEGRAM_BOT_TOKEN`** (статус **USER_ACTION_REQUIRED**, пока оператор не подтвердил). Отдельно: разобрать **HTTP 500** на **`/admin/assistant-rules`** (список), если нужен чистый smoke без FAIL.
 
 ## Вопросы к GPT
 

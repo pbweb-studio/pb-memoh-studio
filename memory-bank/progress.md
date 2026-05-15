@@ -40,7 +40,9 @@
 | 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
 | 14c Staging deploy jar.pb-web.ru (VPS 148.253.209.54) | Done |
 | VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done |
-| MVP стабилизация (роли, beat control commands, Memoh group final-only, admin команды, доки) | Done (код в репо; VPS — проверить после деплоя) |
+| MVP стабилизация (роли, beat, Memoh group final-only, admin команды, доки) | Done (код); VPS выкат **2026-05-15** HEAD **7a4a8a10** |
+| MVP Telegram-приёмка (mvp-* маркеры, /kb_help@bot) | Pending (пользователь) |
+| Celery worker dispose_engine после control commands | Done (**7a4a8a10**) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; обновлены `AI_CONTEXT`, `04`, `06`, memory-bank; см. запись в `docs/04_PROJECT_LOG.md` (MVP стабилизация).
+**Последнее:** на VPS пройдены health/getMe/control-group/SQL; smoke worker **PASS**; остаются smoke **FAIL** только **`/admin/assistant-rules` 500**; см. `docs/04_PROJECT_LOG.md` (2026-05-15), `docs/AI_CONTEXT.md`.
