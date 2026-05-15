@@ -262,7 +262,7 @@
 
 ## 2026-05-14 — MVP стабилизация (роли, команды, Memoh группы)
 
-- **Коммит:** **`a7c00922`** (`fix(mvp): stabilize Memoh group replies, Studio control commands beat, docs`).
+- **Коммит:** **`e6e4a13f`** (`fix(mvp): stabilize Memoh group replies, Studio control commands beat, docs`).
 - **Документация:** добавлен `docs/15_OPERATOR_GUIDE.md`; обновлены `docs/AI_CONTEXT.md`, `docs/06_DECISIONS.md`, memory-bank.
 - **Memoh:** режим «final only» для group/supergroup по умолчанию (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED`); правки в `internal/channel/adapters/telegram/stream.go`, `telegram.go`, тесты `stream_test.go`; исправление long poll / redaction URL в логах — коммит **`b0e7b510`**.
 - **Studio Admin:** подсказка Memoh vs Studio на dashboard и control group; страница **`/admin/control-commands`** (последние `studio_control_commands`, кнопка process-pending).

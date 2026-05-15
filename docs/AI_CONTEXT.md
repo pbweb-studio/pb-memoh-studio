@@ -26,7 +26,7 @@
 ## Что уже работает
 
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
-- **MVP стабилизация (коммит `a7c00922`):** операторский гайд `docs/15_OPERATOR_GUIDE.md`; Memoh group final-only streaming; Studio beat для `process_control_group_commands`; `/kb_help` без требования `STUDIO_KB_ENABLED`; парсер `@bot`; админ `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
+- **MVP стабилизация (коммит `e6e4a13f`):** операторский гайд `docs/15_OPERATOR_GUIDE.md`; Memoh group final-only streaming; Studio beat для `process_control_group_commands`; `/kb_help` без требования `STUDIO_KB_ENABLED`; парсер `@bot`; админ `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
