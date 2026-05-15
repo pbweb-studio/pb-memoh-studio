@@ -1,24 +1,26 @@
 # Active context
 
-**Сейчас (2026-05-15 ~21:40 MSK):** MVP v1 PR1 в продакшене на VPS `148.253.209.54`. Studio MCP-сервис отдаёт 20 инструментов (11 базовых + 9 новых MVP v1). Skill `pb-studio-manager` **v2.1** в Memoh (`/opt/memoh/data/skills/pb-studio-manager/SKILL.md`) — добавлен раздел «Анти-галлюцинации и анти-склейка ответов» против шаблона «Вижу: …» и пересказа прошлых сообщений. Тесты Studio: 320 passed (Studio-код в этом фиксе не менялся).
+**Сейчас (2026-05-15 ~22:20 MSK):** Стратегический разворот. После двух часов отладки off-by-one/«Вижу:» выяснилось что проблема **не решается** патчами skill или watchdog — бот склеивает ответы и в новой сессии с 10 строками истории, и без skill вообще. Это поведение самого Memoh-runtime (как он собирает промпт или ассоциирует ответы).
 
-**Свежий инцидент 21:30 MSK (исправлен):** в DM пользователь увидел «опять off-by-one» + паразитный хвост «Вижу: личку с тобой, группу Управление Jarvis, группу PBVOICE» почти в каждом ответе. На самом деле:
+**Принятое решение: чистый Memoh + надстройки только нативными средствами.**
 
-- В Memoh-Postgres orphan-ов **нет**, все user/assistant пары парны (timestamps интервал ~2 мс).
-- Корень: грязная DM-сессия `cf704360-dfe6-45e4-8999-e22163a34138` — 114 строк за 2 дня без сброса. Модель один раз сгаллюцинировала имена групп после `get_contacts` (где `chat.title` отсутствовал) и зафиксировала шаблон «Вижу: …» в каждый ответ. Дополнительно склеивала прошлый отчёт в начало новых ответов → пользователь видел «реакция на N-1».
+1. Откатить Memoh до коммита `c1afe432` — убрать `studio_event_mirror.go` (единственная наша правка в core).
+2. Удалить старую память бота (Qdrant коллекции + `bot_history_messages`).
+3. Настраивать бота **только** через: system prompt в UI, skill-файлы в `/data/skills/`, MCP-подключение к Studio в UI, native settings (compaction, memory, ACL, heartbeat).
+4. Studio получает Telegram-апдейты своим отдельным webhook — без хука в Memoh.
+5. Все бизнес-фичи (роли, отчёты, проекты, KB, SLA, правила) — через Studio MCP. Это уже работает.
 
-**Что сделано:**
-1. Soft-delete сессии: `bot_sessions.deleted_at = now()` + DELETE 114 строк `bot_history_messages` (бэкап в `/opt/pb-studio/backups/memoh-dm-reset/`). Следующий DM создаст новую сессию.
-2. `skills/pb-studio-manager/SKILL.md` v2.1: явные правила «один вопрос — один ответ», запрет преамбулы «Вижу: …», запрет выдумывать имена групп без источника.
-3. `deploy/scripts/memoh-orphan-cleanup.sh` + `deploy/systemd/memoh-orphan-cleanup.{service,timer}` — каждые 60 с удаляют orphan user-row старше 120 с (страховка от вторичного риска `getUpdates timeout`).
-4. ADR в `docs/06_DECISIONS.md` секция «Memoh DM history hygiene (orphan watchdog + skill anti-coalescing)».
-5. Memoh-core **не трогали** (правило `040-no-core-damage.mdc`); долгосрочный core-патч (auto-cleanup на стороне Memoh при сбое generation, авто-компакция длинных DM) откладывается в PR2 с отдельным ADR.
+**Что осталось на VPS сейчас (до отката):**
+- Memoh: коммит `c1afe432` в ядре + `studio_event_mirror.go`, skill `pb-studio-manager` v2.1 в `/data/skills/`.
+- Studio: коммит `a579f65a` (`pb-studio/main`), 20 MCP tools, watchdog timer активен.
+- Skill сейчас включён обратно (после A/B-теста).
 
-**Ссылки:** **https://jar.pb-web.ru/admin/** · **https://memo.pb-web.ru**
+**Ссылки:** https://jar.pb-web.ru/admin/ · https://memo.pb-web.ru
 
-**Следующий шаг:**
-1. Пользователь — короткий чеклист в DM (5 сообщений), подтверждающий, что бот отвечает по сути и больше не пишет «Вижу: …». См. финальный отчёт в чате.
-2. После подтверждения — приёмка §11 в `docs/AI_CONTEXT.md` (6 сценариев MVP v1).
-3. PR2: UX U1–U8 + ADR/патч Memoh-core против повторного orphan-а + авто-компакция DM.
-
-**Не сделано (PR2):** UX-фичи U1–U8 (self-intro, auto-suggest, briefing, inline confirms, voice, mute by phrase, onboarding wizard, единая навигация) + патч Memoh-core против orphan + авто-компакция длинных DM сессий.
+**Следующий шаг (новый чат):**
+1. Прочитать `docs/AI_CONTEXT.md` и этот файл.
+2. Откатить Memoh к `c1afe432` (удалить `studio_event_mirror.go`, пересобрать образ, задеплоить).
+3. Удалить старую память: Qdrant коллекции бота + все `bot_history_messages` бота `fa57906b-5383-404a-9775-c5821e36fbfc`.
+4. Настроить бота нативно: system prompt + skill (только поведенческая часть, без «Анти-галлюцинаций») + MCP на Studio.
+5. Studio webhook: добавить прямой Telegram webhook в Studio (или временно работать без зеркала через `studio_get_recent_messages`).
+6. Зафиксировать решение в `docs/06_DECISIONS.md`.
