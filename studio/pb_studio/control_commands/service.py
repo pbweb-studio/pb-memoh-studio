@@ -26,7 +26,7 @@ from pb_studio.control_commands.constants import (
 from pb_studio.control_commands.models import StudioControlCommand
 from pb_studio.control_commands.parser import parse_control_group_command_line, period_bounds_utc
 from pb_studio.core.config import Settings, get_settings
-from pb_studio.core.database import get_session_factory
+from pb_studio.core.database import dispose_engine, get_session_factory
 from pb_studio.event_mirror.models import AuditLog, StudioChat, StudioMessage, TelegramRawUpdate
 from pb_studio.assistant_rules import service as assistant_rules_service
 from pb_studio.assistant_rules.constants import AssistantRuleScope, AssistantRuleSource, RULE_HELP_TEXT
@@ -1493,12 +1493,16 @@ async def run_control_commands_cycle(
 
 
 async def run_control_commands_standalone(settings: Settings | None = None) -> dict[str, Any]:
+    """Celery вызывает это через asyncio.run() на новом loop; сбрасываем async engine после цикла."""
     settings = settings or get_settings()
-    factory = get_session_factory(settings)
-    async with factory() as session:
-        out = await run_control_commands_cycle(session, settings)
-        await session.commit()
-    return out
+    try:
+        factory = get_session_factory(settings)
+        async with factory() as session:
+            out = await run_control_commands_cycle(session, settings)
+            await session.commit()
+        return out
+    finally:
+        await dispose_engine()
 
 
 async def list_control_commands(
