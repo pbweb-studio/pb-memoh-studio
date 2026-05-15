@@ -19,6 +19,7 @@ from pb_studio.nl.constants import LearningType, NlInteractionStatus
 from pb_studio.nl.executor import format_nl_reply
 from pb_studio.nl.models import StudioNlInteraction
 from pb_studio.nl.processor import _process_one_nl, _try_handle_confirmation_reply
+from pb_studio.nl.turn_input import nl_turn_router_input
 from pb_studio.nl.router_deterministic import route_deterministic
 from pb_studio.nl.schemas import IntentEnum, NLRouterDecision, RouterModeEnum
 from pb_studio.nl.triggers import normalize_nl_router_input
@@ -176,10 +177,12 @@ async def test_try_handle_confirmation_skips_independent_question(nl_ux_session)
     session.add(row)
     await session.commit()
 
-    handled = await _try_handle_confirmation_reply(session, settings, row, send_message=None)
+    ti = nl_turn_router_input(row.input_text, settings)
+    handled = await _try_handle_confirmation_reply(session, settings, row, turn_input=ti, send_message=None)
     assert handled is False
     await session.refresh(pending)
-    assert pending.status == NlInteractionStatus.PENDING_CONFIRMATION
+    assert pending.status == NlInteractionStatus.IGNORED
+    assert pending.last_error == "superseded_by_new_turn"
 
 
 @pytest.mark.asyncio

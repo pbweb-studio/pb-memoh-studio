@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from pb_studio.core.config import Settings
 from pb_studio.nl.router_deterministic import route_deterministic
 from pb_studio.nl.schemas import NLRouterDecision
-from pb_studio.nl.triggers import normalize_nl_router_input
+from pb_studio.nl.turn_input import nl_turn_router_input
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ Current user message is in Russian or English."""
 
 
 async def route_nl(settings: Settings, text: str) -> NLRouterDecision:
-    normalized = normalize_nl_router_input(text, settings)
+    normalized = nl_turn_router_input(text, settings)
     prov = (settings.studio_nl_router_provider or "").strip().lower()
     if prov != "openai_compatible":
         return route_deterministic(normalized)

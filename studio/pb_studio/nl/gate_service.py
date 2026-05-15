@@ -12,6 +12,7 @@ from pb_studio.core.config import Settings
 from pb_studio.nl.constants import NlInteractionStatus, NlTriggerType
 from pb_studio.nl.models import StudioNlInteraction
 from pb_studio.nl.triggers import is_studio_slash_command_line
+from pb_studio.nl.turn_input import nl_turn_router_input
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,9 @@ async def memoh_nl_gate(
     if int(cg.telegram_chat_id) != int(telegram_chat_id):
         return {"suppress_memoh_assistant": False, "reason": "not_active_control_group"}
 
-    line = (raw_text or text or "").strip()
+    original = (raw_text or text or "").strip()
+    ingest_preview = original[:2000] if original else ""
+    line = nl_turn_router_input(original, settings)
     if not line:
         return {"suppress_memoh_assistant": False, "reason": "empty_text"}
 
@@ -67,7 +70,11 @@ async def memoh_nl_gate(
         trigger_type=NlTriggerType.MENTION if is_mentioned else NlTriggerType.REPLY,
         mode="router_pending",
         status=NlInteractionStatus.PENDING,
-        parameters_json={},
+        parameters_json=(
+            {"ingest_text_preview": ingest_preview[:800]}
+            if ingest_preview.strip() != line.strip()
+            else {}
+        ),
         decision_json={},
     )
     try:

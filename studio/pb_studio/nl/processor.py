@@ -20,12 +20,14 @@ from pb_studio.nl.models import StudioMemoryItem, StudioNlInteraction, StudioPla
 from pb_studio.nl.router import route_nl
 from pb_studio.nl.scan import scan_mirror_for_nl_aliases
 from pb_studio.nl.schemas import IntentEnum, NLRouterDecision, RouterModeEnum
+from pb_studio.nl.turn_input import nl_turn_router_input
 
 logger = logging.getLogger(__name__)
 
 CONFIRM_TTL = timedelta(minutes=30)
 _YES = frozenset({"да", "yes", "ага", "ок", "y"})
 _NO = frozenset({"нет", "no", "n"})
+_CONFIRM_MAX_LEN = 120
 
 
 def _looks_like_independent_nl_question(text: str) -> bool:
@@ -58,6 +60,22 @@ def _looks_like_independent_nl_question(text: str) -> bool:
         "какой llm",
     )
     return any(n in low for n in needles)
+
+
+def _is_likely_learning_confirmation(turn_input: str) -> bool:
+    """Короткий ответ на уточнение learning (да/нет/для проекта / для этого чата)."""
+    s = (turn_input or "").strip().lower()
+    if not s or len(s) > _CONFIRM_MAX_LEN:
+        return False
+    if s in _YES or s in _NO:
+        return True
+    if re.match(r"^да\s*[,!.]?\s*$", s):
+        return True
+    if re.match(r"^для\s+проекта\s+\S+", s):
+        return True
+    if "для этого чата" in s:
+        return True
+    return False
 
 
 def utcnow() -> datetime:
@@ -94,6 +112,7 @@ async def _try_handle_confirmation_reply(
     settings: Settings,
     row: StudioNlInteraction,
     *,
+    turn_input: str,
     send_message: Any = None,
 ) -> bool:
     """If row is short yes/no/project line for pending learning, apply and return True."""
@@ -102,10 +121,16 @@ async def _try_handle_confirmation_reply(
     )
     if pending is None:
         return False
-    if _looks_like_independent_nl_question(row.input_text):
+    if _looks_like_independent_nl_question(turn_input):
+        pending.status = NlInteractionStatus.IGNORED
+        pending.processed_at = utcnow()
+        pending.last_error = "superseded_by_new_turn"
+        await session.flush()
         return False
-    raw = (row.input_text or "").strip().lower()
-    if len(raw) > 120:
+    if not _is_likely_learning_confirmation(turn_input):
+        return False
+    raw = (turn_input or "").strip().lower()
+    if len(raw) > _CONFIRM_MAX_LEN:
         return False
 
     async def reply(txt: str) -> int | None:
@@ -287,7 +312,27 @@ async def _process_one_nl(
         row.processed_at = now
         return
 
-    if await _try_handle_confirmation_reply(session, settings, row, send_message=send_message):
+    turn_input = nl_turn_router_input(row.input_text, settings)
+    logger.info(
+        "nl_turn_start",
+        extra={
+            "nl_interaction_id": str(row.id),
+            "source_message_id": row.source_message_id,
+            "sender_telegram_user_id": row.sender_telegram_user_id,
+            "turn_input_len": len(turn_input),
+            "turn_input_preview": (turn_input[:200] if turn_input else ""),
+        },
+    )
+
+    if await _try_handle_confirmation_reply(session, settings, row, turn_input=turn_input, send_message=send_message):
+        logger.info(
+            "nl_turn_done",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "source_message_id": row.source_message_id,
+                "outcome": "learning_confirmation",
+            },
+        )
         return
 
     allowed = settings.studio_control_commands_allowed_user_ids_set
@@ -302,12 +347,20 @@ async def _process_one_nl(
         return
 
     try:
-        decision = await route_nl(settings, row.input_text)
+        decision = await route_nl(settings, turn_input)
     except Exception as exc:  # noqa: BLE001
         tok = (settings.telegram_bot_token or "").strip()
         row.status = NlInteractionStatus.FAILED
         row.last_error = redact_secrets(str(exc)[:500], tok or None)
         row.processed_at = now
+        logger.info(
+            "nl_turn_done",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "source_message_id": row.source_message_id,
+                "outcome": "router_failed",
+            },
+        )
         return
 
     row.intent = decision.intent.value if decision.intent else None
@@ -337,6 +390,16 @@ async def _process_one_nl(
         row.response_telegram_message_id = mid
         row.reply_text = msg
         row.processed_at = now
+        logger.info(
+            "nl_turn_done",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "source_message_id": row.source_message_id,
+                "intent": row.intent,
+                "mode": row.mode,
+                "outcome": "pending_learning",
+            },
+        )
         return
 
     if decision.mode == RouterModeEnum.business_action and decision.confidence < ex:
@@ -346,15 +409,33 @@ async def _process_one_nl(
         row.reply_text = txt
         row.status = NlInteractionStatus.PROCESSED
         row.processed_at = now
+        logger.info(
+            "nl_turn_done",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "source_message_id": row.source_message_id,
+                "intent": row.intent,
+                "mode": row.mode,
+                "outcome": "low_confidence_clarify",
+            },
+        )
         return
 
     try:
-        out = await format_nl_reply(session, settings, decision, raw_input=row.input_text)
+        out = await format_nl_reply(session, settings, decision, raw_input=turn_input)
     except Exception as exc:  # noqa: BLE001
         tok = (settings.telegram_bot_token or "").strip()
         row.status = NlInteractionStatus.FAILED
         row.last_error = redact_secrets(str(exc)[:500], tok or None)
         row.processed_at = now
+        logger.info(
+            "nl_turn_done",
+            extra={
+                "nl_interaction_id": str(row.id),
+                "source_message_id": row.source_message_id,
+                "outcome": "format_failed",
+            },
+        )
         return
 
     ok, _hs, mid = await _send_text_to_control_group(session, settings, out, send_message=send_message)
@@ -362,6 +443,16 @@ async def _process_one_nl(
     row.reply_text = out
     row.status = NlInteractionStatus.PROCESSED
     row.processed_at = now
+    logger.info(
+        "nl_turn_done",
+        extra={
+            "nl_interaction_id": str(row.id),
+            "source_message_id": row.source_message_id,
+            "intent": row.intent,
+            "mode": row.mode,
+            "outcome": "processed",
+        },
+    )
 
 
 async def run_nl_interactions_standalone(

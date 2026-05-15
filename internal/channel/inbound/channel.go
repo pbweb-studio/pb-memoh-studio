@@ -558,10 +558,8 @@ func (p *ChannelInboundProcessor) HandleInbound(ctx context.Context, cfg channel
 			cid, err1 := strconv.ParseInt(strings.TrimSpace(msg.Conversation.ID), 10, 64)
 			mid, err2 := strconv.Atoi(strings.TrimSpace(msg.Message.ID))
 			if err1 == nil && err2 == nil {
-				raw := strings.TrimSpace(msg.Message.PlainText())
-				if rt, ok := msg.Metadata["raw_text"].(string); ok && strings.TrimSpace(rt) != "" {
-					raw = strings.TrimSpace(rt)
-				}
+				plain := strings.TrimSpace(msg.Message.PlainText())
+				eff := strings.TrimSpace(rawTextForCommand(msg, plain))
 				var uid *int64
 				if s := strings.TrimSpace(msg.Sender.Attribute("user_id")); s != "" {
 					if v, err := strconv.ParseInt(s, 10, 64); err == nil {
@@ -585,8 +583,8 @@ func (p *ChannelInboundProcessor) HandleInbound(ctx context.Context, cfg channel
 					TelegramChatID: cid,
 					MessageID:      mid,
 					UpdateID:       upd,
-					Text:           strings.TrimSpace(msg.Message.PlainText()),
-					RawText:        raw,
+					Text:           eff,
+					RawText:        eff,
 					FromID:         uid,
 					IsMentioned:    metadataBool(msg.Metadata, "is_mentioned"),
 					IsReplyToBot:   metadataBool(msg.Metadata, "is_reply_to_bot"),

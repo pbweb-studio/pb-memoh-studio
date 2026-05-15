@@ -14,6 +14,7 @@ from pb_studio.event_mirror.models import StudioMessage
 from pb_studio.nl.constants import NlInteractionStatus, NlTriggerType
 from pb_studio.nl.models import StudioNlInteraction
 from pb_studio.nl.triggers import is_studio_slash_command_line, strip_alias_prefix
+from pb_studio.nl.turn_input import nl_turn_router_input
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,10 @@ async def scan_mirror_for_nl_aliases(
         if not had_alias:
             counts["skipped"] += 1
             continue
+        if not stripped:
+            counts["skipped"] += 1
+            continue
+        stripped = nl_turn_router_input(stripped, settings)
         if not stripped:
             counts["skipped"] += 1
             continue
