@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Control group — Studio Admin{% endblock %}
+{% block content %}
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-3">Управляющая группа (Telegram)</h1>
+
+{% if current_view %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">Текущая активная запись</div>
+  <div class="card-body">
+    <table class="table table-sm mb-0">
+      <tbody>
+        <tr><th class="w-25">cg_id</th><td><code>{{ current_view.control_group.id }}</code></td></tr>
+        <tr><th>studio_chat_uuid</th><td><code>{{ current_view.chat.id }}</code></td></tr>
+        <tr><th>telegram_chat_id</th><td>{{ current_view.chat.telegram_chat_id }}</td></tr>
+        <tr><th>title</th><td>{{ current_view.chat.title or '—' }}</td></tr>
+        <tr><th>chat_type</th><td>{{ current_view.chat.chat_type }}</td></tr>
+        <tr><th>chat_role</th><td>{{ current_view.chat.chat_role }}</td></tr>
+        <tr><th>is_active</th><td>{{ current_view.control_group.is_active }}</td></tr>
+        <tr><th>created_at</th><td class="small">{{ current_view.control_group.created_at|admin_dt }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning">Активная управляющая группа не назначена.</div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-header">{% if current_view %}Сменить управляющую группу{% else %}Назначить управляющую группу{% endif %}</div>
+  <div class="card-body">
+    {% if not group_chats %}
+    <p class="text-muted small mb-0">Нет зеркалированных групп/supergroup в studio_chats. Сначала должно прийти сообщение из нужного чата.</p>
+    {% else %}
+    <form method="post" action="/admin/control-group/set" class="row g-3 align-items-end">
+      <div class="col-12 col-md-8">
+        <label class="form-label small text-muted">Чат (только group / supergroup)</label>
+        <select name="telegram_chat_id" class="form-select form-select-sm" required>
+          {% for c in group_chats %}
+          <option value="{{ c.telegram_chat_id }}"
+            {% if current_view and c.id == current_view.chat.id %}selected{% endif %}>
+            {{ c.title or '—' }} · tg={{ c.telegram_chat_id }} · {{ c.chat_type }} · {{ c.chat_role }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-md-4">
+        <input type="hidden" name="redirect_to" value="/admin/control-group" />
+        <button type="submit" class="btn btn-primary btn-sm w-100">Сохранить</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

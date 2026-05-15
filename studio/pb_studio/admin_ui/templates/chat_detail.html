@@ -6,9 +6,14 @@
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="card shadow-sm">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-1">
         <span>Поля</span>
-        <span class="badge bg-secondary">{{ chat.chat_role }}</span>
+        <span>
+          <span class="badge bg-secondary">{{ chat.chat_role }}</span>
+          {% if is_active_control_group %}
+          <span class="badge bg-success ms-1">Активная управляющая группа</span>
+          {% endif %}
+        </span>
       </div>
       <div class="card-body">
         <table class="table table-sm mb-0">
@@ -26,6 +31,23 @@
     </div>
   </div>
   <div class="col-lg-5">
+    <div class="card shadow-sm mb-3">
+      <div class="card-header">Управляющая группа</div>
+      <div class="card-body">
+        {% if is_active_control_group %}
+        <p class="small text-success mb-0">Это активная управляющая группа Studio.</p>
+        {% elif show_assign_control_group %}
+        <p class="small text-muted mb-2">Назначить этот чат (group/supergroup) активной управляющей группой для команд /kb*, /summary*, …</p>
+        <form method="post" action="/admin/control-group/set" class="d-inline">
+          <input type="hidden" name="telegram_chat_id" value="{{ chat.telegram_chat_id }}" />
+          <input type="hidden" name="redirect_to" value="/admin/chats/{{ chat.id }}" />
+          <button type="submit" class="btn btn-warning btn-sm">Назначить управляющей группой</button>
+        </form>
+        {% else %}
+        <p class="small text-muted mb-0">Назначение через эту кнопку доступно только для group/supergroup.</p>
+        {% endif %}
+      </div>
+    </div>
     <div class="card shadow-sm mb-3">
       <div class="card-header">Сменить роль</div>
       <div class="card-body">

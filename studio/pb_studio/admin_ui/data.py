@@ -106,6 +106,23 @@ async def fetch_control_group_view(session: AsyncSession) -> dict[str, Any] | No
     return {"control_group": cg, "chat": chat}
 
 
+async def active_control_group_studio_chat_id(session: AsyncSession) -> UUID | None:
+    v = await fetch_control_group_view(session)
+    return v["chat"].id if v else None
+
+
+async def list_group_supergroup_chats_for_control_group(session: AsyncSession, *, limit: int = 500) -> list[StudioChat]:
+    """Telegram group/supergroup only (excludes private), for control group assignment UI."""
+    lim = min(max(limit, 1), 1000)
+    stmt = (
+        select(StudioChat)
+        .where(or_(func.lower(StudioChat.chat_type) == "group", func.lower(StudioChat.chat_type) == "supergroup"))
+        .order_by(StudioChat.title.asc().nullslast(), StudioChat.telegram_chat_id.asc())
+        .limit(lim)
+    )
+    return list((await session.scalars(stmt)).all())
+
+
 async def list_summaries(session: AsyncSession, *, limit: int = 50) -> list[StudioChatSummary]:
     lim = min(max(limit, 1), 200)
     q = select(StudioChatSummary).order_by(StudioChatSummary.created_at.desc()).limit(lim)

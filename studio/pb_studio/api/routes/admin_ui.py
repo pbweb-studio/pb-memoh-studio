@@ -33,7 +33,7 @@ from pb_studio.assistant_rules import service as rules_service
 from pb_studio.assistant_rules.constants import AssistantRuleScope, AssistantRuleStatus
 from pb_studio.assistant_rules.schemas import AssistantRuleCreate
 from pb_studio.control_group.constants import ChatRole
-from pb_studio.control_group.service import set_chat_role
+from pb_studio.control_group.service import set_chat_role, set_control_group_by_telegram_id
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.knowledge import service as kb_service
 from pb_studio.knowledge.constants import KnowledgeDocumentSourceType, KnowledgeDocumentStatus
@@ -92,6 +92,24 @@ def _parse_uuid_optional(raw: str | None) -> UUID | None:
         return UUID(str(raw).strip())
     except ValueError:
         return None
+
+
+def _safe_admin_post_redirect(raw: str | None) -> str:
+    """Allow only /admin/control-group or /admin/chats/{uuid} (no open redirects)."""
+    if raw is None:
+        return "/admin/control-group"
+    t = str(raw).strip()
+    if not t or t == "/admin/control-group":
+        return "/admin/control-group"
+    prefix = "/admin/chats/"
+    if t.startswith(prefix):
+        tail = t.removeprefix(prefix).strip().split("/", 1)[0]
+        try:
+            UUID(tail)
+            return f"{prefix}{tail}"
+        except ValueError:
+            return "/admin/control-group"
+    return "/admin/control-group"
 
 
 def _table(
@@ -306,6 +324,10 @@ async def admin_chat_detail(request: Request, session: DbSession, chat_id: UUID)
         )
     links = await admin_data.list_project_links_for_chat(session, chat_id)
     role_choices = [m.value for m in ChatRole if m != ChatRole.CONTROL_GROUP]
+    active_cg_scid = await admin_data.active_control_group_studio_chat_id(session)
+    is_active_control_group = active_cg_scid is not None and active_cg_scid == chat.id
+    ct = (chat.chat_type or "").strip().lower()
+    show_assign_control_group = ct in ("group", "supergroup") and not is_active_control_group
     return templates.TemplateResponse(
         request,
         "chat_detail.html",
@@ -314,6 +336,8 @@ async def admin_chat_detail(request: Request, session: DbSession, chat_id: UUID)
             "chat": chat,
             "project_links": links,
             "role_choices": role_choices,
+            "is_active_control_group": is_active_control_group,
+            "show_assign_control_group": show_assign_control_group,
             "breadcrumbs": _bc(
                 ("Обзор", "/admin/"),
                 ("Чаты", "/admin/chats"),
@@ -335,37 +359,35 @@ async def admin_chat_role_post(session: DbSession, chat_id: UUID, role: str = Fo
 @router.get("/control-group", response_class=HTMLResponse, dependencies=_admin_dep)
 async def admin_control_group(request: Request, session: DbSession) -> HTMLResponse:
     view = await admin_data.fetch_control_group_view(session)
-    if not view:
-        return _table(
-            request,
-            nav="cg",
-            title="Control group",
-            subtitle="Активная запись не найдена",
-            columns=["—"],
-            rows=[],
-            breadcrumbs=_bc(("Обзор", "/admin/"), ("Control group", None)),
-        )
-    cg = view["control_group"]
-    ch = view["chat"]
-    rows = [
-        [
-            str(cg.id),
-            str(ch.telegram_chat_id),
-            ch.title or "",
-            str(cg.is_active),
-            format_admin_dt(cg.created_at),
-        ]
-    ]
-    return _table(
+    group_chats = await admin_data.list_group_supergroup_chats_for_control_group(session)
+    return templates.TemplateResponse(
         request,
-        nav="cg",
-        title="Control group",
-        subtitle="Активная studio_control_groups + чат",
-        columns=["cg_id", "telegram_chat_id", "title", "is_active", "created_at"],
-        rows=rows,
-        breadcrumbs=_bc(("Обзор", "/admin/"), ("Control group", None)),
-        badge_column_indices=[3],
+        "control_group_page.html",
+        {
+            "nav_active": "cg",
+            "current_view": view,
+            "group_chats": group_chats,
+            "breadcrumbs": _bc(("Обзор", "/admin/"), ("Control group", None)),
+        },
     )
+
+
+@router.post("/control-group/set", dependencies=_admin_dep)
+async def admin_control_group_set_post(
+    session: DbSession,
+    telegram_chat_id: str = Form(...),
+    redirect_to: str = Form(default="/admin/control-group"),
+) -> RedirectResponse:
+    dest = _safe_admin_post_redirect(redirect_to)
+    try:
+        tid = int(str(telegram_chat_id).strip())
+    except ValueError:
+        return redirect_with_flash(dest, error="Некорректный telegram_chat_id.")
+    try:
+        await set_control_group_by_telegram_id(session, tid)
+    except ValueError as exc:
+        return redirect_with_flash(dest, error=str(exc))
+    return redirect_with_flash(dest, success="Управляющая группа обновлена.")
 
 
 @router.get("/summaries", response_class=HTMLResponse, dependencies=_admin_dep)

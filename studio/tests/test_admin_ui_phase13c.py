@@ -18,9 +18,12 @@ import pb_studio.project_digests.models  # noqa: F401
 import pb_studio.projects.models  # noqa: F401
 import pb_studio.sla.models  # noqa: F401
 import pb_studio.summaries.models  # noqa: F401
+from uuid import uuid4
+
 from pb_studio.api.deps import get_db
 from pb_studio.api.main import app
 from pb_studio.control_group.constants import ChatRole
+from pb_studio.control_group.models import StudioControlGroup
 from pb_studio.core.config import get_settings
 from pb_studio.event_mirror.models import StudioChat
 from pb_studio.response_queue.service import create_tables
@@ -200,4 +203,149 @@ async def test_token_not_in_query_pagination_links(c13_client, monkeypatch):
     assert r.status_code == 200
     assert ADMIN_UI_TOKEN not in r.text
     assert "page=2" in r.text
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_control_group_page_empty_state_and_form(c13_client, monkeypatch):
+    monkeypatch.setenv("STUDIO_ADMIN_TOKEN", ADMIN_UI_TOKEN)
+    get_settings.cache_clear()
+    client, session = c13_client
+    session.add(
+        StudioChat(
+            telegram_chat_id=-91001,
+            chat_type="supergroup",
+            title="cg-ui-empty-test",
+            chat_role=ChatRole.UNKNOWN.value,
+        )
+    )
+    await session.commit()
+    r = await client.get("/admin/control-group", headers=_h())
+    assert r.status_code == 200
+    assert "Активная управляющая группа не назначена" in r.text
+    assert 'name="telegram_chat_id"' in r.text
+    assert "cg-ui-empty-test" in r.text
+    assert ADMIN_UI_TOKEN not in r.text
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_admin_control_group_set_creates_and_switches(c13_client, monkeypatch):
+    monkeypatch.setenv("STUDIO_ADMIN_TOKEN", ADMIN_UI_TOKEN)
+    get_settings.cache_clear()
+    client, session = c13_client
+    cid_a = uuid4()
+    cid_b = uuid4()
+    session.add_all(
+        [
+            StudioChat(
+                id=cid_a,
+                telegram_chat_id=-92001,
+                chat_type="supergroup",
+                title="first-cg",
+                chat_role=ChatRole.UNKNOWN.value,
+            ),
+            StudioChat(
+                id=cid_b,
+                telegram_chat_id=-92002,
+                chat_type="supergroup",
+                title="second-cg",
+                chat_role=ChatRole.UNKNOWN.value,
+            ),
+        ]
+    )
+    await session.commit()
+    r1 = await client.post(
+        "/admin/control-group/set",
+        data={"telegram_chat_id": "-92001", "redirect_to": "/admin/control-group"},
+        headers=_h(),
+        follow_redirects=False,
+    )
+    assert r1.status_code == 303
+    active = await session.scalar(select(StudioControlGroup).where(StudioControlGroup.is_active.is_(True)))
+    assert active is not None
+    ch_a = await session.get(StudioChat, cid_a)
+    assert ch_a is not None
+    assert ch_a.chat_role == ChatRole.CONTROL_GROUP.value
+
+    r2 = await client.post(
+        "/admin/control-group/set",
+        data={"telegram_chat_id": "-92002", "redirect_to": "/admin/control-group"},
+        headers=_h(),
+        follow_redirects=False,
+    )
+    assert r2.status_code == 303
+    active2 = await session.scalar(select(StudioControlGroup).where(StudioControlGroup.is_active.is_(True)))
+    assert active2 is not None
+    assert active2.chat_id == cid_b
+    ch_a2 = await session.get(StudioChat, cid_a)
+    assert ch_a2 is not None
+    assert ch_a2.chat_role == ChatRole.UNKNOWN.value
+    ch_b2 = await session.get(StudioChat, cid_b)
+    assert ch_b2 is not None
+    assert ch_b2.chat_role == ChatRole.CONTROL_GROUP.value
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_chat_detail_assign_control_group_button_visibility(c13_client, monkeypatch):
+    monkeypatch.setenv("STUDIO_ADMIN_TOKEN", ADMIN_UI_TOKEN)
+    get_settings.cache_clear()
+    client, session = c13_client
+    gid = uuid4()
+    pid = uuid4()
+    session.add_all(
+        [
+            StudioChat(
+                id=gid,
+                telegram_chat_id=-93001,
+                chat_type="supergroup",
+                title="grp-btn",
+                chat_role=ChatRole.UNKNOWN.value,
+            ),
+            StudioChat(
+                id=pid,
+                telegram_chat_id=93002,
+                chat_type="private",
+                title="priv-btn",
+                chat_role=ChatRole.UNKNOWN.value,
+            ),
+        ]
+    )
+    await session.commit()
+    rg = await client.get(f"/admin/chats/{gid}", headers=_h())
+    assert rg.status_code == 200
+    assert "Назначить управляющей группой" in rg.text
+    rp = await client.get(f"/admin/chats/{pid}", headers=_h())
+    assert rp.status_code == 200
+    assert "Назначить управляющей группой" not in rp.text
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_chat_detail_active_control_group_badge(c13_client, monkeypatch):
+    monkeypatch.setenv("STUDIO_ADMIN_TOKEN", ADMIN_UI_TOKEN)
+    get_settings.cache_clear()
+    client, session = c13_client
+    cid = uuid4()
+    session.add(
+        StudioChat(
+            id=cid,
+            telegram_chat_id=-94001,
+            chat_type="supergroup",
+            title="active-badge",
+            chat_role=ChatRole.UNKNOWN.value,
+        )
+    )
+    await session.commit()
+    await client.post(
+        "/admin/control-group/set",
+        data={"telegram_chat_id": "-94001", "redirect_to": "/admin/control-group"},
+        headers=_h(),
+        follow_redirects=False,
+    )
+    r = await client.get(f"/admin/chats/{cid}", headers=_h())
+    assert r.status_code == 200
+    assert "Активная управляющая группа" in r.text
+    assert "Назначить управляющей группой" not in r.text
     get_settings.cache_clear()
