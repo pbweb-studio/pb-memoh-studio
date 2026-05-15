@@ -268,7 +268,7 @@
 - **Studio Admin:** подсказка Memoh vs Studio на dashboard и control group; страница **`/admin/control-commands`** (последние `studio_control_commands`, кнопка process-pending).
 - **Studio:** парсер slash-команд с `@botusername`; `/kb_help` и unknown-подсказка не блокируются выключенным `STUDIO_KB_ENABLED`; Celery **beat_schedule** на `process_control_group_commands`; настройка **`STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`** (дефолт 5).
 - **Тесты:** расширены `test_control_commands_phase7a.py`, `test_knowledge_phase10a.py`.
-- **Security:** если полный **TELEGRAM_BOT_TOKEN** попадал в логи (в т.ч. через URL Bot API) — статус ротации фиксируется в `docs/AI_CONTEXT.md`; до подтверждения ротации пользователем финальный security-статус не считается закрытым.
+- **Security:** если полный **TELEGRAM_BOT_TOKEN** попадал в логи (в т.ч. через URL Bot API) — рекомендуется ротация; статус фиксируется в `docs/AI_CONTEXT.md`. **2026-05-14:** оператор зафиксировал **отказ от ротации** текущего токена (согласованный остаточный риск).
 
 ## 2026-05-15 — VPS: выборочный деплой MVP + фикс Celery worker
 
@@ -277,6 +277,6 @@
 - **Проверки:** Studio **`/health`**; Memoh web **`:8082/health`**; Telegram **getMe** / **getWebhookInfo** (без печати токена) — **jarvispbweb_bot**, webhook пустой, **pending_update_count=0**; **`GET /control-group`** — active, **Управление Jarvis**, **-1003903704506**; в БД **485395885** → `chat_role=unknown` (не control group).
 - **Celery:** после выката **`e6e4a13f`** worker ловил **`RuntimeError: ... different loop`** на `process_control_group_commands`; исправление **`7a4a8a10`** — **`dispose_engine()`** в `finally` у **`run_control_commands_standalone`**; **vps-e2e-smoke** — логи worker снова **PASS**.
 - **Smoke:** остаются **FAIL** только на **`/admin/assistant-rules`** (HTTP 500 списка) — вне MVP slash-команд; **SKIP** — history import, блок **12** live Telegram, pytest в образе.
-- **Ручная приёмка Telegram:** маркеры **`mvp-private-001`** / **`mvp-group-mention-001`** в `studio_messages` **не найдены** (не отправлялись); **`/kb_help@...`** в `studio_control_commands` — **0 строк** на момент SQL (нужна отправка пользователем).
-- **Security `TELEGRAM_BOT_TOKEN`:** подтверждение ротации после прошлой утечки в URL — **`USER_ACTION_REQUIRED`** до явного подтверждения оператором.
+- **Ручная приёмка Telegram:** на момент SQL **2026-05-15** маркеры **`mvp-private-001`** / **`mvp-group-mention-001`** в `studio_messages` **не найдены**; **`/kb_help@...`** в `studio_control_commands` — **0 строк**. **2026-05-14:** оператор подтвердил в Telegram личку **`mvp-private-001`**, **`/kb_help`** и **`/kb_help@jarvispbweb_bot`** в control group (скрины).
+- **Security `TELEGRAM_BOT_TOKEN`:** **2026-05-14** — оператор **без ротации** (согласовано, остаточный риск принят); см. `docs/AI_CONTEXT.md`.
 
