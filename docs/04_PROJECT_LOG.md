@@ -1,5 +1,31 @@
 # Журнал проекта
 
+## 2026-05-15 ~21:30–21:45 MSK — DM hygiene fix (skill v2.1 + orphan watchdog)
+
+- **Сигнал пользователя:** в DM «бот опять отвечает на N-1» + в каждом ответе хвост «Вижу: личку с тобой, группу Управление Jarvis, группу PBVOICE». Точечный DELETE одной строки в 21:25 MSK ситуацию не снял.
+- **Диагностика на VPS `148.253.209.54`** (контейнеры `memoh-jar-server-1`, `memoh-jar-postgres-1`, `pb-studio-prod-mcp`):
+  - Контейнеры здоровы (Studio 6 шт. healthy, Memoh server healthy).
+  - SKILL.md на VPS совпадает байт-в-байт с репо — паразитного «Вижу:» там **нет**.
+  - В `bot_history_messages` за последние 6 часов: 44 user, 19 assistant, 3 tool — ассимметрия объясняется групповыми чатами (бот не отвечает без mention). В **активной DM-сессии** `cf704360-dfe6-45e4-8999-e22163a34138` все 8 последних user/assistant пар **парны**, intervals ~2 мс. Orphan-ов **нет**.
+  - Корень: история сессии `cf704360-…` живёт 2 дня и накопила **114 строк**. После одного `get_contacts` (где `chat.title` отсутствовал) модель **сгаллюцинировала** имена «Управление Jarvis», «PBVOICE» и зафиксировала шаблон «Вижу: …» в каждый следующий ответ. Дополнительно склеивала прошлый отчёт в начало нового ответа («Кратко за сегодня: … Тебя зовут Денис Губанов»). Visual «off-by-one» — это два этих эффекта вместе.
+  - Лог Memoh: хроническое `getUpdates context deadline exceeded` идёт постоянно (каждые ~30 с, это нормальный long-poll таймаут), но к orphan-у в этой сессии не приводил.
+- **Фикс данных:** soft-delete `bot_sessions.deleted_at = now()` для `cf704360-…` + DELETE 114 строк `bot_history_messages` (бэкап в `/opt/pb-studio/backups/memoh-dm-reset/`: SQL дамп таблиц + CSV истории + CSV сессии).
+- **Skill v2.1:** `skills/pb-studio-manager/SKILL.md` дополнен разделом «Анти-галлюцинации и анти-склейка ответов». Запрещает преамбулу «Вижу: …» вне ответов на вопрос про список чатов; запрещает выдумывать имена групп без `get_contacts` / `studio_list_chats` / `studio_get_chat_context`; требует «один вопрос — один ответ» и не пересказывать прошлые сообщения без явного запроса. Залит в Memoh-том (`docker cp` → `/opt/memoh/data/skills/pb-studio-manager/SKILL.md`) + `docker restart memoh-jar-server-1`.
+- **Watchdog против orphan-ов:** `deploy/scripts/memoh-orphan-cleanup.sh` + `deploy/systemd/memoh-orphan-cleanup.{service,timer}`. Каждые 60 с удаляют user-row старше 120 с, у которых в той же сессии нет assistant/tool ответа. Установлен на VPS симлинком в `/etc/systemd/system/`, `systemctl enable --now` сделан.
+- **Memoh-core не правился** (правило `040-no-core-damage.mdc`). Долгосрочный core-патч (auto-cleanup при сбое generation, авто-компакция длинных DM) — отдельный ADR + PR2.
+- **ADR:** `docs/06_DECISIONS.md` секция «Memoh DM history hygiene (orphan watchdog + skill anti-coalescing)».
+- **Чеклист пользователю:** см. финальное сообщение в чате; короткие 5 проверочных сообщений в DM.
+- **Что дальше:** ожидаем подтверждение от пользователя; затем §11 (6 сценариев MVP v1) и переход к PR2.
+
+## 2026-05-15 — MVP v1 деплой на VPS + orphan fix off-by-one
+
+- **Деплой на VPS `148.253.209.54`:** commit `216368a..db9c1b6` через `git fetch + reset --hard origin/pb-studio/main` в `/opt/pb-studio/pb-memoh-studio/`. `docker compose build studio-api studio-worker studio-beat studio-mcp` — 49 сек. `up -d --remove-orphans` — все 6 Studio-контейнеров запустились, studio-api healthy. Health-чек: `127.0.0.1:8000/health`, `https://jar.pb-web.ru/health`, `https://memo.pb-web.ru/health` — все **200**.
+- **MCP проверка:** прямой запрос `tools/list` через `studio-mcp:8765` изнутри docker-network с Bearer `STUDIO_MCP_AUTH_TOKEN` → **20 инструментов** (11 базовых + 9 новых MVP v1). Сессия инициализируется штатно через streamable HTTP.
+- **Skill в Memoh:** `pb-studio-manager/SKILL.md` (8367 байт) положен в Memoh data-том через `docker cp`, путь `/opt/memoh/data/skills/pb-studio-manager/SKILL.md`. `docker restart memoh-jar-server-1` — контейнер healthy за 23 сек.
+- **Live smoke в Telegram DM — off-by-one:** на сообщение «как дела?» бот отвечал содержанием «Да, я тут. Чем помочь?» (т.е. на «ты тут?»), формально reply ставил на свежее сообщение. Диагностика по `bot_history_messages`: orphan user-turn `id=cce790a0-384f-4dbd-9909-be5e69587f53`, `source_message_id=703`, `display_text='@jarvispbweb_bot ты тут?'` за 16:54 — assistant-пары нет; в логах Memoh за этот период подряд `Failed to get updates, retrying...` от Telegram polling. Memoh при каждом следующем inbound видел этот «висящий» turn и отвечал на него, а Telegram-reply ставился на самое свежее сообщение → визуальный off-by-one.
+- **Фикс данных:** `DELETE FROM bot_history_messages WHERE id::text LIKE 'cce790a0-%'` — одна строка удалена; пары user↔assistant восстановлены. Кода не трогал, ADR не требуется (это data fix). Подтверждение чистоты диалога от пользователя — следующий шаг.
+- **Корневой Memoh-core bug — отложен в PR2:** при неудачной генерации (timeout polling, фейл LLM, краш контейнера) Memoh не должен оставлять user-turn без пары. Варианты: retry-petля до записи ответа; помечать `failed` и пропускать в prompt; удалять row при rollback. Требует изменения Memoh-core → ADR в `docs/06_DECISIONS.md` + PR2.
+
 ## 2026-05-15 — MVP v1: role-aware ассистент студии (PR1, один деплой)
 
 - **Статус:** код в репо, тесты зелёные, деплой — следующий шаг оператора.

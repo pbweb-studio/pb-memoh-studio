@@ -1,35 +1,35 @@
 # Текущая задача
 
-## MVP v1: role-aware ассистент студии (один PR, один деплой)
+## MVP v1 на VPS — DM hygiene fix задеплоен, ждём пользовательской верификации
 
-**Контракт продукта:** `docs/FEATURES_v1.md`.
+**Studio commit `db9c1b6e`** на `pb-studio/main`, VPS `148.253.209.54`. Все 6 Studio-контейнеров healthy, MCP `tools/list` = 20 инструментов. Skill `pb-studio-manager` **v2.1** в Memoh (добавлен раздел «Анти-галлюцинации и анти-склейка ответов»). Контракт — `docs/FEATURES_v1.md`.
 
-### Что сделано в коде (готово к деплою)
+### Что произошло сегодня (2026-05-15, два инцидента)
 
-1. **9 новых MCP-инструментов Studio** (`studio/pb_studio/mcp_tools/extra_handlers.py`):
-   - `studio_get_chat_context(telegram_chat_id, from_user_id?)` — роле-aware контекст для Memoh (role, project, active_rules, can_respond_to_user).
-   - `studio_smart_chat_report(chat_id_or_name, period?, max_messages?)` — LLM-отчёт «по смыслу» чата за период.
-   - `studio_assign_chat_role(telegram_chat_id, role)` — назначить роль (`client_chat | project_chat | internal_chat | service_chat | unknown`).
-   - `studio_set_control_group(telegram_chat_id)` — назначить управляющую группу.
-   - `studio_get_active_rules(scope?, scope_id?)` — список активных правил.
-   - `studio_create_project(name, slug?)` — создать проект с автогенерацией slug.
-   - `studio_bind_chat_to_project(telegram_chat_id, project_slug, role_in_project?)` — привязать чат к проекту.
-   - `studio_disable_rule(rule_id, reason?)` — отключить правило.
-   - `studio_get_recent_messages(chat_id_or_name, limit?)` — сырьё последних сообщений.
-   - Регистрация в FastMCP — `studio/pb_studio/mcp_server/asgi.py`.
-2. **Skill `pb-studio-manager` v2** (`skills/pb-studio-manager/SKILL.md`) — поведение по 6 ролям чата, UX-правила, каталог 20 tools.
-3. **Удалён legacy Studio NL responder:** все `pb_studio/nl/{processor,router,router_deterministic,gate_service,scan,triggers,turn_input,schemas,constants}.py`, 5 `test_nl_*.py`, route `nl-gate`, Celery task, env `STUDIO_NL_*` и `STUDIO_MEMOH_GATE_TOKEN` в `.env*.example`, `docker-compose.prod.yml`, `pb_studio/core/config.py`. Оставлены `pb_studio/nl/executor.py` и `models.py` как утилиты для MCP-хендлеров.
-4. **Тесты:** `studio/tests/test_mcp_extra_handlers.py` (22 теста, все зелёные). Прогон по всем `studio/tests/` — **320 passed**, 1 failed только тест окружения `test_smoke_phase3.py::test_settings_load` (требует переменную `REDIS_URL`, не регрессия).
+1. **~21:25 MSK — orphan user-turn (id `cce790a0…`, `source_message_id=703`)** в `bot_history_messages` без assistant-пары из-за `getUpdates timeout`. Лечение — точечный `DELETE` одной строки.
+2. **~21:30 MSK — псевдо-off-by-one + паразитное «Вижу: личку, Управление Jarvis, PBVOICE» в каждом ответе.** Реальный корень — **НЕ orphan**: DM-сессия `cf704360-…` накопила 114 строк за 2 дня, модель один раз сгаллюцинировала имена групп после `get_contacts` (`chat.title` пустой) и зафиксировала шаблон в каждый следующий ответ + склеивала прошлый отчёт в начало новых ответов. Подробности — `docs/04_PROJECT_LOG.md` и ADR в `docs/06_DECISIONS.md` секция «Memoh DM history hygiene».
 
-### Следующий шаг — деплой (один раунд)
+### Что сделано
 
-1. **Pre-flight аудит VPS (read-only, 5–10 мин):** `docker ps`, `/health`, версии образов; никаких изменений до зелёного результата.
-2. **Rollout VPS:** `git pull` на VPS → `docker compose -f docker-compose.prod.yml build studio-api studio-worker studio-beat studio-mcp` → `up -d` → `alembic upgrade head` (миграций по схеме нет, но команда безопасна).
-3. **Memoh:** подключить обновлённый skill `pb-studio-manager` (тот же путь, новая версия `SKILL.md`); MCP `tools/list` должен показать +9 инструментов.
-4. **Пройти §11 в `docs/AI_CONTEXT.md`** (6 сценариев приёмки).
-5. Зафиксировать новый Studio-hash в `docs/AI_CONTEXT.md` и `memory-bank/activeContext.md`.
+1. **Immediate relief** — soft-delete сессии `cf704360-…` + DELETE 114 строк (бэкап в `/opt/pb-studio/backups/memoh-dm-reset/`). Следующее сообщение в DM создаст чистую сессию.
+2. **`skills/pb-studio-manager/SKILL.md` v2.1** — раздел «Анти-галлюцинации и анти-склейка ответов»: запрет преамбулы «Вижу: …», запрет выдумывать имена групп, «один вопрос — один ответ», не пересказывать предыдущие сообщения без явного запроса. Залит на VPS, Memoh перезапущен.
+3. **Watchdog против orphan-ов** — `deploy/scripts/memoh-orphan-cleanup.sh` + `deploy/systemd/memoh-orphan-cleanup.{service,timer}`, каждые 60 с удаляют user-row старше 120 с без assistant-пары. Установлен на VPS, timer enabled.
+4. **ADR** — `docs/06_DECISIONS.md` секция «Memoh DM history hygiene (orphan watchdog + skill anti-coalescing, 2026-05-15)».
+5. **Memoh-core НЕ правился** (правило `040-no-core-damage.mdc`). Долгосрочный core-патч (авто-компакция DM, retry/cleanup при сбое generation) — отдельный ADR + PR2.
 
-### Что отложено в PR2 (после успешного MVP)
+### Следующий шаг — пользователь
 
-- UX-фичи U1–U8: self-intro в новом чате, auto-suggest роли, утреннее briefing, inline-подтверждения, голосовой ввод, mute by phrase, onboarding wizard, единая навигация по командам.
-- См. `docs/FEATURES_v1.md` секция «UX (PR2)».
+Короткий чеклист в DM (5 сообщений). Между сообщениями жди ~5 секунд:
+
+1. «привет» — ожидаем 1–2 короткие фразы, **без** «Вижу: …».
+2. «как меня зовут?» — ожидаем «Тебя зовут Денис Губанов», **без** перечня чатов и пересказа прошлых сообщений.
+3. «какой сейчас день?» — ожидаем дату одной строкой.
+4. «какие чаты ты видишь?» — здесь перечень разрешён, но **по фактам**: если `chat.title` группы пустой, бот должен сказать «одна группа без имени» или вернуть `target` id, **не выдумывая** «Управление Jarvis / PBVOICE».
+5. «дай краткий отчёт за сегодня» — ожидаем именно отчёт, **без** «Вижу: …» и **без** склейки с предыдущими ответами.
+
+Если на любом шаге снова появится «Вижу: …» как преамбула или склейка — фикс не сработал, пишем в чат, разбираем глубже.
+
+### После приёмки — PR2
+
+- **ADR + патч Memoh-core.** Авто-компакция длинных DM сессий + при сбое генерации (timeout, краш) не оставлять user-turn без пары. Это `040-no-core-damage` исключение с доказанной необходимостью; watchdog и skill v2.1 — только страховка, не замена.
+- **UX-фичи U1–U8** из `docs/FEATURES_v1.md`: self-intro, auto-suggest roles, утреннее briefing, inline confirms, voice, mute by phrase, onboarding wizard, единая навигация.

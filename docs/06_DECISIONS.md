@@ -341,3 +341,25 @@
 2. При откате миграции **`018`**: вручную осознанно (из бэкапа) вернуть строки `studio_nl_interactions`, помеченные как **`ignored_disabled_single_brain_migration`**, если нужен повторный прогон NL worker.
 3. Остановить **`studio-mcp`** или убрать MCP-подключение в Memoh Admin, если откатываетесь полностью на NL+gate.
 
+## Memoh DM history hygiene (orphan watchdog + skill anti-coalescing, 2026-05-15)
+
+**Контекст.** В DM с ботом «ИИ Purple Bear» 2026-05-15 пользователь увидел два связанных симптома: (1) кажущееся off-by-one — бот «отвечал на N-1»; (2) паразитный хвост вида «Вижу: личку с тобой, группу Управление Jarvis, группу PBVOICE» в каждом ответе. Диагностика на VPS (`memoh-jar-postgres-1`) показала, что **orphan user-row отсутствует**, все user/assistant пары в сессии `cf704360-…` шли подряд (timestamps интервал ~2 мс). Корневая причина другая:
+
+1. **Сессия DM ни разу не сбрасывалась 2 дня (114 строк подряд).** Memoh пихал в каждый промпт большую долю истории.
+2. **Галлюцинация имён.** Один раз модель вызвала `get_contacts`, получила список с `target=-1003903704506` (без `chat.title`), и галлюцинировала имена «Управление Jarvis», «PBVOICE». Потом начала **копировать собственную преамбулу «Вижу: …»** в каждый следующий ответ как шаблон.
+3. **Склейка ответов.** На вопрос «как меня зовут?» модель отвечала «Кратко за сегодня: …\n\nТебя зовут Денис Губанов.» — реальный ответ был, но прятался ниже повторённого вчерашнего отчёта. Пользователь видел только верх и фиксировал «off-by-one».
+4. **Отдельно:** хронический `getUpdates context deadline exceeded` в Telegram polling Memoh идёт постоянно (long-poll таймауты, ~раз в 30 с) и **в редких случаях** действительно может оставить orphan user-row, если Memoh не успел дописать ассистент-ответ из-за обрыва. Это вторичный, но реальный риск, см. инцидент 2026-05-15 ~21:25 MSK с `source_message_id=703`.
+
+**Решение (без правок Memoh-core, в духе `040-no-core-damage.mdc`):**
+
+1. **Скиповать «Вижу: …» преамбулу.** В `skills/pb-studio-manager/SKILL.md` добавлен раздел «Анти-галлюцинации и анти-склейка ответов»: запрещён список чатов как преамбула, запрещено выдумывать названия групп без источника (`get_contacts` / `studio_list_chats` / `studio_get_chat_context`), запрещено пересказывать ранее сказанное без явной просьбы, требование «один вопрос — один ответ».
+2. **Watchdog против orphan user-row.** Скрипт `deploy/scripts/memoh-orphan-cleanup.sh` + systemd unit `deploy/systemd/memoh-orphan-cleanup.{service,timer}` раз в 60 с удаляют из `bot_history_messages` user-row старше `GRACE_SECONDS=120`, у которых в той же `session_id` нет assistant/tool строки с `created_at >= user.created_at`. Скрипт идемпотентен и трогает только Memoh-Postgres (`memoh-jar-postgres-1`). Установка — симлинком в `/etc/systemd/system/`, см. `deploy/systemd/README.md`.
+3. **Immediate relief.** Грязная DM-сессия `cf704360-dfe6-45e4-8999-e22163a34138` помечена `deleted_at = now()` и её 114 строк `bot_history_messages` удалены (бэкап в `/opt/pb-studio/backups/memoh-dm-reset/dm_cf704360-…_full_tables.sql` + `_history.csv` + `_session.csv`). Следующее сообщение пользователя в DM создаст новую сессию.
+
+**Отказ от core-патча.** Правка Memoh-core (retry assistant-row при сбое генерации, soft-fail вместо orphan, авто-компакция длинных DM сессий) откладывается в **PR2**. Ждём, что watchdog + skill hygiene удержат поведение бота. Если повторятся — открываем отдельный ADR на core-патч (по правилу `040-no-core-damage.mdc` — только с явной записью).
+
+**Откат:**
+- Skill: вернуть прежнюю версию `skills/pb-studio-manager/SKILL.md` из git и скопировать в `/opt/memoh/data/skills/pb-studio-manager/SKILL.md` контейнера `memoh-jar-server-1`, перезапустить контейнер.
+- Watchdog: `systemctl disable --now memoh-orphan-cleanup.timer && rm /etc/systemd/system/memoh-orphan-cleanup.{service,timer} && systemctl daemon-reload`.
+- Backup-восстановление сессии: бэкап-файлы в `/opt/pb-studio/backups/memoh-dm-reset/`, `psql -U memoh -d memoh -f dm_cf704360-…_full_tables.sql` (но смысла мало: история была компрометирована).
+

@@ -1,0 +1,13 @@
+[Unit]
+Description=Run memoh-orphan-cleanup every minute
+Requires=memoh-orphan-cleanup.service
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=memoh-orphan-cleanup.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

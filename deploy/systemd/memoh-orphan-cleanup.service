@@ -1,0 +1,18 @@
+[Unit]
+Description=Memoh orphan user-turn cleanup (bot_history_messages)
+Wants=docker.service
+After=docker.service
+ConditionPathExists=/opt/pb-studio/pb-memoh-studio/deploy/scripts/memoh-orphan-cleanup.sh
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/pb-studio/pb-memoh-studio
+Environment=GRACE_SECONDS=120
+Environment=MEMOH_PG_CONTAINER=memoh-jar-postgres-1
+Environment=MEMOH_PG_USER=memoh
+Environment=MEMOH_PG_DB=memoh
+Environment=LOG_FILE=/var/log/memoh-orphan-cleanup.log
+ExecStart=/bin/bash /opt/pb-studio/pb-memoh-studio/deploy/scripts/memoh-orphan-cleanup.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

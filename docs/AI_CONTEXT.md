@@ -6,7 +6,13 @@
 
 ## Текущая фаза
 
-**MVP v1: role-aware ассистент студии (май 2026)** — единый мозг Memoh + 9 новых MCP-инструментов Studio для контекста чата, smart-отчётов, проектов и правил. Контракт продукта зафиксирован в `docs/FEATURES_v1.md`. Legacy Studio NL responder **окончательно удалён** (файлы `pb_studio/nl/processor.py`, `router*.py`, `gate_service.py`, `scan.py`, `triggers.py`, `turn_input.py`, `schemas.py`, `constants.py` + связанные API/Celery/тесты), `pb_studio/nl/executor.py` и `models.py` оставлены как утилиты для MCP-хендлеров. Env-переменные `STUDIO_NL_*` и `STUDIO_MEMOH_GATE_TOKEN` удалены из `.env*.example`, `docker-compose.prod.yml`, `pb_studio/core/config.py`.
+**MVP v1: role-aware ассистент студии (май 2026) — РАСКАТАН НА VPS.** Studio-коммит **`db9c1b6e`** на ветке `pb-studio/main` в продакшене на `148.253.209.54`. 6 Studio-контейнеров healthy, Memoh server healthy. MCP `tools/list` отдаёт **20 инструментов**: 11 базовых + 9 новых MVP v1. Skill `pb-studio-manager` **v2.1** установлен в Memoh (`/opt/memoh/data/skills/pb-studio-manager/SKILL.md`) — добавлен раздел «Анти-галлюцинации и анти-склейка ответов». Контракт продукта — `docs/FEATURES_v1.md`. Legacy Studio NL responder удалён (9 файлов + 5 тестов + env-переменные).
+
+**Свежий инцидент (исправлен 2026-05-15 ~21:40 MSK).** Пользователь увидел в DM «опять off-by-one» + паразитный хвост «Вижу: личку с тобой, группу Управление Jarvis, группу PBVOICE» в почти каждом ответе. Точечный DELETE одной строки в 21:25 MSK не помог.
+
+- **Реальный корень — НЕ orphan.** Все user/assistant пары в DM-сессии `cf704360-dfe6-45e4-8999-e22163a34138` парны (timestamps интервал ~2 мс). История накопила **114 строк за 2 дня** без сброса. Модель один раз сгаллюцинировала имена групп после `get_contacts` (`chat.title` отсутствовал) и зафиксировала шаблон «Вижу: …» в каждый ответ; параллельно склеивала прошлый отчёт в начало новых ответов → визуальный «off-by-one».
+- **Фикс (без core-патча Memoh):** (1) soft-delete сессии + DELETE 114 строк `bot_history_messages` (бэкап в `/opt/pb-studio/backups/memoh-dm-reset/`); (2) `skills/pb-studio-manager/SKILL.md` v2.1 — раздел «Анти-галлюцинации и анти-склейка ответов» (запрет преамбулы «Вижу: …», запрет выдумывать имена групп, «один вопрос — один ответ»); (3) systemd-watchdog `memoh-orphan-cleanup.{service,timer}` каждые 60 с удаляет orphan user-row старше 120 с. ADR — `docs/06_DECISIONS.md` секция «Memoh DM history hygiene».
+- **Memoh-core не правился** (правило `040-no-core-damage.mdc`). Долгосрочный фикс ядра (авто-компакция DM, retry/cleanup при сбое generation) — PR2.
 
 **Single-brain (фон):** Memoh **без** `PostNLGate` / `internal/studio`; Celery beat **без** `studio-process-nl-interactions`. Memoh-коммит **`c1afe432`**. Studio-коммит до MVP v1: **`f22fd204`**.
 
@@ -103,8 +109,16 @@
 
 ## Следующая задача
 
-- Оператор: pre-flight аудит VPS → выкат Studio (новый коммит после MVP v1) → подключить обновлённый `pb-studio-manager` skill в Memoh → пройти §11 → зафиксировать commit hash здесь.
-- PR2 (после успешного MVP): UX-фичи U1–U8 (self-intro, auto-suggest roles, morning briefing, inline confirmations, voice input, mute by phrase, onboarding wizard, единая навигация).
+1. **Пользователь — короткая верификация в DM (5 сообщений).** Скрипт проверки:
+   1. «привет» — ожидаем 1–2 короткие фразы, **без** «Вижу: …».
+   2. «как меня зовут?» — ожидаем «Тебя зовут Денис Губанов», **без** перечня чатов и **без** пересказа прошлых сообщений.
+   3. «какой сейчас день?» — ожидаем дату одной строкой, **без** «Вижу: …».
+   4. «какие чаты ты видишь?» — здесь **разрешено** перечислить, но **по фактам из `get_contacts` / `studio_list_chats`**, а не «Управление Jarvis / PBVOICE» (если их реальные `chat.title` пусты — должен сказать «одна группа без имени» или вернуть `target` id).
+   5. «дай краткий отчёт за сегодня» — ожидаем именно отчёт, **без** дублирования «Вижу: …» и **без** склейки с предыдущим ответом.
+   Если на любом шаге снова появится «Вижу: …» как преамбула или склейка прошлого отчёта — фикс не сработал; см. `docs/06_DECISIONS.md` секция «Memoh DM history hygiene».
+2. **После прохождения 1.** — пройти полный §11 (6 сценариев) и зафиксировать «MVP v1 принят».
+3. **PR2 — ADR + Memoh-core fix.** Авто-компакция длинных DM сессий + при сбое генерации Memoh не должен оставлять user-turn без пары (retry / pomet `failed` / удаление). Сейчас страховка только на стороне Studio (systemd watchdog + skill v2.1), но это не идеально.
+4. **PR2 — UX-фичи U1–U8:** self-intro, auto-suggest roles, morning briefing, inline confirmations, voice input, mute by phrase, onboarding wizard, единая навигация. См. `docs/FEATURES_v1.md`.
 
 ## Вопросы к GPT
 
