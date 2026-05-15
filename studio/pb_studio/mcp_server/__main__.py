@@ -14,6 +14,9 @@ def main() -> None:
         port=int(settings.studio_mcp_listen_port),
         factory=False,
         log_level="info",
+        # Docker DNS (e.g. Host: studio-mcp:8765) must be accepted for Memoh federation probes.
+        proxy_headers=True,
+        forwarded_allow_ips="*",
     )
 
 

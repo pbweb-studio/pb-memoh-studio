@@ -8,6 +8,42 @@ from pb_studio.core.config import get_settings
 from pb_studio.mcp_tools import handlers as mcp_handlers
 
 
+def _normalize_streamable_host(
+    app: Callable[..., Awaitable[None]],
+    listen_port: int,
+) -> Callable[..., Awaitable[None]]:
+    """MCP streamable stack rejects Host: <docker-service>:port; normalize to loopback."""
+
+    async def middleware(scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope.get("type") != "http":
+            await app(scope, receive, send)
+            return
+        raw_headers = list(scope.get("headers") or [])
+        new_headers: list[tuple[bytes, bytes]] = []
+        loop = f"127.0.0.1:{listen_port}".encode("ascii")
+        for key, val in raw_headers:
+            if key.lower() == b"host":
+                try:
+                    hostport = val.decode("latin-1")
+                except Exception:
+                    new_headers.append((key, val))
+                    continue
+                hostname = hostport.split(":", 1)[0].strip().lower()
+                if hostname not in ("127.0.0.1", "localhost", "::1"):
+                    new_headers.append((b"host", loop))
+                else:
+                    new_headers.append((key, val))
+            else:
+                new_headers.append((key, val))
+        if not any(k.lower() == b"host" for k, _ in new_headers):
+            new_headers.append((b"host", loop))
+        new_scope = dict(scope)
+        new_scope["headers"] = new_headers
+        await app(new_scope, receive, send)
+
+    return middleware
+
+
 def _wrap_bearer(app: Callable[..., Awaitable[None]], token: str) -> Callable[..., Awaitable[None]]:
     """Require Authorization: Bearer <token> when token is non-empty."""
 
@@ -107,7 +143,10 @@ def build_mcp_asgi_app() -> Callable[..., Awaitable[None]]:
         inner = mcp.http_app()
     else:
         raise RuntimeError("FastMCP: install mcp>=1.8 with streamable_http_app or http_app")
-    tok = (get_settings().studio_mcp_auth_token or "").strip()
+    settings = get_settings()
+    listen_port = int(settings.studio_mcp_listen_port)
+    inner = _normalize_streamable_host(inner, listen_port)
+    tok = (settings.studio_mcp_auth_token or "").strip()
     if not tok:
         return inner
     return _wrap_bearer(inner, tok)
