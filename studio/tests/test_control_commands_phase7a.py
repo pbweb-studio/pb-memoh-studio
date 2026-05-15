@@ -364,6 +364,28 @@ def test_parser_invalid_uuid_unknown():
     assert p.name == ControlCommandName.UNKNOWN
 
 
+def test_parser_slash_command_with_bot_suffix():
+    p = parse_control_group_command_line("/kb_help@jarvispbweb_bot")
+    assert p is not None
+    assert p.name == ControlCommandName.KB_HELP
+    p2 = parse_control_group_command_line("/summary_help@some_bot")
+    assert p2 is not None
+    assert p2.name == ControlCommandName.SUMMARY_HELP
+    p3 = parse_control_group_command_line("/project_list@b")
+    assert p3 is not None
+    assert p3.name == ControlCommandName.PROJECT_LIST
+    p4 = parse_control_group_command_line("/rule_help@x")
+    assert p4 is not None
+    assert p4.name == ControlCommandName.RULE_HELP
+
+
+def test_parser_kb_import_last_with_bot_suffix():
+    p = parse_control_group_command_line("/kb_import_last@botname My Document Title")
+    assert p is not None
+    assert p.name == ControlCommandName.KB_IMPORT_LAST
+    assert p.args["title"] == "My Document Title"
+
+
 def test_period_bounds_rejects_inverted():
     with pytest.raises(ValueError):
         period_bounds_utc("2025-01-10", "2025-01-05")
@@ -372,6 +394,13 @@ def test_period_bounds_rejects_inverted():
 def test_celery_process_control_task_registered():
     assert "pb_studio.worker.process_control_group_summary_commands" in celery_app.tasks
     assert "pb_studio.worker.process_control_group_commands" in celery_app.tasks
+
+
+def test_celery_beat_schedule_includes_process_control_group_commands():
+    bs = celery_app.conf.beat_schedule or {}
+    entry = bs.get("studio-process-control-group-commands")
+    assert entry is not None
+    assert entry["task"] == "pb_studio.worker.process_control_group_commands"
 
 
 def test_celery_process_control_invokes_runner(monkeypatch):

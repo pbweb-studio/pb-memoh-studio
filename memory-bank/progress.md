@@ -40,6 +40,7 @@
 | 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
 | 14c Staging deploy jar.pb-web.ru (VPS 148.253.209.54) | Done |
 | VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done |
+| MVP стабилизация (роли, beat control commands, Memoh group final-only, admin команды, доки) | Done (код в репо; VPS — проверить после деплоя) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** VPS checkout = origin; E2E smoke PASS + ожидаемые SKIP; скрипты `vps-e2e-smoke.py` / `.sh` в репо; см. `docs/04_PROJECT_LOG.md`, `docs/AI_CONTEXT.md`.
+**Последнее:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; обновлены `AI_CONTEXT`, `04`, `06`, memory-bank; см. запись в `docs/04_PROJECT_LOG.md` (MVP стабилизация).

@@ -57,6 +57,22 @@ logger = logging.getLogger(__name__)
 ACCESS_DENIED_REPLY = "Нет прав на команды сводок в этой группе. Обратитесь к администратору."
 
 
+def _kb_help_reply_text(settings: Settings) -> str:
+    """Справка по /kb_* + флаги KB/RAG (без секретов)."""
+    kb = "on" if settings.studio_kb_enabled else "off"
+    emb = "on" if settings.studio_kb_embeddings_enabled else "off"
+    rag = "on" if settings.studio_kb_rag_enabled else "off"
+    tg_imp = "on" if settings.studio_kb_telegram_import_enabled else "off"
+    tail = (
+        "\n\n— Текущий статус Studio (флаги):\n"
+        f"STUDIO_KB_ENABLED: {kb}\n"
+        f"STUDIO_KB_EMBEDDINGS_ENABLED: {emb}\n"
+        f"STUDIO_KB_RAG_ENABLED: {rag}\n"
+        f"STUDIO_KB_TELEGRAM_IMPORT_ENABLED: {tg_imp}\n"
+    )
+    return KB_HELP_TEXT + tail
+
+
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -707,16 +723,9 @@ async def _dispatch_kb_control_commands(
 ) -> None:
     token = (settings.telegram_bot_token or "").strip()
     try:
-        if not settings.studio_kb_enabled:
-            mid = await reply("База знаний выключена (STUDIO_KB_ENABLED=false).")
-            cmd.status = ControlCommandStatus.PROCESSED
-            cmd.processed_at = now
-            cmd.response_telegram_message_id = mid
-            return
-
         if cmd.command_name == ControlCommandName.UNKNOWN:
             reason = str(cmd.args_json.get("reason") or "")
-            text_out = KB_HELP_TEXT
+            text_out = _kb_help_reply_text(settings)
             if reason:
                 text_out = f"Ошибка: {reason}\n\n" + text_out
             mid = await reply(text_out)
@@ -726,7 +735,7 @@ async def _dispatch_kb_control_commands(
             return
 
         if cmd.command_name == ControlCommandName.KB_HELP:
-            mid = await reply(KB_HELP_TEXT)
+            mid = await reply(_kb_help_reply_text(settings))
             cmd.status = ControlCommandStatus.PROCESSED
             cmd.processed_at = now
             cmd.response_telegram_message_id = mid
@@ -751,6 +760,16 @@ async def _dispatch_kb_control_commands(
                 command_name=cmd.command_name,
                 payload={},
             )
+            return
+
+        if not settings.studio_kb_enabled:
+            mid = await reply(
+                "База знаний выключена (STUDIO_KB_ENABLED=false). Команда не выполнена.\n"
+                "Список команд и статусы: /kb_help"
+            )
+            cmd.status = ControlCommandStatus.PROCESSED
+            cmd.processed_at = now
+            cmd.response_telegram_message_id = mid
             return
 
         if cmd.command_name in (ControlCommandName.KB_IMPORT_LAST, ControlCommandName.KB_IMPORT_FILE):

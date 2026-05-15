@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -33,6 +34,17 @@ const (
 	// HTTP client timeout must exceed long poll + TLS/network slack, or getUpdates fails with "context deadline exceeded".
 	telegramHTTPClientTimeout = 90 * time.Second
 )
+
+// telegramGroupStreamingEnabled returns true when MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED
+// is set to a truthy value. Default (unset) is false: groups use a single final sendMessage
+// instead of editMessageText streaming (avoids "……" placeholders and duplicate/unstable edits).
+func telegramGroupStreamingEnabled() bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv("MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED")))
+	if v == "" {
+		return false
+	}
+	return v == "1" || v == "true" || v == "yes" || v == "on"
+}
 
 var (
 	telegramBotLogger      = newSlogBotLogger(nil)
@@ -798,15 +810,34 @@ func (a *TelegramAdapter) OpenStream(ctx context.Context, cfg channel.ChannelCon
 			}
 		}
 	}
+	groupFinalOnly := !isPrivateChat && !telegramGroupStreamingEnabled()
+	if a.logger != nil {
+		mode := "private_draft"
+		switch {
+		case isPrivateChat:
+			mode = "private_draft"
+		case groupFinalOnly:
+			mode = "group_final_only"
+		default:
+			mode = "group_edit_stream"
+		}
+		a.logger.Info(
+			"telegram outbound stream opened",
+			slog.String("config_id", cfg.ID),
+			slog.String("stream_mode", mode),
+			slog.Bool("group_streaming_edits", !isPrivateChat && telegramGroupStreamingEnabled()),
+		)
+	}
 	return &telegramOutboundStream{
-		adapter:       a,
-		cfg:           cfg,
-		target:        target,
-		reply:         opts.Reply,
-		parseMode:     "",
-		isPrivateChat: isPrivateChat,
-		streamChatID:  chatID,
-		draftID:       1,
+		adapter:          a,
+		cfg:              cfg,
+		target:           target,
+		reply:            opts.Reply,
+		parseMode:        "",
+		isPrivateChat:    isPrivateChat,
+		groupFinalOnly:   groupFinalOnly,
+		streamChatID:     chatID,
+		draftID:          1,
 	}, nil
 }
 

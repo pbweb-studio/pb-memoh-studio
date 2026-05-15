@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Команды — Studio Admin{% endblock %}
+{% block content %}
+{% include "partials/breadcrumbs.html" %}
+<h1 class="h4 mb-2">Команды control group</h1>
+<p class="text-muted small mb-3">
+  Slash-команды <code>/kb_*</code>, <code>/summary_*</code>, <code>/project_*</code>, <code>/rule_*</code> из Telegram попадают в
+  <code>studio_control_commands</code> после Event Mirror. Обработка — worker/beat или кнопка ниже.
+</p>
+
+<div class="alert alert-light border small mb-3">
+  <strong>Роли:</strong> Memoh отвечает за обычный AI-чат в личке и по mention/reply в группах.
+  Studio отвечает за slash-команды и бизнес-данные (проекты, KB, SLA, правила).
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <form method="post" action="/admin/control-commands/process-pending" class="m-0">
+    <button type="submit" class="btn btn-primary btn-sm">Обработать pending</button>
+  </form>
+  <span class="text-muted small">
+    STUDIO_CONTROL_COMMANDS_ENABLED:
+    {% if settings.studio_control_commands_enabled %}<span class="text-success">true</span>{% else %}<span class="text-warning">false</span>{% endif %}
+    · beat: <code>process_control_group_commands</code> каждые {{ settings.studio_control_commands_interval_seconds }}s
+  </span>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-header">Последние записи</div>
+  <div class="card-body p-0 table-responsive">
+    <table class="table table-sm table-striped mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>created</th>
+          <th>command</th>
+          <th>status</th>
+          <th>text</th>
+          <th>tg_msg</th>
+          <th>last_error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if not commands %}
+        <tr><td colspan="6" class="text-muted small p-3">Пока нет команд.</td></tr>
+        {% endif %}
+        {% for c in commands %}
+        <tr>
+          <td class="small text-nowrap">{{ c.created_at|admin_dt }}</td>
+          <td><code>{{ c.command_name }}</code></td>
+          <td><span class="badge text-bg-secondary">{{ c.status }}</span></td>
+          <td class="small">{{ c.command_text|admin_snip(80) }}</td>
+          <td class="small">{{ c.response_telegram_message_id or '—' }}</td>
+          <td class="small text-danger">{{ (c.last_error or '')|admin_snip(120) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

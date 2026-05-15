@@ -241,6 +241,33 @@ async def test_kb_list_not_scanned_outside_control_group(kb_client, monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_kb_help_works_when_kb_disabled(kb_client, monkeypatch):
+    monkeypatch.setenv("STUDIO_ADMIN_TOKEN", "admkb")
+    monkeypatch.setenv("STUDIO_KB_ENABLED", "false")
+    monkeypatch.setenv("STUDIO_CONTROL_COMMANDS_ENABLED", "true")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "TEST_BOT_TOKEN_X")
+    get_settings.cache_clear()
+
+    client, session = kb_client
+    headers = {"Authorization": "Bearer admkb"}
+    await client.post("/events/telegram", json=_msg(997001, -99701))
+    await client.post("/control-group/set", headers=headers, json={"telegram_chat_id": -99701})
+    mock_send = AsyncMock(return_value=(True, 200, "", 42))
+    await client.post(
+        "/events/telegram",
+        json=_msg(997002, -99701, text="/kb_help@jarvispbweb_bot", message_id=2),
+    )
+    await run_control_commands_cycle(session, get_settings(), send_message=mock_send)
+    cmd = await session.scalar(select(StudioControlCommand).order_by(StudioControlCommand.created_at.desc()))
+    assert cmd is not None
+    assert cmd.command_name == ControlCommandName.KB_HELP
+    assert cmd.status == ControlCommandStatus.PROCESSED
+    mock_send.assert_awaited()
+    sent = mock_send.await_args.kwargs.get("text", "")
+    assert "STUDIO_KB_ENABLED: off" in sent
+
+
+@pytest.mark.asyncio
 async def test_kb_acl_denied(kb_client, monkeypatch):
     monkeypatch.setenv("STUDIO_ADMIN_TOKEN", "admkb")
     monkeypatch.setenv("STUDIO_KB_ENABLED", "true")

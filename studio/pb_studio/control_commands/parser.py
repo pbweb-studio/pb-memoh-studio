@@ -22,6 +22,15 @@ _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _SLUG_TOKEN_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$", re.IGNORECASE)
 
 
+def normalize_telegram_slash_command_token(raw: str) -> str:
+    """Map /cmd@BotName to /cmd (Telegram often appends @bot in groups)."""
+    s = raw.strip()
+    if "@" not in s or not s.startswith("/"):
+        return s.lower()
+    head, _, _ = s.partition("@")
+    return head.lower()
+
+
 def _parse_uuid(token: str) -> UUID | None:
     t = token.strip()
     if not _UUID_RE.match(t):
@@ -46,7 +55,7 @@ def _parse_project_command_line(line: str) -> ParsedControlCommand:
     parts = line.split()
     if not parts:
         return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
-    cmd = parts[0].strip().lower()
+    cmd = normalize_telegram_slash_command_token(parts[0])
     rest = parts[1:]
 
     if cmd == "/project_help":
@@ -113,7 +122,7 @@ def _parse_project_digest_command_line(line: str) -> ParsedControlCommand:
     parts = line.split()
     if not parts:
         return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
-    cmd = parts[0].strip().lower()
+    cmd = normalize_telegram_slash_command_token(parts[0])
     rest = parts[1:]
 
     if cmd == "/project_digest_today":
@@ -174,7 +183,7 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
     parts = line.split(maxsplit=1)
     if not parts:
         return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
-    cmd = parts[0].strip().lower()
+    cmd = normalize_telegram_slash_command_token(parts[0])
     rest = parts[1].strip() if len(parts) > 1 else ""
 
     if cmd == "/kb_help":
@@ -191,11 +200,11 @@ def _parse_kb_command_line(line: str) -> ParsedControlCommand:
         return ParsedControlCommand(ControlCommandName.KB_IMPORT_HELP, {})
 
     if cmd == "/kb_import_last":
-        rest_all = line.strip()
-        low = rest_all.lower()
-        if not low.startswith("/kb_import_last"):
+        first_tok = line.split(maxsplit=1)[0]
+        first_norm = normalize_telegram_slash_command_token(first_tok)
+        if first_norm != "/kb_import_last":
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "not_kb_import_last"})
-        tail = rest_all[len("/kb_import_last") :].strip()
+        tail = line[len(first_tok) :].strip()
         if not tail:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "missing_title"})
         m = re.match(r"(?i)--project\s+(\S+)\s+(.+)", tail)
@@ -350,7 +359,7 @@ def _parse_rule_command_line(line: str) -> ParsedControlCommand:
     parts = line.split()
     if not parts:
         return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "empty"})
-    cmd = parts[0].strip().lower()
+    cmd = normalize_telegram_slash_command_token(parts[0])
 
     if cmd == "/rule_help":
         if len(parts) > 1:
@@ -369,7 +378,8 @@ def _parse_rule_command_line(line: str) -> ParsedControlCommand:
         return ParsedControlCommand(ControlCommandName.RULE_LIST, {})
 
     if cmd == "/rule_add":
-        tail = line[len("/rule_add") :].strip()
+        first_tok = parts[0]
+        tail = line[len(first_tok) :].strip()
         if not tail:
             return ParsedControlCommand(ControlCommandName.UNKNOWN, {"raw": line, "reason": "rule_add needs text"})
         return ParsedControlCommand(ControlCommandName.RULE_ADD, {"rule_text": tail})
@@ -430,21 +440,23 @@ def parse_control_group_command_line(text: str | None) -> ParsedControlCommand |
     if not text or not isinstance(text, str):
         return None
     line = text.strip()
-    if line.startswith("/kb"):
+    first_tok = line.split(maxsplit=1)[0] if line else ""
+    head = normalize_telegram_slash_command_token(first_tok)
+    if head.startswith("/kb"):
         return _parse_kb_command_line(line)
-    if line.startswith("/rule"):
+    if head.startswith("/rule"):
         return _parse_rule_command_line(line)
-    if line.startswith("/project_digest"):
+    if head.startswith("/project_digest"):
         return _parse_project_digest_command_line(line)
-    if line.startswith("/project"):
+    if head.startswith("/project"):
         return _parse_project_command_line(line)
-    if not line.startswith("/summary"):
+    if not head.startswith("/summary"):
         return None
 
     parts = line.split()
     if not parts:
         return None
-    cmd = parts[0].strip().lower()
+    cmd = normalize_telegram_slash_command_token(parts[0])
     rest = parts[1:]
 
     if cmd == "/summary_help":

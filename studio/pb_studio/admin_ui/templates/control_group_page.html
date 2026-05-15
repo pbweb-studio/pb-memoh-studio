@@ -4,6 +4,11 @@
 {% include "partials/breadcrumbs.html" %}
 <h1 class="h4 mb-3">Управляющая группа (Telegram)</h1>
 
+<div class="alert alert-light border small mb-3">
+  Memoh отвечает за обычный AI-чат. Studio отвечает за команды <code>/kb_*</code>, <code>/summary_*</code>, <code>/project_*</code>, <code>/rule_*</code> и бизнес-данные.
+  Статусы команд: <a href="/admin/control-commands">/admin/control-commands</a>.
+</div>
+
 {% if current_view %}
 <div class="card shadow-sm mb-4">
   <div class="card-header">Текущая активная запись</div>

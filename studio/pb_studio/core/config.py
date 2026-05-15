@@ -95,6 +95,12 @@ class Settings(BaseSettings):
         default="",
         description="STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS — CSV / пробелы: Telegram user id; пусто = все участники control group",
     )
+    studio_control_commands_interval_seconds: int = Field(
+        default=5,
+        ge=3,
+        le=300,
+        description="STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS — интервал Celery beat для process_control_group_commands",
+    )
 
     studio_sla_enabled: bool = Field(
         default=False,

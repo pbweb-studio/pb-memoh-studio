@@ -308,3 +308,13 @@
 - **Код на сервер:** синхронизация с локального дерева (`git archive`), т.к. удалённая ветка отставала по `docker-compose.prod.yml`.
 - **Миграции (репо):** `f8dbd06e09f7b081733061ca1c6aefcf9b727afb` — в ревизии `006_summary_delivery_control_group` выполняется `ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)` до записи длинных revision id.
 - **Инцидент безопасности (14c):** при запуске вспомогательного shell с **`set -x`** в лог попала команда **`export STUDIO_ADMIN_TOKEN=…`**; **токен ротирован** на VPS. **Правило:** deploy- и smoke-обвязки **не** запускать с **`bash -x` / `set -x`**, если в том же процессе экспортируются секреты; предпочитать **`set -eu`**. Детали и чеклист — `docs/08_RUNBOOK_PRODUCTION.md` (разделы C, F).
+
+## MVP стабилизация — роли Memoh / Studio (зафиксировано)
+
+- **Memoh** = live-агент: Telegram runtime, входящие updates, ответы ассистента (личка / mention / reply), провайдер LLM, Memoh memory, Memoh Web.
+- **Studio** = бизнес source of truth: Event Mirror, архив, control group, slash-команды `/kb_*`, `/summary_*`, `/project_*`, `/rule_*`, KB/RAG, проекты, SLA, правила, Studio Admin.
+- **Команды Studio** обрабатываются из зеркала сообщений control group; ответы — **только** `sendMessage` в активную control group (тот же `TELEGRAM_BOT_TOKEN`, без второго бота и без polling/webhook из Studio).
+- **Парсинг команд в группах:** поддержка суффикса `@BotUserName` у первого токена (`/kb_help@bot` и т.д.).
+- **`/kb_help`:** справка и строки статуса флагов KB/RAG доступны **даже при** `STUDIO_KB_ENABLED=false`; остальные `/kb_*` по-прежнему требуют включённого KB.
+- **Memoh — ответы в группах:** по умолчанию без потокового `editMessageText` для group/supergroup (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED` не truthy → один финальный `sendMessage`), чтобы избежать дублей, «……» и зависшего typing; личка без изменения контракта (по необходимости).
+- **Celery beat:** в `pb_studio.celery_app` добавлен периодический запуск `pb_studio.worker.process_control_group_commands` (интервал `STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`, по умолчанию 5 с); при `STUDIO_CONTROL_COMMANDS_ENABLED=false` задача остаётся no-op на стороне цикла команд.

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from celery import Celery
 
 from pb_studio.core.config import get_settings
@@ -12,6 +14,7 @@ def create_celery_app() -> Celery:
         broker=s.celery_broker_url,
         backend=s.celery_backend_effective,
     )
+    interval_s = max(3, min(int(s.studio_control_commands_interval_seconds or 5), 300))
     application.conf.update(
         task_default_queue="studio",
         task_serializer="json",
@@ -19,6 +22,12 @@ def create_celery_app() -> Celery:
         result_serializer="json",
         timezone="UTC",
         enable_utc=True,
+        beat_schedule={
+            "studio-process-control-group-commands": {
+                "task": "pb_studio.worker.process_control_group_commands",
+                "schedule": timedelta(seconds=interval_s),
+            },
+        },
     )
     application.autodiscover_tasks(["pb_studio.worker"])
     return application

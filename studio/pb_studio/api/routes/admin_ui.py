@@ -28,12 +28,10 @@ from pb_studio.admin_ui.auth import (
     require_admin_ui,
 )
 from pb_studio.admin_ui.flash import redirect_with_flash
-from pb_studio.api.deps import DbSession
-from pb_studio.assistant_rules import service as rules_service
-from pb_studio.assistant_rules.constants import AssistantRuleScope, AssistantRuleStatus
-from pb_studio.assistant_rules.schemas import AssistantRuleCreate
+from pb_studio.api.deps import DbSession, SettingsDep
 from pb_studio.control_group.constants import ChatRole
 from pb_studio.control_group.service import set_chat_role, set_control_group_by_telegram_id
+from pb_studio.control_commands.service import list_control_commands, run_control_commands_cycle
 from pb_studio.core.config import Settings, get_settings
 from pb_studio.knowledge import service as kb_service
 from pb_studio.knowledge.constants import KnowledgeDocumentSourceType, KnowledgeDocumentStatus
@@ -388,6 +386,30 @@ async def admin_control_group_set_post(
     except ValueError as exc:
         return redirect_with_flash(dest, error=str(exc))
     return redirect_with_flash(dest, success="Управляющая группа обновлена.")
+
+
+@router.get("/control-commands", response_class=HTMLResponse, dependencies=_admin_dep)
+async def admin_control_commands_list(request: Request, session: DbSession, settings: SettingsDep) -> HTMLResponse:
+    rows = await list_control_commands(session, limit=80)
+    return templates.TemplateResponse(
+        request,
+        "control_commands_page.html",
+        {
+            "nav_active": "ccmds",
+            "commands": rows,
+            "settings": settings,
+            "breadcrumbs": _bc(("Обзор", "/admin/"), ("Команды control group", None)),
+        },
+    )
+
+
+@router.post("/control-commands/process-pending", dependencies=_admin_dep)
+async def admin_control_commands_process_post(session: DbSession, settings: SettingsDep) -> RedirectResponse:
+    try:
+        await run_control_commands_cycle(session, settings)
+    except Exception as exc:  # noqa: BLE001
+        return redirect_with_flash("/admin/control-commands", error=str(exc)[:400])
+    return redirect_with_flash("/admin/control-commands", success="Выполнен цикл scan + process (как Celery / POST API).")
 
 
 @router.get("/summaries", response_class=HTMLResponse, dependencies=_admin_dep)

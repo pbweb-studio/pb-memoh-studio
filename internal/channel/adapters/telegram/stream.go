@@ -31,9 +31,12 @@ type telegramOutboundStream struct {
 	reply         *channel.ReplyRef
 	parseMode     string
 	isPrivateChat bool
-	draftID       int
-	closed        atomic.Bool
-	mu            sync.Mutex
+	// groupFinalOnly: non-private chats send one final sendMessage (no editMessageText streaming).
+	groupFinalOnly bool
+	finalBodySent  atomic.Bool
+	draftID        int
+	closed         atomic.Bool
+	mu             sync.Mutex
 	buf           strings.Builder
 	streamChatID  int64
 	streamMsgID   int
@@ -86,6 +89,9 @@ func (s *telegramOutboundStream) refreshTypingAction(ctx context.Context) error 
 }
 
 func (s *telegramOutboundStream) ensureStreamMessage(ctx context.Context, text string) error {
+	if s.groupFinalOnly {
+		return nil
+	}
 	s.mu.Lock()
 	go func() {
 		if err := s.refreshTypingAction(ctx); err != nil {
@@ -310,6 +316,19 @@ func (s *telegramOutboundStream) deliverFinalText(ctx context.Context, text, par
 	if s.isPrivateChat {
 		return s.sendPermanentMessage(ctx, text, parseMode)
 	}
+	if s.groupFinalOnly {
+		if strings.TrimSpace(text) == "" {
+			return nil
+		}
+		if s.finalBodySent.Load() {
+			return nil
+		}
+		err := s.sendPermanentMessage(ctx, text, parseMode)
+		if err == nil {
+			s.finalBodySent.Store(true)
+		}
+		return err
+	}
 	if err := s.ensureStreamMessage(ctx, text); err != nil {
 		return err
 	}
@@ -333,7 +352,7 @@ func (s *telegramOutboundStream) pushToolCallStart(ctx context.Context, tc *chan
 				}
 			}
 		}
-	} else if hasMsg && bufText != "" {
+	} else if hasMsg && bufText != "" && !s.groupFinalOnly {
 		_ = s.editStreamMessageFinal(ctx, bufText)
 	}
 	s.resetStreamState()
@@ -508,6 +527,9 @@ func (s *telegramOutboundStream) pushPhaseEnd(ctx context.Context, event channel
 	if s.isPrivateChat {
 		return nil
 	}
+	if s.groupFinalOnly {
+		return nil
+	}
 	s.mu.Lock()
 	finalText := strings.TrimSpace(s.buf.String())
 	s.mu.Unlock()
@@ -532,6 +554,9 @@ func (s *telegramOutboundStream) pushDelta(ctx context.Context, event channel.Pr
 	content = s.formatStreamContent(content)
 	if s.isPrivateChat {
 		return s.sendDraft(ctx, content)
+	}
+	if s.groupFinalOnly {
+		return nil
 	}
 	if err := s.ensureStreamMessage(ctx, content); err != nil {
 		return err
@@ -586,6 +611,9 @@ func (s *telegramOutboundStream) pushFinal(ctx context.Context, event channel.Pr
 		if err := sendTelegramTextWithActions(bot, s.target, finalText, replyTo, s.parseMode, msg.Message.Actions); err != nil {
 			return err
 		}
+		if s.groupFinalOnly {
+			s.finalBodySent.Store(true)
+		}
 	} else if err := s.deliverFinalText(ctx, finalText, s.parseMode); err != nil {
 		return err
 	}
@@ -622,6 +650,9 @@ func (s *telegramOutboundStream) pushError(ctx context.Context, event channel.Pr
 	s.parseMode = ""
 	s.mu.Unlock()
 	if s.isPrivateChat {
+		return s.sendPermanentMessage(ctx, display, "")
+	}
+	if s.groupFinalOnly {
 		return s.sendPermanentMessage(ctx, display, "")
 	}
 	if err := s.ensureStreamMessage(ctx, display); err != nil {

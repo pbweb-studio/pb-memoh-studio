@@ -259,3 +259,13 @@
 - Добавлены и закоммичены в **`origin/pb-studio/main`**: `deploy/scripts/vps-e2e-smoke.py`, `deploy/scripts/vps-e2e-smoke.sh` (без `set -x`; slug под `ProjectCreate.pattern`; проверка **302** на `/admin/chats` без auth через `curl` без следования редиректам; блок **14** — SKIP, если в prod-образе нет модуля pytest).
 - На VPS **148.253.209.54**: `git fetch` + **`git reset --hard origin/pb-studio/main`** (несохранённые правки **tracked**-файлов на сервере сброшены; **`.env.prod`** вне git — сохраняется), повторный **`./deploy/scripts/vps-e2e-smoke.sh`** — **PASS** с ожидаемыми **SKIP** (RAG / Telegram / history import / pytest в образе).
 - **Memoh не менялся.** Значения секретов в журнал не заносятся.
+
+## 2026-05-14 — MVP стабилизация (роли, команды, Memoh группы)
+
+- **Коммит:** **`a7c00922`** (`fix(mvp): stabilize Memoh group replies, Studio control commands beat, docs`).
+- **Документация:** добавлен `docs/15_OPERATOR_GUIDE.md`; обновлены `docs/AI_CONTEXT.md`, `docs/06_DECISIONS.md`, memory-bank.
+- **Memoh:** режим «final only» для group/supergroup по умолчанию (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED`); правки в `internal/channel/adapters/telegram/stream.go`, `telegram.go`, тесты `stream_test.go`; исправление long poll / redaction URL в логах — коммит **`b0e7b510`**.
+- **Studio Admin:** подсказка Memoh vs Studio на dashboard и control group; страница **`/admin/control-commands`** (последние `studio_control_commands`, кнопка process-pending).
+- **Studio:** парсер slash-команд с `@botusername`; `/kb_help` и unknown-подсказка не блокируются выключенным `STUDIO_KB_ENABLED`; Celery **beat_schedule** на `process_control_group_commands`; настройка **`STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`** (дефолт 5).
+- **Тесты:** расширены `test_control_commands_phase7a.py`, `test_knowledge_phase10a.py`.
+- **Security:** если полный **TELEGRAM_BOT_TOKEN** попадал в логи (в т.ч. через URL Bot API) — статус ротации фиксируется в `docs/AI_CONTEXT.md`; до подтверждения ротации пользователем финальный security-статус не считается закрытым.

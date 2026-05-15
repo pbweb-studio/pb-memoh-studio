@@ -6,29 +6,27 @@
 
 ## Текущая фаза
 
-**После 14c** — первый **staging/prod deploy** Studio на VPS **148.253.209.54**, домен **https://jar.pb-web.ru** (Caddy → `127.0.0.1:8000`). Проверены: `GET /health`, `/admin/login`, `smoke-prod.sh`, `backup-postgres.sh`. **Memoh не менялся.** Якорь миграций в репо: **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: расширение `alembic_version.version_num` до `VARCHAR(255)`). Инцидент с утечкой `STUDIO_ADMIN_TOKEN` в лог из‑за `set -x` — зафиксирован в `docs/08_RUNBOOK_PRODUCTION.md` и `docs/06_DECISIONS.md`; токен на VPS ротирован.
+**MVP-стабилизация (май 2026)** — зафиксировано разделение ролей **Memoh vs Studio** (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Рабочий репозиторий на VPS: **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
 
-**VPS E2E smoke** — скрипт `deploy/scripts/vps-e2e-smoke.sh` / `vps-e2e-smoke.py`: compose, логи, health (`env=production`), админ (редирект без auth через `curl` без follow), alembic/таблицы, Admin UI + фильтры, API smoke (проект `smoke-*`, правило, KB, embeddings/search при включённом KB), SLA при флаге, бэкапы Postgres/KB. Итог прогона: **PASS** + **SKIP** (RAG без chat key / выключен; Telegram без токена; history import выключен; **pytest** в prod-образе не установлен — ожидаемо, полный `pytest` в CI или dev-окружении). Секреты в вывод не попадают.
+- **Studio Admin:** **https://jar.pb-web.ru/admin/** — в т.ч. назначение active control group (**коммит `dd285584`**), обзор с подсказкой ролей, **`/admin/control-commands`** (журнал slash-команд + кнопка «Обработать pending»).
+- **Memoh Web:** **https://memo.pb-web.ru** — UI Memoh; **Memoh server** на том же VPS обрабатывает входящий Telegram (long polling); в коде: **`b0e7b510`** — таймаут long poll Bot API и **redaction** полных URL с токеном в логах.
+- **Группы Telegram (Memoh):** по умолчанию без потокового `editMessageText` для group/supergroup — один финальный `sendMessage` (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED` не truthy → режим *group final only* в `internal/channel/adapters/telegram/stream.go`), чтобы убрать дубли, «……» и зависший typing.
+- **Studio control commands:** парсинг `/cmd@BotName`; **`/kb_help`** и подсказка для `unknown` работают **даже при** `STUDIO_KB_ENABLED=false` (остальные `/kb_*` — только при включённом KB). **Celery beat** вызывает `pb_studio.worker.process_control_group_commands` каждые **`STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`** (дефолт 5 с).
+- **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
+- **Security / `TELEGRAM_BOT_TOKEN`:** если токен бота когда-либо оказывался в логах (в т.ч. до правок redaction) — **ротация в BotFather и обновление в Memoh + Studio `.env.prod`** остаётся действием оператора; до подтверждения в журнале/тикете финальный статус **USER_ACTION_REQUIRED** (не считать инцидент закрытым только правкой логирования).
 
-**После 14b** — readiness: `docs/08_RUNBOOK_PRODUCTION.md`, `validate_env_prod.py`, `smoke-prod.sh`, restore/KB backup, `.env.prod.example`.
+**VPS E2E smoke** — `deploy/scripts/vps-e2e-smoke.sh` / `vps-e2e-smoke.py`: **PASS** + ожидаемые **SKIP** (RAG, Telegram-ветки без токена/флагов, history import, pytest в prod-образе). Секреты в вывод не попадают.
 
-**После 14a** — `docker-compose.prod.yml`, `.env.prod.example`, `deploy/`, runbook.
-
-**После 13c** — Studio Admin: **13a** + **13b** + **13c** (фильтры, пагинация, breadcrumbs, offcanvas, форматирование дат).
-
-**Фаза 12a (Studio: Telegram Desktop JSON → Event Mirror)** — `POST /history-import/telegram-json`, `GET /history-import/jobs*`, таблица `studio_history_import_jobs`; `STUDIO_HISTORY_IMPORT_ENABLED` + `STUDIO_ADMIN_TOKEN`; запись в `studio_chats` / `studio_messages` (без Memoh/Bot API).
-
-**Фаза 11b (Studio: assistant rules → KB RAG)** — активные правила в user-prompt `ask_knowledge_base` (global + project при `project_id` + chat при `chat_id`); `POST /knowledge/ask` — `applied_rule_ids`, опциональный `chat_id`; `/kb_ask` использует `studio_chats.id` control group для chat-rules. **Без** Memoh и без применения правил к сводкам/SLA/digest.
-
-Фазы **10g** (Telegram → KB), **10f** (HTTP KB), **10e** — см. журнал.
+**Фаза 12a** — `POST /history-import/telegram-json`, jobs в БД. **Фаза 11b** — правила в KB RAG. Фазы **10g**–**10e** — см. журнал.
 
 ## Текущая цель
 
-Расширение Admin UI (**13+**), **6+** (LLM для сводок и пр.), **10+**, донастройка staging (**Telegram**/RAG-ключи на VPS) — по отдельной постановке.
+Закрыть MVP по чеклисту приёмки (личка / control group / `/kb_help` / mirror / админка / доки) **без** новых крупных фич; дальнейшие **6+**, **13+**, **10+** — отдельными задачами после стабильного MVP.
 
 ## Что уже работает
 
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
+- **MVP стабилизация (коммит `a7c00922`):** операторский гайд `docs/15_OPERATOR_GUIDE.md`; Memoh group final-only streaming; Studio beat для `process_control_group_commands`; `/kb_help` без требования `STUDIO_KB_ENABLED`; парсер `@bot`; админ `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
 - **14c:** VPS **148.253.209.54**, **jar.pb-web.ru**, health/admin/smoke/backup; `.env.prod` только на сервере (не в git); см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **VPS E2E smoke:** `deploy/scripts/vps-e2e-smoke.sh` — автоматизированный чеклист (compose, DB, admin, API smoke, бэкапы); **PASS** + ожидаемые **SKIP** на текущих флагах/образе; см. `docs/04_PROJECT_LOG.md`.
 - **14b:** smoke + валидация `.env.prod`, restore/KB backup scripts, расширенный runbook; см. `docs/08_RUNBOOK_PRODUCTION.md`, `deploy/scripts/`, `docs/06_DECISIONS.md`.
@@ -52,7 +50,7 @@
 
 ## Что ещё не готово
 
-- Расширенный Studio Admin (формы, HTMX, мутации) без отдельной постановки; прочие сценарии 6+.
+- LLM-сводки и прочие сценарии **6+**; расширенный Studio Admin (HTMX и т.п.) — только по отдельной постановке.
 
 ## Идентификаторы коммитов (история 4b)
 
@@ -65,9 +63,10 @@
 
 **ADR (только текст):** `60a319773fc545be147a29625e3121613002bd7f`
 
-## Файлы Memoh (фаза 4b)
+## Файлы Memoh (актуально)
 
-См. предыдущую версию контекста: `telegram.go`, `studio_event_mirror.go`, `studio_event_mirror_test.go`.
+- **Telegram adapter / streaming:** `internal/channel/adapters/telegram/telegram.go`, `stream.go`, `stream_test.go`.
+- **Studio → Memoh hook (4b):** `studio_event_mirror.go`, `studio_event_mirror_test.go`.
 
 ## Принятые решения
 
@@ -91,12 +90,13 @@
 - **Фаза 13b:** детали + HTML-формы в Studio Admin (те же сервисы, что REST); flash без секретов; см. `docs/06_DECISIONS.md`.
 - **Фаза 13c:** фильтры, пагинация и полировка списков в Studio Admin; см. `docs/06_DECISIONS.md`.
 - **Фаза 14c:** первый deploy Studio на VPS + домен; инцидент `set -x` / ротация admin token — см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
+- **MVP стабилизация:** Memoh = runtime/ассистент; Studio = mirror + slash-команды + бизнес-данные; beat для control commands; см. `docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
 - **Фаза 14b:** deploy readiness — checklist, `validate_env_prod.py`, `smoke-prod.sh`, restore/backup KB; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 - **Фаза 14a:** prod compose + env example + runbook/backup/Caddy skeleton; см. `docs/06_DECISIONS.md`, `docs/08_RUNBOOK_PRODUCTION.md`.
 
 ## Следующая задача
 
-- По постановке: **13+**, **6+**, расширение **10+**, донастройка **jar.pb-web.ru** (секреты Telegram/RAG на VPS) — по постановке.
+- Подтвердить на VPS: один poller Memoh, `/kb_help` и `/kb_help@bot` в control group, приёмка без утечек в логах; при необходимости — **ротация `TELEGRAM_BOT_TOKEN`** и перезапуск только memoh-jar + studio-api/worker/beat.
 
 ## Вопросы к GPT
 

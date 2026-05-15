@@ -1,7 +1,12 @@
 # Active context
 
-**Сейчас:** фаза **14c** + **VPS E2E smoke** — Studio на **148.253.209.54**, **https://jar.pb-web.ru**; checkout VPS **= `origin/pb-studio/main`**; прогон **`vps-e2e-smoke.sh`** — **PASS** с ожидаемыми **SKIP** (RAG/chat key, Telegram-токен, history import off, pytest не в prod-образе). **Memoh не менялся.** `.env.prod` только на сервере (не в git). Миграции: якорь **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`**. Инцидент `set -x` / токен — см. `docs/08`, `docs/06`.
+**Сейчас:** **MVP-стабилизация** — коммит **`a7c00922`** в репо; роли Memoh vs Studio (`docs/15_OPERATOR_GUIDE.md`, `docs/06_DECISIONS.md`). Studio **148.253.209.54** / **https://jar.pb-web.ru/admin/**; Memoh Web **https://memo.pb-web.ru**; репо на VPS **`/opt/pb-studio/pb-memoh-studio`**, ветка **`origin/pb-studio/main`**.
+
+- **Memoh:** `b0e7b510` — long poll timeout + redaction URL с токеном; группы — final-only send по умолчанию (`MEMOH_TELEGRAM_GROUP_STREAMING_ENABLED`).
+- **Studio:** `dd285584` — control group в админке; beat **`process_control_group_commands`**; **`STUDIO_CONTROL_COMMANDS_INTERVAL_SECONDS`**; `/kb_help` при выключенном KB; парсер `/cmd@bot`; **`/admin/control-commands`**.
+
+**Security:** ротация **`TELEGRAM_BOT_TOKEN`** после возможной утечки — **подтвердить оператором**; до подтверждения — **USER_ACTION_REQUIRED**.
 
 **Ветка:** `pb-studio/main`.
 
-**Следующий шаг:** секреты/флаги на VPS по продукту (при необходимости), **6+** / **13+** / **10+** — по постановке.
+**Следующий шаг:** приёмка на VPS (один Memoh poller, private + group mention, `/kb_help` + `/kb_help@bot`, mirror rows); при необходимости деплой только memoh-jar server и studio-api/worker/beat без full stack.

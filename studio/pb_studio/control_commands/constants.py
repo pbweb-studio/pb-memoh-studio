@@ -125,5 +125,6 @@ KB_HELP_TEXT = """Команды базы знаний (Studio, только и�
 
 Правила ассистента (без LLM, фаза 11a): /rule_help
 
-Требуется STUDIO_KB_ENABLED=true. Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.
+Справочник /kb_help доступен всегда. Остальные команды /kb_* выполняются только при STUDIO_KB_ENABLED=true.
+Документы и API: GET/POST /knowledge/... под STUDIO_ADMIN_TOKEN.
 """
