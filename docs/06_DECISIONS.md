@@ -334,4 +334,4 @@
 - **Таблицы:** Alembic `017` — `studio_nl_interactions`, `studio_memory_items`, `studio_playbooks`.
 - **Memoh:** узкий вызов `PostNLGate` из inbound для Telegram group/supergroup до старта ассистента при условии `ShouldAttemptNLGate`.
 - **Прод (2026-05-15):** VPS-выкат без `set -x` и без печати `.env`/`config.toml` целиком; публичный URL gate; Bearer на Memoh согласован с Studio (ingest-токен на хосте).
-- **Прод (2026-05-15):** на VPS env и compose **без** `set -x` / печати секретов; gate URL публичный (`https://jar.pb-web.ru/integrations/memoh/nl-gate`); Bearer совпадает с ingest-токеном (операторская политика на хосте).
+- **Прод (2026-05-15, NL anti–off-by-one):** VPS **148.253.209.54** — выкат **`566052e1`**: Studio api/worker/beat + Memoh server; smoke **PASS**; live/`/kb_help`/getMe — оператор. Журнал: `docs/04_PROJECT_LOG.md`.
