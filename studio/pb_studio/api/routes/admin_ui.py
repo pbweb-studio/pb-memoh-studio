@@ -29,6 +29,9 @@ from pb_studio.admin_ui.auth import (
 )
 from pb_studio.admin_ui.flash import redirect_with_flash
 from pb_studio.api.deps import DbSession, SettingsDep
+from pb_studio.assistant_rules import service as rules_service
+from pb_studio.assistant_rules.constants import AssistantRuleScope, AssistantRuleStatus
+from pb_studio.assistant_rules.schemas import AssistantRuleCreate
 from pb_studio.control_group.constants import ChatRole
 from pb_studio.control_group.service import set_chat_role, set_control_group_by_telegram_id
 from pb_studio.control_commands.service import list_control_commands, run_control_commands_cycle
