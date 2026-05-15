@@ -44,7 +44,7 @@
 | MVP Telegram-приёмка (mvp-* маркеры, /kb_help@bot) | Done по скринам; group mention UX — при необходимости оператор |
 | Celery worker dispose_engine после control commands | Done (**7a4a8a10**) |
 | Studio Admin `/admin/assistant-rules` HTTP 500 | Done (**8af1537d**) |
-| NL Business & Learning (gate, worker, Memoh, admin, tests, docs) | Done (код в репо; деплой VPS — отдельно) |
+| NL Business & Learning — **VPS deploy** (148.253.209.54, 2026-05-15) | Done (инфра + smoke; ручной TG §18 7–10 — оператор) |
 | 6+ Сводки (LLM / доставка в Telegram) и прочее | Pending |
 
-**Последнее:** NL layer (feat NL + Memoh gate): Alembic `017`, `pb_studio/nl`, gate, Celery `process_nl_interactions`, Memoh `nl_gate.go` + inbound, админ NL, тесты. См. `docs/04_PROJECT_LOG.md` (2026-05-15), `docs/AI_CONTEXT.md`, `docs/06_DECISIONS.md`.
+**Последнее:** VPS **148.253.209.54** — выкат **NL** (**`16b80740`**): env без печати секретов, migrate **017**, compose Studio + Memoh server, health/smoke/gate-403 probe, getMe **jarvispbweb_bot**. См. `docs/04_PROJECT_LOG.md`, `docs/AI_CONTEXT.md`.

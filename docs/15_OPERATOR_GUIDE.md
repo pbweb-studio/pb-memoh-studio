@@ -48,7 +48,7 @@
 2. **Открыть Studio Admin:** **https://jar.pb-web.ru/admin/** (логин по cookie после POST `/admin/login`).
 3. **Назначить control group:** `/admin/control-group` → выбрать group/supergroup из зеркала → «Сохранить».
 4. **Проверить команды:** в управляющей группе отправить `/kb_help`; статусы и кнопка «Обработать pending» — **`/admin/control-commands`**.
-5. **Флаги на сервере** (без публикации значений): `STUDIO_CONTROL_COMMANDS_ENABLED=true`, при NL-режиме **`STUDIO_NL_COMMANDS_ENABLED=true`**, **`MEMOH_STUDIO_NL_GATE_URL`** на Studio API (`…/integrations/memoh/nl-gate`) и согласованный Bearer (`STUDIO_MEMOH_GATE_TOKEN` или общий ingest-токен), `TELEGRAM_BOT_TOKEN` задан для Studio worker/api (тот же токен, что у Memoh), при необходимости `STUDIO_KB_ENABLED` для операций KB кроме справки `/kb_help` (справка работает и при выключенном KB).
+5. **Флаги на сервере** (без публикации значений): после выката NL — **`STUDIO_NL_COMMANDS_ENABLED`**, **`STUDIO_MEMOH_GATE_TOKEN`** (или общий ingest), **`MEMOH_STUDIO_NL_GATE_URL`** на Memoh; плюс **`STUDIO_CONTROL_COMMANDS_ENABLED=true`**, **`TELEGRAM_BOT_TOKEN`** для Studio worker/api (тот же токен, что у Memoh), при необходимости `STUDIO_KB_ENABLED` для операций KB кроме справки `/kb_help` (справка работает и при выключенном KB).
 
 ## 6. Smoke-данные на Overview
 

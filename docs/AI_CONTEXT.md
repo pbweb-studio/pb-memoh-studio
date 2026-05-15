@@ -15,7 +15,7 @@
 - **Якорь миграций (репо):** **`f8dbd06e09f7b081733061ca1c6aefcf9b727afb`** (`006`: `alembic_version.version_num` → `VARCHAR(255)`). Инцидент **`set -x`** / утечка **`STUDIO_ADMIN_TOKEN`** — токен на VPS **ротирован**; см. `docs/08_RUNBOOK_PRODUCTION.md`, `docs/06_DECISIONS.md`.
 - **Security / `TELEGRAM_BOT_TOKEN`:** при попадании токена в логи рекомендуется ротация в BotFather + обновление в Memoh и Studio `.env.prod` (**см. `docs/15_OPERATOR_GUIDE.md`**). **2026-05-14:** оператор **явно отказался** от ротации текущего бота (согласованный **остаточный риск**); статус **USER_ACTION_REQUIRED** по ротации снят.
 
-**VPS (2026-05-15):** на **148.253.209.54**: `git reset --hard origin/pb-studio/main` — актуальная ветка **`pb-studio/main`**; функциональный фикс Studio — **`8af1537d`** (`admin_ui.py` импорты для **`/admin/assistant-rules`**); обновления журнала/контекста — коммиты **`c8893960`** и следом (см. `git log`). Пересобраны **studio-api / studio-worker / studio-beat** (Memoh **не** пересобирался). Health: **memo.pb-web.ru** **200**; **jar.pb-web.ru** админка с токеном — **200** на **`/admin/assistant-rules`**; `getMe` → **jarvispbweb_bot** / **ИИ Purple Bear**; **webhook пустой**; **pending_update_count=0**. Active control group: **Управление Jarvis**, **telegram_chat_id=-1003903704506**, **studio_chat_uuid=863b1234-0ccf-45c2-a1c3-e3b0b0479863**. **`vps-e2e-smoke.sh`:** **PASS** (в т.ч. **`4_admin_/admin/assistant-rules`** и фильтр **`?status=active`**); ожидаемые **SKIP**: history import, **12_telegram**, **14_pytest**. В **`studio_messages`** по SQL на VPS: **≥1** строка с **`mvp-group-mention-001`** (зеркало); визуально в Telegram (один ответ Memoh, без дублей / «……») — **USER_CONFIRM_REQUIRED** при необходимости повторной проверки.
+**VPS (2026-05-15, NL rollout):** **148.253.209.54**, `/opt/pb-studio/pb-memoh-studio` — **HEAD `16b80740`**; без сноса Postgres/Redis volumes; env дополнен (**`STUDIO_NL_*`**, **`STUDIO_MEMOH_GATE_TOKEN`**, **`MEMOH_STUDIO_NL_GATE_*`**) без печати значений; **studio-migrate/api/worker/beat** пересобраны; **Memoh server** пересобран (gate). Health **jar** / **memo** — **200**; **getMe** — **jarvispbweb_bot**; webhook **url=null** (long polling). Gate: **403** на неверный Bearer. **`vps-e2e-smoke.sh`** — **PASS**, ожидаемые **SKIP**. Живые сценарии §18 шаги **7–10** — **подтверждение оператором** (не из агентской сессии).
 
 **VPS E2E smoke** — **PASS**; **SKIP**: history import, **12_telegram** (ручной CG), **14_pytest**.
 
@@ -23,7 +23,7 @@
 
 ## Текущая цель
 
-Выкатить **NL layer** на VPS после ревью: миграция **`017`**, env Studio (`STUDIO_NL_*`, `STUDIO_MEMOH_GATE_TOKEN`) + Memoh (`MEMOH_STUDIO_NL_GATE_*`), пересборка **studio-api / worker / beat** и **memoh-server**; ручная приёмка §18 в `docs/04_PROJECT_LOG.md`. Дальше — **6+** и прочие фичи отдельными задачами.
+Закрыть **ручную приёмку NL** §18 (шаги **7–10** в control group) после выката; затем отдельные задачи (**6+** и прочее).
 
 ## Что уже работает
 
@@ -100,7 +100,7 @@
 
 ## Следующая задача
 
-- После мержа NL: **деплой** на согласованном VPS (миграция, env, пересборка **Memoh + Studio**), ручной чеклист **§18** в `docs/04_PROJECT_LOG.md` (в т.ч. mention в CG → один ответ Studio, slash без регресса, fail-open Gate).
+- Оператор: пройти §18 шаги **7–10** в Telegram (inventory, отчёт, «запомни», модель) и зафиксировать PASS/FAIL в `docs/04_PROJECT_LOG.md` при расхождении с ожиданиями.
 
 ## Вопросы к GPT
 

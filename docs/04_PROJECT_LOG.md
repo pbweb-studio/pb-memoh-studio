@@ -2,7 +2,8 @@
 
 ## 2026-05-15 — NL Business & Learning Layer (Studio + Memoh)
 
-- Статус: реализовано в репозитории; **деплой на VPS — отдельный шаг** после `git pull` / миграции / обновления `.env.prod` и `.env.memoh`.
+- Статус: **код в репо** + **деплой на VPS 148.253.209.54** (2026-05-15, без переустановки Postgres/Redis volumes, без `set -x`, без печати `.env`/`config.toml` целиком).
+- **VPS deploy (2026-05-15):** `git fetch` + `reset --hard` → **HEAD `16b80740`**; в `.env.prod` добавлены ключи **`STUDIO_NL_*`**, **`STUDIO_MEMOH_GATE_TOKEN`** (значение выровнено с существующим **`STUDIO_EVENTS_INGEST_TOKEN`** на хосте, без вывода); в `/opt/pb-studio/memoh/.env.memoh` — **`MEMOH_STUDIO_NL_GATE_URL`** (HTTPS `jar.pb-web.ru/.../nl-gate`) и **`MEMOH_STUDIO_NL_GATE_TOKEN`** (тот же ingest на стороне Memoh). `docker compose ... build` + `up` для **studio-migrate / api / worker / beat**; **Memoh `server`** пересобран и поднят. Миграция Alembic **`016 → 017_studio_nl_layer`** — exit 0.
 - **Studio:** Alembic **`017_studio_nl_layer`** (`studio_nl_interactions`, `studio_memory_items`, `studio_playbooks`); пакет **`pb_studio/nl`** (router deterministic/OpenAI-compatible, triggers, executor, scan alias, processor, gate service); **`POST /integrations/memoh/nl-gate`**; Celery **`process_nl_interactions`** + beat interval **`STUDIO_NL_PROCESS_INTERVAL_SECONDS`**; админка **`/admin/nl-interactions`**, **`/admin/memory-items`**, **`/admin/playbooks`**; счётчики на dashboard.
 - **Memoh:** **`internal/studio/nl_gate.go`**, вызов из inbound для Telegram group/supergroup до ассистента; env **`MEMOH_STUDIO_NL_GATE_URL`**, **`MEMOH_STUDIO_NL_GATE_TOKEN`** / **`MEMOH_STUDIO_EVENTS_TOKEN`**, **`MEMOH_STUDIO_NL_GATE_TIMEOUT_MS`**.
 - **Тесты:** `studio/tests/test_nl_phase.py`; `internal/studio/nl_gate_test.go`. Полный прогон: `pytest studio/tests/ -q` (**302 passed** в Docker); `go test ./internal/studio/... -count=1`.
@@ -18,7 +19,21 @@
 5. **ACL:** пользователь не из **`STUDIO_CONTROL_COMMANDS_ALLOWED_USER_IDS`** (если список не пуст) → отказ NL, без утечек секретов в тексте ошибки.
 6. **Админка:** открыть **`/admin/nl-interactions`**, фильтры status/mode/intent; memory/playbooks списки открываются.
 
-## 2026-05-14 — Фаза 0 (Bootstrap)
+### Автоматические проверки после выката (2026-05-15, VPS)
+
+| Проверка | Результат |
+|-----------|-----------|
+| `curl` **Studio** `127.0.0.1:8000/health` | **200** |
+| `curl` **https://jar.pb-web.ru/health** | **200** |
+| `curl` **https://memo.pb-web.ru/health** | **200** |
+| Контейнеры **pb-studio-prod-api/worker/beat**, **memoh-jar-server-1** | **Up**, api **healthy** |
+| `getMe` | **ok**, username **jarvispbweb_bot** |
+| `getWebhookInfo.url` | **null** (long poll) |
+| `POST /integrations/memoh/nl-gate` с неверным Bearer | **HTTP 403** (маршрут жив, токены в ответе не печатались) |
+| `bash deploy/scripts/vps-e2e-smoke.sh` | **PASS**, ожидаемые **SKIP** (history, **12_telegram**, pytest) |
+| Логи Memoh по строке `nl-gate` в последних 200 строках | пусто (до первого живого mention) |
+
+**Ручные шаги 7–10 (Telegram control group):** выполняет оператор по §18 выше — из этой сессии не верифицированы.
 
 - Статус: завершена.
 - Клонирован upstream Memoh; remotes: `upstream` = memohai/Memoh, `origin` = pbweb-studio/pb-memoh-studio; ветка `pb-studio/main`; тег `stable-upstream-memoh`.
