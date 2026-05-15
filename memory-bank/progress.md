@@ -39,7 +39,7 @@
 | 14a Prod compose + env example + runbook/backup (no deploy) | Done |
 | 14b Deploy readiness (checklist, smoke, env validation, scripts) | Done |
 | 14c Staging deploy jar.pb-web.ru (VPS 148.253.209.54) | Done |
-| VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done (PASS после **`8af1537d`**; репо HEAD **`de7fb81c`**) |
+| VPS E2E smoke (`deploy/scripts/vps-e2e-smoke.sh`) | Done (PASS после **`8af1537d`**; репо HEAD **`dfd24111`**) |
 | MVP стабилизация (роли, beat, Memoh group final-only, admin команды, доки) | Done |
 | MVP Telegram-приёмка (mvp-* маркеры, /kb_help@bot) | Done по скринам; group mention UX — при необходимости оператор |
 | Celery worker dispose_engine после control commands | Done (**7a4a8a10**) |
