@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from pb_studio.core.config import get_settings
+from pb_studio.mcp_tools import extra_handlers as mcp_extra_handlers
 from pb_studio.mcp_tools import handlers as mcp_handlers
 
 
@@ -135,6 +136,87 @@ def build_mcp_asgi_app() -> Callable[..., Awaitable[None]]:
     @mcp.tool()
     async def studio_runtime_status(include_debug: bool = False) -> str:
         return await mcp_handlers.studio_runtime_status(include_debug=include_debug)
+
+    # ===== MVP v1: role-aware context, smart reports, projects, rules =====
+
+    @mcp.tool()
+    async def studio_get_chat_context(
+        telegram_chat_id: int,
+        from_user_id: int | None = None,
+    ) -> str:
+        """Контекст чата для Memoh: role, project, active_rules, can_respond_to_user.
+
+        ОБЯЗАТЕЛЬНО вызывать перед ответом в любом групповом чате, кроме
+        управляющей группы и личных DM.
+        """
+        return await mcp_extra_handlers.studio_get_chat_context(
+            telegram_chat_id=telegram_chat_id, from_user_id=from_user_id
+        )
+
+    @mcp.tool()
+    async def studio_smart_chat_report(
+        chat_id_or_name: str,
+        period: str = "today",
+        max_messages: int = 200,
+    ) -> str:
+        """LLM-отчёт «по смыслу» чата за период (today | yesterday | week).
+        Формат отчёта выбирает LLM из содержимого (задачи / лиды / согласования / обзор).
+        """
+        return await mcp_extra_handlers.studio_smart_chat_report(
+            chat_id_or_name=chat_id_or_name, period=period, max_messages=max_messages
+        )
+
+    @mcp.tool()
+    async def studio_assign_chat_role(telegram_chat_id: int, role: str) -> str:
+        """Назначить чату роль: client_chat | project_chat | internal_chat | service_chat | unknown."""
+        return await mcp_extra_handlers.studio_assign_chat_role(
+            telegram_chat_id=telegram_chat_id, role=role
+        )
+
+    @mcp.tool()
+    async def studio_set_control_group(telegram_chat_id: int) -> str:
+        """Назначить чат управляющей группой (control_group)."""
+        return await mcp_extra_handlers.studio_set_control_group(
+            telegram_chat_id=telegram_chat_id
+        )
+
+    @mcp.tool()
+    async def studio_get_active_rules(scope: str = "global", scope_id: str | None = None) -> str:
+        """Активные правила ассистента (scope: global | project | chat).
+        Для project/chat укажи scope_id: slug проекта или telegram_chat_id/UUID."""
+        return await mcp_extra_handlers.studio_get_active_rules(
+            scope=scope, scope_id=scope_id
+        )
+
+    @mcp.tool()
+    async def studio_create_project(name: str, slug: str | None = None) -> str:
+        """Создать проект. Если slug не задан — сгенерируется из name."""
+        return await mcp_extra_handlers.studio_create_project(name=name, slug=slug)
+
+    @mcp.tool()
+    async def studio_bind_chat_to_project(
+        telegram_chat_id: int,
+        project_slug: str,
+        role_in_project: str = "secondary",
+    ) -> str:
+        """Привязать чат к проекту. Роль в проекте: primary | secondary | client_facing | …"""
+        return await mcp_extra_handlers.studio_bind_chat_to_project(
+            telegram_chat_id=telegram_chat_id,
+            project_slug=project_slug,
+            role_in_project=role_in_project,
+        )
+
+    @mcp.tool()
+    async def studio_disable_rule(rule_id: str, reason: str | None = None) -> str:
+        """Отключить правило ассистента по UUID."""
+        return await mcp_extra_handlers.studio_disable_rule(rule_id=rule_id, reason=reason)
+
+    @mcp.tool()
+    async def studio_get_recent_messages(chat_id_or_name: str, limit: int = 30) -> str:
+        """Последние N сообщений чата (для контекста, без LLM-обработки)."""
+        return await mcp_extra_handlers.studio_get_recent_messages(
+            chat_id_or_name=chat_id_or_name, limit=limit
+        )
 
     stream_builder = getattr(mcp, "streamable_http_app", None)
     if callable(stream_builder):

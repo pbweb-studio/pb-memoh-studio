@@ -1,5 +1,27 @@
 # Журнал проекта
 
+## 2026-05-15 — MVP v1: role-aware ассистент студии (PR1, один деплой)
+
+- **Статус:** код в репо, тесты зелёные, деплой — следующий шаг оператора.
+- **Контракт продукта:** новый файл `docs/FEATURES_v1.md` — продуктовое видение, поведение по 6 ролям чата (control_group / internal_chat / project_chat / client_chat / service_chat / unknown), MVP / LATER / WON'T фичи. Сменяет «кривой» `docs/03_IMPLEMENTATION_PLAN.md`.
+- **9 новых MCP-инструментов Studio** в `studio/pb_studio/mcp_tools/extra_handlers.py`:
+  - `studio_get_chat_context` — обязательный первый вызов в групповом чате (role, project, active_rules, can_respond_to_user).
+  - `studio_smart_chat_report` — LLM-отчёт по содержимому чата (OpenAI-compatible через `STUDIO_KB_CHAT_*`).
+  - `studio_assign_chat_role`, `studio_set_control_group` — управление ролями чатов.
+  - `studio_create_project`, `studio_bind_chat_to_project` — проекты + автогенерация slug (включая транслит кириллицы).
+  - `studio_get_active_rules`, `studio_disable_rule` — управление правилами ассистента.
+  - `studio_get_recent_messages` — сырьё чата без LLM.
+  - Регистрация — `studio/pb_studio/mcp_server/asgi.py` (теперь 20 MCP tools).
+- **Skill `pb-studio-manager` v2:** `skills/pb-studio-manager/SKILL.md` переписан под единый мозг: правила поведения по `chat_role` (включая молчание в `client_chat` без ACL и `service_chat`), каталог всех 20 инструментов, UX-правила «один вопрос подряд», одна строка подтверждения после действий.
+- **Удалён legacy Studio NL responder (необратимо):**
+  - Стёртые файлы: `studio/pb_studio/nl/{processor,router,router_deterministic,gate_service,scan,triggers,turn_input,schemas,constants}.py`, `studio/pb_studio/api/routes/nl_gate.py`, 5 тестов `test_nl_*.py`.
+  - Очистка env: `STUDIO_NL_*` и `STUDIO_MEMOH_GATE_TOKEN` удалены из `.env.example`, `.env.prod.example`, `docker-compose.prod.yml`, `studio/pb_studio/core/config.py`; `MEMOH_STUDIO_NL_GATE_*` удалены из `.env.example`.
+  - Очистка кода: route `/integrations/memoh/nl-gate` снят (`pb_studio/api/main.py`); `verify_memoh_nl_gate_optional` / `verify_nl_gate_feature_enabled` удалены (`pb_studio/api/deps.py`); Celery `process_nl_interactions` удалён (`pb_studio/worker/tasks.py`); из `pb_studio/admin_ui/data.py` убран счётчик `nl_interactions`; в `/admin/nl-interactions` баннер сменён с «отключён» на «архивирован»; `pb_studio/nl/executor.py` очищен от ссылок на удалённые legacy функции, оставлены только утилиты для MCP-хендлеров (`_digest_all_chats`, `_list_chats_text`, `_kb_search_text`, `_diagnostics_text`, `_runtime_config_query_text`).
+  - Оставлены как утилиты: `pb_studio/nl/executor.py` и `pb_studio/nl/models.py` (`StudioMemoryItem`, `StudioPlaybook` нужны MCP; `StudioNlInteraction` остаётся как архивная таблица — миграция/удаление — отдельной задачей).
+- **Тесты:** `studio/tests/test_mcp_extra_handlers.py` — 22 теста (контекст / роли / control_group / проекты / правила / recent_messages / smart_report fallback / автогенерация slug). Прогон `pytest studio/tests/` — **320 passed**, 1 failed только `test_smoke_phase3.py::test_settings_load` из-за env (`REDIS_URL`) локального окружения — не регрессия.
+- **Доки:** `docs/FEATURES_v1.md` (новый), `docs/AI_CONTEXT.md` (текущая фаза → MVP v1), `docs/05_CURRENT_TASK.md` (дорожная карта PR1 + PR2), `memory-bank/activeContext.md` (обновлён).
+- **Деплой:** не выполнялся из этой сессии. Шаг оператора — pre-flight аудит VPS → один rollout → §11 в `docs/AI_CONTEXT.md`.
+
 ## 2026-05-15 — Single-brain: удалён Memoh NL gate, архив Studio NL responder
 
 - **Статус:** код в репо — Memoh **`c1afe432`**: удалены `internal/studio/nl_gate*`, inbound без Studio consult, Telegram `stream.go` как upstream; Studio **`f22fd204`**: beat **никогда** не планирует `studio-process-nl-interactions`; `run_nl_interactions_standalone` / Celery task — no-op; Alembic **`018_nl_status_widen_finalize_pending`** (`status` VARCHAR(64), pending → **`ignored_disabled_single_brain_migration`**); pytest `test_nl_ux_regression` / `test_nl_turn_isolation` — **skip**.

@@ -40,29 +40,6 @@ async def verify_events_ingest_optional(
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid token")
 
 
-async def verify_memoh_nl_gate_optional(
-    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-    settings: Settings = Depends(get_settings),
-) -> None:
-    token = (settings.studio_memoh_gate_token or "").strip() or (settings.studio_events_ingest_token or "").strip()
-    if not token:
-        return
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
-    got = authorization.removeprefix("Bearer ").strip()
-    if got != token:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid token")
-
-
-async def verify_nl_gate_feature_enabled(settings: Settings = Depends(get_settings)) -> None:
-    """NL responder gate: reject when STUDIO_NL_COMMANDS_ENABLED is false (single-brain / Memoh-only replies)."""
-    if not settings.studio_nl_commands_enabled:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            detail="NL gate disabled (STUDIO_NL_COMMANDS_ENABLED=false)",
-        )
-
-
 async def verify_admin_optional(
     authorization: Annotated[str | None, Header(alias="Authorization")] = None,
     settings: Settings = Depends(get_settings),

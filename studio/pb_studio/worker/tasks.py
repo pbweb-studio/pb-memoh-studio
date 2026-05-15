@@ -87,13 +87,3 @@ def embed_pending_knowledge_chunks() -> dict[str, int]:
     return asyncio.run(run_embed_pending_knowledge_standalone())
 
 
-@celery_app.task(name="pb_studio.worker.process_nl_interactions")
-def process_nl_interactions() -> dict[str, Any]:
-    """Legacy task name kept for compatibility; Studio NL responder is archived (single-brain)."""
-    return {
-        "skipped": True,
-        "reason": "nl_responder_archived_single_brain",
-        "scanned_aliases": 0,
-        "inserted_aliases": 0,
-        "processed_nl": 0,
-    }

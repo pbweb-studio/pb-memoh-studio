@@ -6,23 +6,30 @@
 
 ## Текущая фаза
 
-**Single-brain Memoh + Studio MCP (май 2026)** — второй ответчик Studio NL **архивирован**: Memoh **без** `PostNLGate` / `internal/studio`; Celery beat **без** `studio-process-nl-interactions`; `run_nl_interactions_standalone` — no-op; Alembic **`018`** финализирует старые `pending`. Бизнес для ассистента: **`studio-mcp`** (Bearer **`STUDIO_MCP_AUTH_TOKEN`**), инструменты `studio_*`, skill **`pb-studio-manager`**. Event Mirror — пассивный ingest; slash/control — legacy/operator (см. ADR). Коммиты: **`c1afe432`** (Memoh), **`f22fd204`** (Studio).
+**MVP v1: role-aware ассистент студии (май 2026)** — единый мозг Memoh + 9 новых MCP-инструментов Studio для контекста чата, smart-отчётов, проектов и правил. Контракт продукта зафиксирован в `docs/FEATURES_v1.md`. Legacy Studio NL responder **окончательно удалён** (файлы `pb_studio/nl/processor.py`, `router*.py`, `gate_service.py`, `scan.py`, `triggers.py`, `turn_input.py`, `schemas.py`, `constants.py` + связанные API/Celery/тесты), `pb_studio/nl/executor.py` и `models.py` оставлены как утилиты для MCP-хендлеров. Env-переменные `STUDIO_NL_*` и `STUDIO_MEMOH_GATE_TOKEN` удалены из `.env*.example`, `docker-compose.prod.yml`, `pb_studio/core/config.py`.
 
-### §11 Ручная приёмка (Telegram, после выката single-brain)
+**Single-brain (фон):** Memoh **без** `PostNLGate` / `internal/studio`; Celery beat **без** `studio-process-nl-interactions`. Memoh-коммит **`c1afe432`**. Studio-коммит до MVP v1: **`f22fd204`**.
 
-1. В CG: mention бота — **один** ответ **Memoh** (Studio NL не вмешивается).
-2. В Memoh Admin: MCP **tools/list** видит `studio_list_chats` и остальные `studio_*`.
-3. Вызов инструмента (например список чатов) возвращает осмысленный текст без утечки секретов в ошибках.
-4. **`/admin/nl-interactions`** — баннер «NL responder отключён» при `STUDIO_NL_COMMANDS_ENABLED=false`.
-5. Event Mirror: новое сообщение в группе по-прежнему попадает в зеркало (smoke по `studio_messages` / админке).
+### §11 Ручная приёмка MVP v1 (Telegram, после выката)
+
+1. **Контекст чата:** в Memoh Admin → MCP → `tools/list` появились новые tools (`studio_get_chat_context`, `studio_smart_chat_report`, `studio_assign_chat_role`, `studio_set_control_group`, `studio_get_active_rules`, `studio_create_project`, `studio_bind_chat_to_project`, `studio_disable_rule`, `studio_get_recent_messages`) рядом со старыми 11 инструментами.
+2. **CG → DM:** в личке с ботом «составь отчёт по чату NN за сегодня» → Memoh зовёт `studio_smart_chat_report`, возвращает осмысленный текст; формат отчёта определяется содержимым (задачи / лиды / согласования / обзор).
+3. **client_chat молчание:** добавить бота в тестовый клиентский чат → назначить роль `client_chat` (`studio_assign_chat_role`) → бот по умолчанию **молчит** даже на mention клиента, отвечает только менеджеру из ACL.
+4. **service_chat:** назначить роль `service_chat` другому чату → бот **никогда не пишет** в этот чат.
+5. **Проект:** в CG «создай проект Site Redesign и привяжи к нему чат NN» → `studio_create_project` + `studio_bind_chat_to_project`; роль чата становится `project_chat`, `studio_get_chat_context` показывает `project_slug=site-redesign`.
+6. **Правила:** «правило: не отвечай на провокации» → `studio_save_behavior_rule` (уже есть); через `studio_get_active_rules` правило видно; `studio_disable_rule` отключает.
 
 ## Текущая цель
 
-Выкатить на VPS образы с **single-brain** + **`studio-mcp`**; в Memoh Admin подключить MCP и skill; пройти §11; зафиксировать hash в этом файле.
+Выкатить на VPS обновлённую Studio (включая 9 новых MCP-инструментов и удалённый NL responder); подключить skill `pb-studio-manager` v2 в Memoh; пройти §11; зафиксировать новый Studio-hash в этом файле.
 
 ## Что уже работает
 
-- **Single-brain + MCP (май 2026):** Memoh без nl-gate; Studio без NL в beat; **`studio-mcp`** + 11 tools; см. `docs/06_DECISIONS.md`, `docker-compose.prod.yml`, `skills/pb-studio-manager/SKILL.md`.
+- **MVP v1 контракт продукта:** `docs/FEATURES_v1.md` — роле-aware поведение по 6 ролям чата, smart-отчёты, проекты, правила, KB; MVP / LATER / WON'T фичи.
+- **9 новых MCP-инструментов (PR1, май 2026):** `studio_get_chat_context`, `studio_smart_chat_report`, `studio_assign_chat_role`, `studio_set_control_group`, `studio_get_active_rules`, `studio_create_project`, `studio_bind_chat_to_project`, `studio_disable_rule`, `studio_get_recent_messages`. Реализация — `studio/pb_studio/mcp_tools/extra_handlers.py`, регистрация — `studio/pb_studio/mcp_server/asgi.py`. Тесты — `studio/tests/test_mcp_extra_handlers.py` (22 теста, все зелёные).
+- **Skill `pb-studio-manager` v2:** в `skills/pb-studio-manager/SKILL.md` — поведение по `chat_role` (control_group / internal_chat / project_chat / client_chat / service_chat / unknown), UX-правила, полный каталог 20 инструментов.
+- **Legacy Studio NL responder удалён:** файлы `pb_studio/nl/{processor,router,router_deterministic,gate_service,scan,triggers,turn_input,schemas,constants}.py` + 5 `test_nl_*.py` стёрты; route `/integrations/memoh/nl-gate` снят; Celery `process_nl_interactions` удалён; `STUDIO_NL_*` и `STUDIO_MEMOH_GATE_TOKEN` env-переменные удалены из `.env*.example`, `docker-compose.prod.yml`, `pb_studio/core/config.py`. `pb_studio/nl/executor.py` и `models.py` остаются как утилиты для MCP-хендлеров и архива.
+- **Single-brain + MCP (фон, май 2026):** Memoh без nl-gate; Studio без NL в beat; **`studio-mcp`** + 11 базовых tools (теперь +9 → 20); см. `docs/06_DECISIONS.md`, `docker-compose.prod.yml`, `skills/pb-studio-manager/SKILL.md`.
 - Фазы 0–14c по Studio: см. `docs/04_PROJECT_LOG.md` и `docs/03_IMPLEMENTATION_PLAN.md`.
 - **MVP стабилизация:** операторский гайд `docs/15_OPERATOR_GUIDE.md`; коммиты **`e6e4a13f`** (код+доки), **`8d2b41d3`** (ссылки на hash), **`7a4a8a10`** (Celery: `dispose_engine` после `run_control_commands_standalone`, чтобы worker не ловил *different event loop*); Memoh group final-only; beat `process_control_group_commands`; `/kb_help` без `STUDIO_KB_ENABLED`; парсер `@bot`; `/admin/control-commands` — см. `docs/04_PROJECT_LOG.md`.
 - **NL слой (архив conversational):** Alembic **`017`+`018`**, пакет **`pb_studio/nl`** (legacy/debug), HTTP **`POST …/nl-gate`** при `STUDIO_NL_COMMANDS_ENABLED`; Celery **`process_nl_interactions`** — stub; Memoh **`internal/studio`** удалён. См. `docs/06_DECISIONS.md`, `docs/04_PROJECT_LOG.md`.
@@ -96,7 +103,8 @@
 
 ## Следующая задача
 
-- Оператор: выкат образов (**`c1afe432`** Memoh, **`f22fd204`** Studio + Alembic **`018`**) + §11 live; затем обновить «последний стабильный commit» в этом файле.
+- Оператор: pre-flight аудит VPS → выкат Studio (новый коммит после MVP v1) → подключить обновлённый `pb-studio-manager` skill в Memoh → пройти §11 → зафиксировать commit hash здесь.
+- PR2 (после успешного MVP): UX-фичи U1–U8 (self-intro, auto-suggest roles, morning briefing, inline confirmations, voice input, mute by phrase, onboarding wizard, единая навигация).
 
 ## Вопросы к GPT
 

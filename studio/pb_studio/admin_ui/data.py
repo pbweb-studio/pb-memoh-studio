@@ -29,13 +29,12 @@ class DashboardCounts:
     history_import_jobs: int
     summaries: int
     sla_incidents: int
-    nl_interactions: int
     memory_items: int
     playbooks: int
 
 
 async def fetch_dashboard_counts(session: AsyncSession) -> DashboardCounts:
-    from pb_studio.nl.models import StudioMemoryItem, StudioNlInteraction, StudioPlaybook
+    from pb_studio.nl.models import StudioMemoryItem, StudioPlaybook
 
     chats = int(await session.scalar(select(func.count()).select_from(StudioChat)) or 0)
     messages = int(await session.scalar(select(func.count()).select_from(StudioMessage)) or 0)
@@ -45,7 +44,6 @@ async def fetch_dashboard_counts(session: AsyncSession) -> DashboardCounts:
     jobs = int(await session.scalar(select(func.count()).select_from(StudioHistoryImportJob)) or 0)
     sums = int(await session.scalar(select(func.count()).select_from(StudioChatSummary)) or 0)
     sla = int(await session.scalar(select(func.count()).select_from(StudioSlaIncident)) or 0)
-    nl = int(await session.scalar(select(func.count()).select_from(StudioNlInteraction)) or 0)
     mem = int(await session.scalar(select(func.count()).select_from(StudioMemoryItem)) or 0)
     pb = int(await session.scalar(select(func.count()).select_from(StudioPlaybook)) or 0)
     return DashboardCounts(
@@ -57,7 +55,6 @@ async def fetch_dashboard_counts(session: AsyncSession) -> DashboardCounts:
         history_import_jobs=jobs,
         summaries=sums,
         sla_incidents=sla,
-        nl_interactions=nl,
         memory_items=mem,
         playbooks=pb,
     )

@@ -1,3 +1,11 @@
+"""MCP report helpers.
+
+Используется Studio MCP-handlers и Studio Admin как набор read-only утилит для
+формирования текстов отчётов / поиска / диагностики. Это НЕ NL responder —
+ответы в Telegram даёт Memoh; этот модуль просто отдаёт текстовые блоки,
+которые Memoh может включить в свой ответ через MCP tools.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -14,8 +22,6 @@ from pb_studio.core.config import Settings
 from pb_studio.event_mirror.models import StudioChat
 from pb_studio.knowledge.rag import ask_knowledge_base
 from pb_studio.knowledge.service import search_knowledge_chunks
-from pb_studio.nl.constants import LearningType
-from pb_studio.nl.schemas import IntentEnum, NLRouterDecision, RouterModeEnum
 from pb_studio.project_digests.constants import ProjectDigestType
 from pb_studio.projects.constants import ProjectStatus
 from pb_studio.projects.models import StudioProject
@@ -295,7 +301,6 @@ async def _kb_ask_text(session: AsyncSession, settings: Settings, question: str)
 def _diagnostics_text(settings: Settings) -> str:
     parts = [
         "Studio diagnostics (без секретов):",
-        f"STUDIO_NL_COMMANDS_ENABLED={settings.studio_nl_commands_enabled}",
         f"STUDIO_CONTROL_COMMANDS_ENABLED={settings.studio_control_commands_enabled}",
         f"STUDIO_KB_ENABLED={settings.studio_kb_enabled}",
         f"STUDIO_KB_RAG_ENABLED={settings.studio_kb_rag_enabled}",
@@ -306,87 +311,8 @@ def _diagnostics_text(settings: Settings) -> str:
     return "\n".join(parts)
 
 
-def _help_capabilities_text() -> str:
-    return (
-        "Можно писать обычным языком в управляющей группе (с @ботом или ответом боту, либо префикс «джарвис, …»):\n"
-        "— отчёт за сегодня/вчера/неделю;\n"
-        "— что горит / кто без ответа (SLA);\n"
-        "— сводка по проекту;\n"
-        "— списки чатов и проектов;\n"
-        "— поиск и вопросы по базе знаний;\n"
-        "— «запомни …», «научись …» (с подтверждением).\n"
-        "Slash-команды остаются как fallback/debug."
-    )
-
-
 def _runtime_config_query_text(settings: Settings) -> str:
-    name = (settings.studio_memoh_model_display_name or "").strip()
-    if name:
-        return f"По настройкам Studio для ответов указано: {name}."
     return (
-        "Я не могу надёжно прочитать точное имя модели из текущего чата: Studio не имеет прямого доступа к runtime Memoh. "
-        "Это можно посмотреть в Memoh Admin → настройки бота и провайдера (Bot / Provider settings)."
+        "Имя текущей модели Memoh нужно смотреть в Memoh Admin → Bot / Provider settings — "
+        "Studio не имеет прямого доступа к runtime Memoh."
     )
-
-
-async def format_nl_reply(
-    session: AsyncSession,
-    settings: Settings,
-    decision: NLRouterDecision,
-    *,
-    raw_input: str,
-) -> str:
-    if decision.mode == RouterModeEnum.refusal:
-        return decision.clarify_question or "Отказ по политике безопасности."
-
-    if decision.mode == RouterModeEnum.clarify:
-        return decision.clarify_question or "Уточните запрос."
-
-    if decision.mode == RouterModeEnum.casual:
-        return "Я на связи. Напишите, что нужно по студии (отчёт, SLA, проект, база знаний) или используйте slash-команды."
-
-    if decision.mode != RouterModeEnum.business_action or decision.intent is None:
-        return "Пока не умею выполнить это автоматически."
-
-    intent = decision.intent
-    params = decision.parameters or {}
-
-    if intent == IntentEnum.help_capabilities:
-        return _help_capabilities_text()
-    if intent == IntentEnum.diagnostics_status:
-        return _diagnostics_text(settings)
-    if intent == IntentEnum.runtime_config_query:
-        return _runtime_config_query_text(settings)
-    if intent == IntentEnum.list_chats:
-        return await _list_chats_text(session)
-    if intent == IntentEnum.list_projects:
-        return await _list_projects_text(session)
-    if intent == IntentEnum.open_risks_or_sla:
-        return await _risks_sla_text(session, settings)
-    if intent == IntentEnum.studio_digest:
-        period = str(params.get("period") or "today")
-        return await _digest_all_chats(session, settings, period)
-    if intent == IntentEnum.project_digest:
-        return await _project_digest_text(session, settings, params)
-    if intent == IntentEnum.kb_search:
-        return await _kb_search_text(session, settings, str(params.get("query") or raw_input))
-    if intent == IntentEnum.kb_ask:
-        return await _kb_ask_text(session, settings, str(params.get("question") or raw_input))
-
-    return "Intent не реализован в MVP executor."
-
-
-def learning_confirmation_message(draft: dict[str, Any]) -> str:
-    lt = str(draft.get("learning_type") or "")
-    if lt == LearningType.BEHAVIOR_RULE:
-        return (
-            "Понял как правило поведения. Сохранить глобально для всей студии?\n"
-            "Ответьте: да / нет / для проекта SLUG / для этого чата."
-        )
-    if lt == LearningType.WORKFLOW_PLAYBOOK:
-        return "Сохранить черновик playbook в Studio? Ответьте: да или нет."
-    if lt == LearningType.KNOWLEDGE_NOTE:
-        return "Сохранить как заметку (memory item)? Ответьте: да или нет."
-    if lt == LearningType.KNOWLEDGE_DOCUMENT:
-        return "Создать документ KB из текста? Ответьте: да или нет."
-    return "Подтвердите действие: да или нет."

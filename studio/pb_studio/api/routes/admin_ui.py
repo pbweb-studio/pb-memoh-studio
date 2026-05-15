@@ -1192,13 +1192,11 @@ async def admin_nl_interactions(
         {"name": "mode", "label": "mode", "type": "text", "value": (mode or "").strip()},
         {"name": "intent", "label": "intent", "type": "text", "value": (intent or "").strip()},
     ]
-    banner = None
-    if not settings.studio_nl_commands_enabled:
-        banner = (
-            "<strong>NL responder отключён</strong> (STUDIO_NL_COMMANDS_ENABLED=false). "
-            "Ответы в Telegram — только Memoh; бизнес-данные Studio — через MCP (skill pb-studio-manager). "
-            "Таблица ниже — только для разбора истории."
-        )
+    banner = (
+        "<strong>NL responder архивирован</strong> (single-brain Memoh + Studio MCP). "
+        "Ответы в Telegram — только Memoh; бизнес-данные Studio — через MCP (skill <code>pb-studio-manager</code>). "
+        "Таблица ниже — только для разбора истории."
+    )
     return _table(
         request,
         nav="nl",

@@ -12,7 +12,6 @@ from pb_studio.api.routes import admin_ui as admin_ui_routes
 from pb_studio.api.routes import assistant_rules as assistant_rules_routes
 from pb_studio.api.routes import control as control_routes
 from pb_studio.api.routes import control_commands as control_commands_routes
-from pb_studio.api.routes import nl_gate as nl_gate_routes
 from pb_studio.api.routes import events as events_routes
 from pb_studio.api.routes import history_import as history_import_routes
 from pb_studio.api.routes import knowledge as knowledge_routes
@@ -65,7 +64,6 @@ def create_app() -> FastAPI:
     application.include_router(knowledge_routes.router)
     application.include_router(assistant_rules_routes.router)
     application.include_router(history_import_routes.router)
-    application.include_router(nl_gate_routes.router)
     application.include_router(admin_ui_routes.router)
 
     return application
