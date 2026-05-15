@@ -210,7 +210,7 @@ sudo caddy reload --config /etc/caddy/Caddyfile
 ## H. Single-brain + Studio MCP (операторский чеклист)
 
 - [ ] В `.env.prod`: **`STUDIO_NL_COMMANDS_ENABLED=false`**, задан сильный **`STUDIO_MCP_AUTH_TOKEN`** (если MCP доступен не только из loopback).
-- [ ] `docker compose … up -d` включает сервис **`studio-mcp`**; из контейнера Memoh (или с хоста с общей Docker-сетью) доступен URL вида **`http://studio-mcp:8765`** (transport **streamable HTTP** / **http** — как поддерживает версия Memoh; см. Memoh Admin MCP).
+- [ ] `docker compose … up -d` включает сервис **`studio-mcp`**; из контейнера **Memoh `server`** (после `fix(deploy): memoh server joins Studio prod network for studio-mcp`) доступен URL **`http://studio-mcp:8765`** — тот же хост, внешняя сеть **`pb-studio-prod_default`**.
 - [ ] На Memoh: пустой **`MEMOH_STUDIO_NL_GATE_URL`** или **`MEMOH_STUDIO_NL_GATE_DISABLED=true`**; в UI бота добавлено MCP-подключение с **`Authorization: Bearer`** = `STUDIO_MCP_AUTH_TOKEN`.
 - [ ] Установлен skill **`pb-studio-manager`** (репозиторий: `skills/pb-studio-manager/SKILL.md`).
 - [ ] Откат: см. **`docs/06_DECISIONS.md`** (раздел «Откат single-brain»).
